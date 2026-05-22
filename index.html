@@ -38,7 +38,7 @@
         /* WATERMARK */
         .watermark { position: fixed; bottom: 12px; right: 15px; z-index: 10000; font-size: 10px; font-weight: 800; color: rgba(0,255,0,0.3); text-shadow: 0 0 4px rgba(0,0,0,0.9); pointer-events: none; }
 
-        /* RESTANTE DO CSS ORIGINAL MANTIDO */
+        /* RESTANTE DO CSS */
         .top-left-panel { position: absolute; top: 40px; left: 20px; z-index: 1000; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 320px; max-height: calc(100vh - 60px); overflow-y: auto; }
         .panel-title { font-weight: 800; font-size: 16px; margin-bottom: 15px; display: block; color: #1a1a1a; border-bottom: 3px solid #00ff00; padding-bottom: 10px; }
         .filter-row { margin-bottom: 12px; }
@@ -84,6 +84,71 @@
         .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
         .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #00ff00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- MODAL SOBRE / CRÉDITOS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 20000;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+            backdrop-filter: blur(6px);
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: #fff; width: 92%; max-width: 500px; border-radius: 14px;
+            padding: 0; box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+            transform: translateY(20px) scale(0.98); transition: all 0.3s ease;
+            overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+        .modal-close {
+            position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.15);
+            border: none; width: 32px; height: 32px; border-radius: 50%;
+            cursor: pointer; font-size: 16px; color: #fff; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; z-index: 2;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+        .modal-header {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            padding: 20px; color: white; text-align: center;
+            border-bottom: 2px solid #00ff00;
+        }
+        .modal-logo {
+            max-width: 200px; 
+            height: auto; 
+            margin-bottom: 12px;
+            /* Logo branca já otimizada - sem filtros de inversão */
+            filter: drop-shadow(0 0 10px rgba(0,255,0,0.4));
+            transition: transform 0.3s ease;
+        }
+        .modal-logo:hover { transform: scale(1.02); }
+        .modal-header h2 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: 1.5px; }
+        .version-badge {
+            display: inline-block; margin-top: 10px; padding: 4px 12px;
+            background: rgba(0,255,0,0.15); color: #00ff00; border-radius: 20px;
+            font-size: 10px; font-weight: bold; font-family: 'Courier New', monospace;
+            border: 1px solid rgba(0,255,0,0.3);
+        }
+        .modal-body { padding: 25px; }
+        .description { font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 20px; text-align: center; }
+        .credit-section {
+            text-align: center; padding: 18px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px; margin-bottom: 20px; border: 1px dashed #00ff00;
+        }
+        .dev-badge {
+            display: block; font-weight: 800; color: #0a0e27; font-size: 16px; margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+        .copyright { font-size: 12px; color: #666; margin: 0; font-weight: 500; }
+        .tech-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            font-size: 12px; color: #444;
+        }
+        .tech-item { background: #f0f4f8; padding: 10px; border-radius: 8px; border-left: 3px solid #00bfff; }
+        .tech-item strong { color: #0088cc; }
+        .modal-footer { padding: 10px 25px 25px; text-align: center; }
+        .modal-footer .btn-primary { width: 100%; padding: 12px; border: none; cursor: pointer; background: #00ff00; color: #000; font-weight: 700; border-radius: 8px; transition: transform 0.2s; }
+        .modal-footer .btn-primary:hover { transform: translateY(-2px); background: #00cc00; }
     </style>
 </head>
 <body>
@@ -91,7 +156,7 @@
     <div class="status-bar">
         <div class="status-item">🕒 <span id="live-clock">--:--:--</span> UTC</div>
         <div class="status-item">📡 <span id="connection-status">Conectado</span></div>
-        <div class="status-item">⏱️ Atualização em: <span id="next-refresh">60</span>s</div>
+        <div class="status-item">⏱️ Atualização: <span id="next-refresh">60</span>s</div>
         <div class="status-item live-badge">🔴 AO VIVO</div>
     </div>
 
@@ -130,6 +195,7 @@
             <option value="pt">🇧 Português</option>
             <option value="en">🇺 English</option>
         </select>
+        <button class="control-btn" id="btnAbout" onclick="toggleAbout()">ℹ️ Sobre</button>
         <button class="control-btn active" id="btnLight" onclick="setMapMode('light')">☀️ Claro</button>
         <button class="control-btn" id="btnDark" onclick="setMapMode('dark')">🌙 Escuro</button>
     </div>
@@ -162,6 +228,40 @@
     <div class="loading-overlay" id="loading">
         <div class="spinner"></div>
         <div style="font-size: 18px; font-weight: 600;">Inicializando Sistema em Tempo Real...</div>
+    </div>
+
+    <!-- Modal Sobre / Créditos -->
+    <div class="modal-overlay" id="aboutModal" onclick="closeAbout(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeAbout()">✖</button>
+            <div class="modal-header">
+                <!-- LOGO BRANCA OFICIAL VDMTX -->
+                <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" 
+                     alt="Logo VDMTX" 
+                     class="modal-logo" 
+                     onerror="this.style.display='none'">
+                <h2>SEU MUNDO NESTE MOMENTO</h2>
+                <span class="version-badge">v3.0 REAL-TIME ENGINE</span>
+            </div>
+            <div class="modal-body">
+                <p class="description">Plataforma de monitoramento global integrando dados sísmicos, climáticos, solares e econômicos em tempo real. Desenvolvida para análise estratégica, logística e conscientização geográfica.</p>
+                
+                <div class="credit-section">
+                    <span class="dev-badge">🛡️ DESENVOLVIDO POR VDMTX</span>
+                    <p class="copyright">© <span id="currentYear"></span> VDMTX. Todos os direitos reservados.</p>
+                </div>
+
+                <div class="tech-grid">
+                    <div class="tech-item"><strong>🌐 Mapa:</strong> Leaflet + CartoDB</div>
+                    <div class="tech-item"><strong>📡 Dados:</strong> USGS, NOAA, Open-Meteo</div>
+                    <div class="tech-item"><strong>💱 Economia:</strong> CoinGecko, ExchangeRate</div>
+                    <div class="tech-item"><strong>🗺️ Geo:</strong> OpenStreetMap, Wikipedia</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeAbout()">Entendido</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -224,19 +324,17 @@
                 }, 1000);
             }
             scheduleLiveUpdates() {
-                // Intervalos escalonados para evitar rate limits
-                this.intervals.solar = setInterval(() => this.refreshData('solar', fetchSolarActivity), 60000);      // 1 min
-                this.intervals.conflict = setInterval(() => this.refreshData('conflict', fetchConflicts), 120000);   // 2 min
-                this.intervals.disaster = setInterval(() => this.refreshData('disaster', fetchDisasters), 180000);   // 3 min
-                this.intervals.weather = setInterval(() => this.refreshData('weather', fetchWeatherData), 300000);   // 5 min
-                this.intervals.economy = setInterval(this.updateEconomyLight, 30000);                                // 30s
+                this.intervals.solar = setInterval(() => this.refreshData('solar', fetchSolarActivity), 60000);
+                this.intervals.conflict = setInterval(() => this.refreshData('conflict', fetchConflicts), 120000);
+                this.intervals.disaster = setInterval(() => this.refreshData('disaster', fetchDisasters), 180000);
+                this.intervals.weather = setInterval(() => this.refreshData('weather', fetchWeatherData), 300000);
+                this.intervals.economy = setInterval(this.updateEconomyLight, 30000);
             }
             async refreshData(type, fetchFn) {
                 if(!this.isOnline) return;
                 try {
                     const newData = await fetchFn();
                     if(newData && newData.length > 0) {
-                        // Atualização incremental: substitui apenas o tipo, mantém o resto
                         allData = allData.filter(d => d.type !== type).concat(newData);
                         renderMarkers();
                         this.showToast(`🔄 ${type.toUpperCase()} atualizado: ${newData.length} eventos`, 'success');
@@ -299,8 +397,15 @@
             if(mode === 'light') { b1.classList.add('active'); b2.classList.remove('active'); if(currentLayer !== lightTiles) { map.removeLayer(currentLayer); currentLayer = lightTiles.addTo(map); } }
             else { b2.classList.add('active'); b1.classList.remove('active'); if(currentLayer !== darkTiles) { map.removeLayer(currentLayer); currentLayer = darkTiles.addTo(map); } }
         }
-        function addStep(text, isError = false) {
-            const d = document.createElement('div'); d.className = 'loading-step' + (isError ? ' error' : ''); d.textContent = text; document.getElementById('loadingSteps').appendChild(d);
+
+        // --- CONTROLE DO MODAL SOBRE ---
+        function toggleAbout() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+        function closeAbout(e) {
+            if (!e || e.target === document.getElementById('aboutModal')) {
+                document.getElementById('aboutModal').classList.remove('active');
+            }
         }
 
         async function fetchLocalData(lat, lng) {
@@ -360,8 +465,8 @@
                     if(t.includes('ukraine')||t.includes('russia')){lat=48.5;lon=31;loc='Ukraine';}
                     else if(t.includes('gaza')||t.includes('palestine')){lat=31.5;lon=34.5;loc='Gaza';}
                     else if(t.includes('sudan')){lat=15.5;lon=32.5;loc='Sudan';}
-                    else if(t.includes('yemen')){lat=15.5;lon:48.5;loc='Yemen';}
-                    else if(t.includes('syria')){lat=35;lon:38;loc='Syria';}
+                    else if(t.includes('yemen')){lat=15.5;lon=48.5;loc='Yemen';}
+                    else if(t.includes('syria')){lat=35;lon=38;loc='Syria';}
                     return {id:i.id, type:'conflict', severity:'critical', lat, lon, location:loc, title_pt:i.fields.title, title_en:i.fields.title, source:'ReliefWeb', url:i.fields.url, desc_pt:i.fields.summary?.substring(0,100)||'Crise ativa', desc_en:i.fields.summary?.substring(0,100)||'Active crisis'};
                 }).filter(c=>c.lat!==0);
             } catch(e){ return []; }
@@ -373,9 +478,9 @@
                 return Array.from(xml.querySelectorAll('item')).slice(0,8).map(i => {
                     const title = i.querySelector('title').textContent; const link = i.querySelector('link').textContent;
                     let lat=0,lon=0,loc='Unknown';
-                    if(title.includes('Volcano')){lat=-1;lon:30;loc='Volcano';}
-                    else if(title.includes('Flood')){lat=20;lon:80;loc='Flood';}
-                    else if(title.includes('Cyclone')){lat=-20;lon:55;loc='Cyclone';}
+                    if(title.includes('Volcano')){lat=-1;lon=30;loc='Volcano';}
+                    else if(title.includes('Flood')){lat=20;lon=80;loc='Flood';}
+                    else if(title.includes('Cyclone')){lat=-20;lon=55;loc='Cyclone';}
                     return {id:'gd_'+Math.random(), type:'disaster', severity:title.includes('Red')?'critical':'high', lat, lon, location:loc, title_pt:title.split('-')[0]||'Desastre', title_en:title.split('-')[0]||'Disaster', source:'GDACS', url:link, desc_pt:i.querySelector('description')?.textContent?.substring(0,80)||'', desc_en:''};
                 }).filter(d=>d.lat!==0);
             } catch(e){ return []; }
@@ -433,7 +538,11 @@
         }
         function closeEconomicPanel() { document.getElementById('economicPanel').classList.remove('active'); }
 
-        window.onload = loadData;
+        // Init
+        window.onload = function() { 
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+            loadData(); 
+        };
     </script>
 </body>
 </html>
