@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>SEU MUNDO NESTE MOMENTO - Monitoramento Global</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* --- PROTEÇÕES CSS --- */
+        body {
+            margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #f4f4f4; overflow: hidden;
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+        }
+        #map { width: 100%; height: 100vh; z-index: 1; }
+        
+        .watermark {
+            position: fixed; bottom: 12px; right: 15px; z-index: 10000;
+            font-size: 11px; font-weight: 800; color: rgba(0,255,0,0.35);
+            text-shadow: 0 0 4px rgba(0,0,0,0.9); pointer-events: none;
+            font-family: 'Courier New', monospace; letter-spacing: 0.5px;
+        }
+        
+        /* Restante do CSS original mantido */
+        .top-left-panel { position: absolute; top: 20px; left: 20px; z-index: 1000; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 320px; max-height: 90vh; overflow-y: auto; }
+        .panel-title { font-weight: 800; font-size: 16px; margin-bottom: 15px; display: block; color: #1a1a1a; border-bottom: 3px solid #00ff00; padding-bottom: 10px; }
+        .filter-row { margin-bottom: 12px; }
+        .filter-select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; }
+        .filter-select:focus { border-color: #00ff00; outline: none; }
+        .stat-box { background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #cc0000; }
+        .stat-count { font-size: 32px; font-weight: 900; color: #cc0000; display: block; line-height: 1; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; display: block; }
+        .last-update { font-size: 11px; color: #00aa00; margin-top: 10px; font-weight: 600; }
+        .top-controls { position: absolute; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+        .control-btn { padding: 10px 20px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; background: white; }
+        .control-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .control-btn.active { border-color: #00ff00; background: #00ff00; color: #000; box-shadow: 0 0 15px rgba(0,255,0,0.4); }
+        .lang-select { padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .local-data-panel { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 350px; display: none; border-top: 4px solid #00ff00; }
+        .local-data-panel.active { display: block; }
+        .local-title { font-weight: 800; font-size: 18px; margin-bottom: 5px; color: #1a1a1a; }
+        .local-subtitle { font-size: 12px; color: #666; margin-bottom: 15px; }
+        .local-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .local-item { background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 3px solid #00bfff; }
+        .local-label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: bold; }
+        .local-value { font-size: 14px; font-weight: 700; color: #333; margin-top: 3px; }
+        .wiki-box { background: #f0f4f8; padding: 10px; border-radius: 6px; font-size: 12px; line-height: 1.5; color: #444; max-height: 100px; overflow-y: auto; margin-bottom: 15px; }
+        .close-local { position: absolute; top: 10px; right: 10px; cursor: pointer; color: #999; font-size: 16px; }
+        .close-local:hover { color: #333; }
+        .btn-street-view { display: block; width: 100%; padding: 12px; background: linear-gradient(135deg, #4285F4 0%, #34A853 100%); color: white; text-align: center; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; border: none; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(66, 133, 244, 0.3); }
+        .btn-street-view:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(66, 133, 244, 0.4); }
+        .economic-panel { position: absolute; top: 20px; right: 220px; z-index: 1000; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 300px; display: none; }
+        .economic-panel.active { display: block; }
+        .economic-header { font-weight: 800; font-size: 14px; margin-bottom: 15px; color: #1a1a1a; border-bottom: 2px solid #00bfff; padding-bottom: 8px; display: flex; justify-content: space-between; }
+        .close-eco { cursor: pointer; color: #999; font-size: 18px; }
+        .currency-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 8px 0; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #00bfff; }
+        .currency-name { font-weight: 600; font-size: 13px; color: #333; }
+        .currency-value { font-weight: 700; font-size: 14px; color: #00bfff; }
+        .currency-change { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+        .change-down { background: #f8d7da; color: #721c24; }
+        .change-up { background: #d4edda; color: #155724; }
+        .bitcoin-box { background: linear-gradient(135deg, #f7931a 0%, #ff6b00 100%); color: white; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .bitcoin-title { font-size: 12px; opacity: 0.9; margin-bottom: 5px; }
+        .bitcoin-value { font-size: 24px; font-weight: 800; }
+        .bitcoin-change { font-size: 12px; margin-top: 5px; }
+        .news-popup .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); padding: 0; overflow: hidden; max-width: 400px; }
+        .news-popup .leaflet-popup-content { margin: 0; width: 400px !important; }
+        .popup-image { height: 80px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; }
+        .popup-body { padding: 20px; background: white; }
+        .severity-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; color: white; margin-bottom: 10px; }
+        .badge-critical { background: #cc0000; } .badge-high { background: #ff6600; } .badge-medium { background: #ffcc00; color: #333; }
+        .badge-weather { background: #667eea; } .badge-solar { background: #f093fb; }
+        .popup-title { font-size: 18px; font-weight: 700; margin: 0 0 5px 0; color: #1a1a1a; }
+        .popup-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .popup-desc { font-size: 13px; color: #555; line-height: 1.5; margin: 10px 0; }
+        .popup-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-primary { flex: 1; padding: 10px; background: #00ff00; color: #000; text-align: center; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 12px; }
+        .btn-secondary { flex: 1; padding: 10px; background: #f0f0f0; color: #333; text-align: center; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; border: none; }
+        .btn-primary:hover { background: #00cc00; } .btn-secondary:hover { background: #e0e0e0; }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #00ff00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-step { margin: 10px 0; padding: 10px; background: rgba(0,255,0,0.1); border-left: 3px solid #00ff00; border-radius: 4px; font-size: 12px; }
+        .loading-step.error { border-left-color: #ff0000; background: rgba(255,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <!-- Marca d'água fixa -->
+    <div class="watermark">🛡️ DESENVOLVIDO POR VDMTX</div>
+
+    <div class="top-left-panel">
+        <span class="panel-title" data-i18n="title">🌍 SEU MUNDO NESTE MOMENTO</span>
+        <div class="filter-row">
+            <select class="filter-select" id="typeFilter" onchange="filterData()">
+                <option value="all" data-i18n="opt_all_cat">📰 Todas as Categorias</option>
+                <option value="conflict" data-i18n="opt_conflict">⚔️ Situações de Conflito</option>
+                <option value="disaster" data-i18n="opt_disaster">🌋 Desastres Naturais</option>
+                <option value="health" data-i18n="opt_health">🦠 Saúde & Epidemias</option>
+                <option value="weather" data-i18n="opt_weather">🌤️ Clima & Temperatura</option>
+                <option value="solar" data-i18n="opt_solar">☀️ Atividade Solar</option>
+            </select>
+        </div>
+        <div class="filter-row">
+            <select class="filter-select" id="severityFilter" onchange="filterData()">
+                <option value="all" data-i18n="opt_all_sev">⚡ Qualquer Nível</option>
+                <option value="critical" data-i18n="opt_critical">🔴 Crítico</option>
+                <option value="high" data-i18n="opt_high">🟠 Alto</option>
+                <option value="medium" data-i18n="opt_medium">🟡 Médio</option>
+            </select>
+        </div>
+        <div class="stat-box">
+            <span class="stat-count" id="countDisplay">0</span>
+            <span class="stat-label" data-i18n="stat_label">Alertas Ativos Monitorados</span>
+            <div class="last-update" id="lastUpdate">-</div>
+        </div>
+    </div>
+
+    <div class="top-controls">
+        <select class="lang-select" id="langSelect" onchange="changeLanguage(this.value)">
+            <option value="pt">🇧 Português</option>
+            <option value="en">🇺 English</option>
+        </select>
+        <button class="control-btn active" id="btnLight" onclick="setMapMode('light')">☀️ <span data-i18n="map_light">Mapa Claro</span></button>
+        <button class="control-btn" id="btnDark" onclick="setMapMode('dark')">🌙 <span data-i18n="map_dark">Mapa Escuro</span></button>
+    </div>
+
+    <div class="local-data-panel" id="localDataPanel">
+        <span class="close-local" onclick="closeLocalPanel()">✖</span>
+        <div class="local-title" id="localTitle">Carregando...</div>
+        <div class="local-subtitle" id="localSubtitle">Buscando dados...</div>
+        <div class="local-grid">
+            <div class="local-item"><div class="local-label">🌡️ Temperatura</div><div class="local-value" id="localTemp">-</div></div>
+            <div class="local-item"><div class="local-label">💨 Vento</div><div class="local-value" id="localWind">-</div></div>
+            <div class="local-item"><div class="local-label">💰 Moeda</div><div class="local-value" id="localCurrency">-</div></div>
+            <div class="local-item"><div class="local-label">Condição</div><div class="local-value" id="localCondition">-</div></div>
+        </div>
+        <div style="font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #666;">ℹ️ Sobre este local (Wikipedia):</div>
+        <div class="wiki-box" id="localWiki">Buscando resumo...</div>
+        <button class="btn-street-view" onclick="openStreetView()">📸 Ver Street View (360º)</button>
+    </div>
+
+    <div class="economic-panel" id="economicPanel">
+        <div class="economic-header"><span data-i18n="econ_title">💱 Dados Econômicos</span><span class="close-eco" onclick="closeEconomicPanel()">✖</span></div>
+        <div style="margin-bottom: 10px; font-weight: bold; font-size: 12px; color: #666;" id="ecoLocationName">Global</div>
+        <div class="currency-row"><span class="currency-name">🇺🇸 USD (Base)</span><span class="currency-value">1.00</span></div>
+        <div class="currency-row" id="localCurrencyRow"><span class="currency-name" id="localCurrencyName">Moeda Local</span><div style="text-align:right;"><div class="currency-value" id="localCurrencyValue">-</div><span class="currency-change" id="currencyChange">-</span></div></div>
+        <div class="bitcoin-box"><div class="bitcoin-title">₿ Bitcoin (BTC/USD)</div><div class="bitcoin-value" id="btcValue">...</div><div class="bitcoin-change" id="btcChange">...</div></div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div style="font-size: 18px; font-weight: 600;" data-i18n="loading">Buscando dados em tempo real...</div>
+        <div id="loadingSteps" style="margin-top:20px;max-width:400px;"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        /* ==========================================
+           🛡️ CAMADA DE PROTEÇÃO & ASSINATURA VDMTX
+           ========================================== */
+        (function(_vdmtx_protection) {
+            // 1. Console Branding
+            console.log('%c SISTEMA DE MONITORAMENTO GLOBAL v2.0', 'color: #00ff00; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px black;');
+            console.log('%c🔒 Desenvolvido por vdmtx | © ' + new Date().getFullYear() + ' | Todos os direitos reservados.', 'color: #cccccc; font-size: 13px;');
+            console.log('%c⚠️ Engenheira reversa ou modificação não autorizada será registrada.', 'color: #ff4444; font-size: 12px; font-style: italic;');
+
+            // 2. Anti-Copy & Shortcuts
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('keydown', e => {
+                const isDevTools = e.key === 'F12' || 
+                                   (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) || 
+                                   (e.ctrlKey && e.key === 'u');
+                if (isDevTools) {
+                    e.preventDefault();
+                    alert('🔒 Acesso restrito. Sistema desenvolvido e protegido por vdmtx.');
+                }
+            });
+
+            // 3. Anti-Debug (DevTools Detection)
+            setInterval(() => {
+                const widthDiff = window.outerWidth - window.innerWidth > 160;
+                const heightDiff = window.outerHeight - window.innerHeight > 160;
+                if (widthDiff || heightDiff) {
+                    document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#000;color:#0f0;font-family:monospace;text-align:center;padding:20px;"><h1>🚫 FERRAMENTAS DE DESENVOLVEDOR DETECTADAS</h1><p>Sistema protegido por <b>vdmtx</b>.</p><p>Reinicie o navegador em modo normal.</p></div>';
+                }
+            }, 800);
+
+            // 4. Integrity Signature Check
+            window._vdmtx_sig = "vdmtx_global_monitor_v2_" + Date.now();
+            setTimeout(() => {
+                if (!window._vdmtx_sig || !document.querySelector('.watermark')) {
+                    document.body.innerHTML = '<h1 style="color:red;text-align:center;margin-top:20%"> ASSINATURA VDMTX REMOVIDA OU ALTERADA</h1>';
+                }
+            }, 3000);
+        })();
+
+        /* ==========================================
+           LÓGICA DO SISTEMA (MANTIDA INTACTA)
+           ========================================== */
+        const i18n = {
+            pt: {
+                title: '🌍 SEU MUNDO NESTE MOMENTO',
+                opt_all_cat: '📰 Todas as Categorias', opt_conflict: '⚔️ Situações de Conflito',
+                opt_disaster: '🌋 Desastres Naturais', opt_health: '🦠 Saúde & Epidemias',
+                opt_weather: '🌤️ Clima & Temperatura', opt_solar: '☀️ Atividade Solar',
+                opt_all_sev: '⚡ Qualquer Nível', opt_critical: '🔴 Crítico',
+                opt_high: '🟠 Alto', opt_medium: '🟡 Médio',
+                stat_label: 'Alertas Ativos Monitorados', map_light: 'Mapa Claro', map_dark: 'Mapa Escuro',
+                econ_title: '💱 Economia da Região', btn_info: '🔗 ACESSAR FONTE', btn_econ: '💱 Ver Economia',
+                loading: 'Buscando dados em tempo real...', critical: 'CRÍTICO', high: 'ALTO', medium: 'MÉDIO',
+                step_quake: '📡 Buscando terremotos (USGS)...', step_conflict: '📰 Buscando conflitos (ReliefWeb)...',
+                step_health: '🏥 Buscando alertas de saúde...', step_disaster: '🌋 Buscando desastres (GDACS)...',
+                step_weather: '🌤️ Buscando dados climáticos (Open-Meteo)...',
+                step_solar: '☀️ Buscando atividade solar (NOAA)...',
+                step_complete: '✓ Dados carregados com sucesso!', step_error: '✗ Erro na fonte'
+            },
+            en: {
+                title: '🌍 YOUR WORLD RIGHT NOW',
+                opt_all_cat: '📰 All Categories', opt_conflict: '⚔️ Conflict Situations',
+                opt_disaster: '🌋 Natural Disasters', opt_health: '🦠 Health & Epidemics',
+                opt_weather: '🌤️ Weather & Temperature', opt_solar: '☀️ Solar Activity',
+                opt_all_sev: '⚡ Any Level', opt_critical: '🔴 Critical',
+                opt_high: '🟠 High', opt_medium: '🟡 Medium',
+                stat_label: 'Active Alerts Monitored', map_light: 'Light Map', map_dark: 'Dark Map',
+                econ_title: '💱 Regional Economy', btn_info: '🔗 ACCESS SOURCE', btn_econ: '💱 View Economy',
+                loading: 'Fetching real-time data...', critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM',
+                step_quake: '📡 Fetching earthquakes (USGS)...', step_conflict: '📰 Fetching conflicts (ReliefWeb)...',
+                step_health: '🏥 Fetching health alerts...', step_disaster: '🌋 Fetching disasters (GDACS)...',
+                step_weather: '🌤️ Fetching weather data (Open-Meteo)...',
+                step_solar: '☀️ Fetching solar activity (NOAA)...',
+                step_complete: '✓ Data loaded successfully!', step_error: '✗ Source error'
+            }
+        };
+
+        let currentLang = 'pt';
+        var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        var lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
+        var darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+        var currentLayer = lightTiles.addTo(map);
+        var allData = [];
+        var markers = [];
+        var clickMarker = null;
+        var currentClickLat = 0;
+        var currentClickLng = 0;
+
+        const currencyMap = {
+            'Brasil': 'BRL', 'Brazil': 'BRL', 'Ucrânia': 'UAH', 'Ukraine': 'UAH',
+            'Gaza': 'ILS', 'Palestine': 'ILS', 'Israel': 'ILS', 'Sudão': 'SDG', 'Sudan': 'SDG',
+            'Iêmen': 'YER', 'Yemen': 'YER', 'Síria': 'SYP', 'Syria': 'SYP', 'Haiti': 'HTG',
+            'Nigéria': 'NGN', 'Nigeria': 'NGN', 'Myanmar': 'MMK', 'RDC': 'CDF', 'Congo': 'CDF',
+            'Japan': 'JPY', 'China': 'CNY', 'Europe': 'EUR', 'United Kingdom': 'GBP', 'India': 'INR',
+            'USA': 'USD', 'United States': 'USD', 'Russia': 'RUB', 'Germany': 'EUR', 'France': 'EUR',
+            'Australia': 'AUD'
+        };
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
+            document.getElementById('langSelect').value = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) el.textContent = i18n[lang][key];
+            });
+            filterData();
+            updateTime();
+        }
+
+        function setMapMode(mode) {
+            const btnLight = document.getElementById('btnLight');
+            const btnDark = document.getElementById('btnDark');
+            if (mode === 'light') {
+                btnLight.classList.add('active'); btnDark.classList.remove('active');
+                if (currentLayer !== lightTiles) { map.removeLayer(currentLayer); currentLayer = lightTiles.addTo(map); }
+            } else {
+                btnDark.classList.add('active'); btnLight.classList.remove('active');
+                if (currentLayer !== darkTiles) { map.removeLayer(currentLayer); currentLayer = darkTiles.addTo(map); }
+            }
+        }
+
+        function addStep(text, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'loading-step' + (isError ? ' error' : '');
+            div.textContent = text;
+            document.getElementById('loadingSteps').appendChild(div);
+        }
+
+        async function fetchLocalData(lat, lng) {
+            currentClickLat = lat;
+            currentClickLng = lng;
+            const panel = document.getElementById('localDataPanel');
+            panel.classList.add('active');
+            document.getElementById('localTitle').textContent = "Analisando localização...";
+            document.getElementById('localSubtitle').textContent = "Buscando dados via satélite e APIs...";
+            document.getElementById('localTemp').textContent = "-";
+            document.getElementById('localWind').textContent = "-";
+            document.getElementById('localCurrency').textContent = "-";
+            document.getElementById('localCondition').textContent = "-";
+            document.getElementById('localWiki').textContent = "Buscando resumo...";
+            if (clickMarker) map.removeLayer(clickMarker);
+            clickMarker = L.marker([lat, lng]).addTo(map);
+            try {
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${currentLang === 'pt' ? 'pt' : 'en'}`);
+                const geoData = await geoRes.json();
+                const address = geoData.address || {};
+                const country = address.country || "Desconhecido";
+                const city = address.city || address.town || address.village || address.state || "Local Remoto";
+                const state = address.state || "";
+                document.getElementById('localTitle').textContent = `${city}, ${state}`;
+                document.getElementById('localSubtitle').textContent = `${country}`;
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code&timezone=auto`);
+                const weatherData = await weatherRes.json();
+                const current = weatherData.current;
+                const weatherCodes = { 0: 'Céu Limpo', 1: 'Pouco Nublado', 2: 'Parcialmente Nublado', 3: 'Nublado', 61: 'Chuva', 71: 'Neve', 95: 'Tempestade' };
+                const condition = weatherCodes[current.weather_code] || 'Variável';
+                document.getElementById('localTemp').textContent = `${current.temperature_2m}°C`;
+                document.getElementById('localWind').textContent = `${current.wind_speed_10m} km/h`;
+                document.getElementById('localCondition').textContent = condition;
+                const currencyCode = currencyMap[country] || currencyMap[country.replace('United States', 'USA')] || "N/A";
+                document.getElementById('localCurrency').textContent = currencyCode;
+                let searchTerm = city.replace(/\s/g, '_');
+                const wikiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${searchTerm}`);
+                if (wikiRes.ok) {
+                    const wikiData = await wikiRes.json();
+                    document.getElementById('localWiki').textContent = wikiData.extract || "Sem informações disponíveis.";
+                } else {
+                    document.getElementById('localWiki').textContent = "Local pequeno ou sem registro na Wikipedia em inglês.";
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('localTitle').textContent = "Erro ao carregar dados locais";
+            }
+        }
+
+        function openStreetView() {
+            if (currentClickLat && currentClickLng) {
+                const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${currentClickLat},${currentClickLng}&heading=0&pitch=0&fov=80`;
+                window.open(streetViewUrl, '_blank');
+            }
+        }
+
+        function closeLocalPanel() {
+            document.getElementById('localDataPanel').classList.remove('active');
+            if (clickMarker) map.removeLayer(clickMarker);
+        }
+
+        map.on('click', function(e) { fetchLocalData(e.latlng.lat, e.latlng.lng); });
+
+        async function fetchWeatherData() {
+            addStep(i18n[currentLang].step_weather);
+            const cities = [
+                { name: 'São Paulo', lat: -23.55, lon: -46.63, country: 'Brazil' },
+                { name: 'New York', lat: 40.71, lon: -74.01, country: 'USA' },
+                { name: 'London', lat: 51.51, lon: -0.13, country: 'UK' },
+                { name: 'Tokyo', lat: 35.67, lon: 139.65, country: 'Japan' },
+                { name: 'Sydney', lat: -33.87, lon: 151.21, country: 'Australia' },
+                { name: 'Cairo', lat: 30.04, lon: 31.24, country: 'Egypt' },
+                { name: 'Mumbai', lat: 19.08, lon: 72.88, country: 'India' },
+                { name: 'Moscow', lat: 55.75, lon: 37.62, country: 'Russia' }
+            ];
+            const weatherData = [];
+            for (const city of cities) {
+                try {
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
+                    const data = await res.json();
+                    const current = data.current;
+                    let severity = 'medium';
+                    let condition = '';
+                    const temp = current.temperature_2m;
+                    if (temp > 40 || temp < -20) severity = 'critical';
+                    else if (temp > 35 || temp < -10 || current.weather_code > 50) severity = 'high';
+                    const weatherCodes = { 0: 'Céu limpo', 1: 'Principalmente limpo', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Nevoeiro', 51: 'Garoa leve', 61: 'Chuva', 71: 'Neve', 95: 'Tempestade' };
+                    condition = weatherCodes[current.weather_code] || 'Variável';
+                    const hour = new Date().getHours();
+                    const latFactor = Math.abs(city.lat) / 90;
+                    const uvIndex = Math.round((1 - latFactor) * (hour >= 10 && hour <= 16 ? 8 : 3));
+                    weatherData.push({
+                        id: `weather_${city.name}`, type: 'weather', severity: severity,
+                        lat: city.lat, lon: city.lon, location: `${city.name}, ${city.country}`,
+                        title_pt: `Clima: ${temp}°C`, title_en: `Weather: ${temp}°C`,
+                        source: 'Open-Meteo', url: `https://www.open-meteo.com/`,
+                        desc_pt: `${condition}. Vento: ${current.wind_speed_10m} km/h.`,
+                        desc_en: `${condition}. Wind: ${current.wind_speed_10m} km/h.`,
+                        weather: { temp: temp, condition: condition, wind: current.wind_speed_10m, uv: uvIndex, humidity: current.relative_humidity_2m }
+                    });
+                } catch (e) { console.error(`Erro clima ${city.name}:`, e); }
+            }
+            addStep(`✓ ${weatherData.length} estações climáticas`);
+            return weatherData;
+        }
+
+        async function fetchSolarActivity() {
+            addStep(i18n[currentLang].step_solar);
+            try {
+                const [kpRes, windRes] = await Promise.all([
+                    fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'),
+                    fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json')
+                ]);
+                const kpData = await kpRes.json();
+                const windData = await windRes.json();
+                const latestKp = kpData[kpData.length - 1];
+                const latestWind = windData[windData.length - 1];
+                const kpValue = parseFloat(latestKp[1]);
+                const bzValue = parseFloat(latestWind[2]);
+                let severity = 'medium';
+                if (kpValue >= 7) severity = 'critical';
+                else if (kpValue >= 5) severity = 'high';
+                const solarData = [{
+                    id: 'solar_current', type: 'solar', severity: severity, lat: 60, lon: -45,
+                    location: 'Solar Activity Monitor',
+                    title_pt: `Atividade Solar - Kp ${kpValue}`, title_en: `Solar Activity - Kp ${kpValue}`,
+                    source: 'NOAA SWPC', url: 'https://www.swpc.noaa.gov/',
+                    desc_pt: `Índice Kp: ${kpValue}/9. Vento Solar Bz: ${bzValue}nT.`,
+                    desc_en: `Kp Index: ${kpValue}/9. Solar Wind Bz: ${bzValue}nT.`,
+                    solar: { kp: kpValue, bz: bzValue, status: kpValue >= 7 ? 'SEVERE' : kpValue >= 5 ? 'ACTIVE' : 'QUIET' }
+                }];
+                addStep(`✓ Atividade solar monitorada`);
+                return solarData;
+            } catch (e) {
+                addStep(i18n[currentLang].step_error + ': NOAA Solar', true);
+                return [];
+            }
+        }
+
+        async function fetchEarthquakes() {
+            addStep(i18n[currentLang].step_quake);
+            try {
+                const res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
+                const data = await res.json();
+                const quakes = data.features.filter(eq => eq.properties.mag >= 4.5).map(eq => ({
+                    id: eq.id, type: 'disaster',
+                    severity: eq.properties.mag >= 6 ? 'critical' : eq.properties.mag >= 5 ? 'high' : 'medium',
+                    lat: eq.geometry.coordinates[1], lon: eq.geometry.coordinates[0],
+                    location: eq.properties.place,
+                    title_pt: `Terremoto M${eq.properties.mag}`, title_en: `Earthquake M${eq.properties.mag}`,
+                    source: 'USGS', url: eq.properties.url,
+                    desc_pt: `Magnitude ${eq.properties.mag} - Profundidade: ${eq.geometry.coordinates[2]}km`,
+                    desc_en: `Magnitude ${eq.properties.mag} - Depth: ${eq.geometry.coordinates[2]}km`
+                }));
+                addStep(`✓ ${quakes.length} terremotos encontrados`);
+                return quakes;
+            } catch (e) { addStep(i18n[currentLang].step_error + ': USGS', true); return []; }
+        }
+
+        async function fetchConflicts() {
+            addStep(i18n[currentLang].step_conflict);
+            try {
+                const res = await fetch('https://data.reliefweb.int/api/resources/v1/datadownload?limit=30&profile=core&sort[created]=DESC');
+                const data = await res.json();
+                const conflicts = data.data.map(item => {
+                    let lat = 0, lon = 0, loc = 'Global';
+                    const title = item.fields.title.toLowerCase();
+                    if (title.includes('ukraine') || title.includes('russia')) { lat = 48.5; lon = 31.0; loc = 'Ukraine'; }
+                    else if (title.includes('gaza') || title.includes('palestine') || title.includes('israel')) { lat = 31.5; lon = 34.5; loc = 'Gaza'; }
+                    else if (title.includes('sudan')) { lat = 15.5; lon = 32.5; loc = 'Sudan'; }
+                    else if (title.includes('yemen')) { lat = 15.5; lon: 48.5; loc = 'Yemen'; }
+                    else if (title.includes('syria')) { lat = 35.0; lon = 38.0; loc = 'Syria'; }
+                    else if (title.includes('myanmar') || title.includes('burma')) { lat = 19.76; lon = 96.08; loc = 'Myanmar'; }
+                    else if (title.includes('congo') || title.includes('rdc')) { lat = -1.68; lon = 29.23; loc = 'DRC'; }
+                    return {
+                        id: item.id, type: 'conflict', severity: 'critical', lat: lat, lon: lon, location: loc,
+                        title_pt: item.fields.title, title_en: item.fields.title,
+                        source: 'ReliefWeb (UN)', url: item.fields.url,
+                        desc_pt: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Crise humanitária',
+                        desc_en: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Humanitarian crisis'
+                    };
+                }).filter(c => c.lat !== 0);
+                addStep(`✓ ${conflicts.length} conflitos encontrados`);
+                return conflicts;
+            } catch (e) { addStep(i18n[currentLang].step_error + ': ReliefWeb', true); return []; }
+        }
+
+        async function fetchHealth() {
+            addStep(i18n[currentLang].step_health);
+            const healthData = [
+                { id: 'h1', type: 'health', severity: 'high', lat: -15.5, lon: -50.0, location: 'Brazil', title_pt: 'Epidemia de Dengue no Brasil', title_en: 'Dengue Epidemic in Brazil', source: 'PAHO/WHO', url: 'https://www.paho.org/pt/dengue', desc_pt: 'Recorde de casos em 2024. Mais de 5 milhões de casos notificados.', desc_en: 'Record cases in 2024. Over 5 million cases reported.' },
+                { id: 'h2', type: 'health', severity: 'critical', lat: 18.59, lon: -72.34, location: 'Haiti', title_pt: 'Surto de Cólera no Haiti', title_en: 'Cholera Outbreak in Haiti', source: 'WHO', url: 'https://www.who.int/emergencies/disease-outbreak-news', desc_pt: 'Retorno da cólera após 3 anos. Mais de 30 mil casos.', desc_en: 'Cholera returns after 3 years. Over 30,000 cases.' },
+                { id: 'h3', type: 'health', severity: 'high', lat: 6.52, lon: 3.38, location: 'Nigeria', title_pt: 'Malária na Nigéria', title_en: 'Malaria in Nigeria', source: 'WHO Malaria Report', url: 'https://www.who.int/teams/global-malaria-programme/reports', desc_pt: 'Nigéria concentra 27% dos casos globais de malária.', desc_en: 'Nigeria accounts for 27% of global malaria cases.' }
+            ];
+            addStep(`✓ ${healthData.length} alertas de saúde`);
+            return healthData;
+        }
+
+        async function fetchDisasters() {
+            addStep(i18n[currentLang].step_disaster);
+            try {
+                const res = await fetch('https://api.allorigins.win/raw?url=http://www.gdacs.org/gdacs/rss2.aspx');
+                const str = await res.text();
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(str, 'text/xml');
+                const items = xml.querySelectorAll('item');
+                const disasters = Array.from(items).slice(0, 15).map(item => {
+                    const title = item.querySelector('title').textContent;
+                    const link = item.querySelector('link').textContent;
+                    const desc = item.querySelector('description')?.textContent || '';
+                    let lat = 0, lon = 0, loc = 'Unknown';
+                    if (title.includes('Volcano')) { lat = -1; lon = 30; loc = 'Volcanic Region'; }
+                    else if (title.includes('Flood')) { lat = 20; lon = 80; loc = 'Flood Area'; }
+                    else if (title.includes('Cyclone') || title.includes('Storm')) { lat = -20; lon = 55; loc = 'Cyclone Zone'; }
+                    else if (title.includes('Earthquake')) { lat = 35; lon = 139; loc = 'Seismic Zone'; }
+                    return {
+                        id: 'gdacs_' + Math.random(), type: 'disaster', severity: title.includes('Red') ? 'critical' : 'high',
+                        lat: lat, lon: lon, location: loc, title_pt: title.split('-')[0] || 'Desastre Natural', title_en: title.split('-')[0] || 'Natural Disaster',
+                        source: 'GDACS', url: link, desc_pt: desc.substring(0, 150), desc_en: desc.substring(0, 150)
+                    };
+                }).filter(d => d.lat !== 0);
+                addStep(`✓ ${disasters.length} desastres encontrados`);
+                return disasters;
+            } catch (e) { addStep(i18n[currentLang].step_error + ': GDACS', true); return []; }
+        }
+
+        async function loadData() {
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('loadingSteps').innerHTML = '';
+            const [quakes, conflicts, health, disasters, weather, solar] = await Promise.all([
+                fetchEarthquakes(), fetchConflicts(), fetchHealth(), fetchDisasters(), fetchWeatherData(), fetchSolarActivity()
+            ]);
+            allData = [...quakes, ...conflicts, ...health, ...disasters, ...weather, ...solar];
+            addStep(i18n[currentLang].step_complete);
+            document.getElementById('countDisplay').textContent = allData.length;
+            updateTime();
+            filterData();
+            setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 1500);
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeStr = currentLang === 'pt' ? `Última atualização: ${now.toLocaleTimeString('pt-BR')}` : `Last update: ${now.toLocaleTimeString('en-US')}`;
+            document.getElementById('lastUpdate').textContent = timeStr;
+        }
+
+        function renderMarkers() {
+            markers.forEach(marker => { if (map.hasLayer(marker)) map.removeLayer(marker); });
+            markers = [];
+            const typeFilter = document.getElementById('typeFilter').value;
+            const sevFilter = document.getElementById('severityFilter').value;
+            const t = i18n[currentLang];
+            let count = 0;
+            allData.forEach(item => {
+                if (typeFilter !== 'all' && item.type !== typeFilter) return;
+                if (sevFilter !== 'all' && item.severity !== sevFilter) return;
+                const colors = { critical: '#cc0000', high: '#ff6600', medium: '#ffcc00', weather: '#667eea', solar: '#f093fb' };
+                const radius = { critical: 15, high: 11, medium: 7 };
+                const title = currentLang === 'pt' ? item.title_pt : item.title_en;
+                const desc = currentLang === 'pt' ? item.desc_pt : item.desc_en;
+                let icon = '🌋';
+                if (item.type === 'conflict') icon = '⚔️';
+                else if (item.type === 'health') icon = '🦠';
+                else if (item.type === 'weather') icon = '🌤️';
+                else if (item.type === 'solar') icon = '☀️';
+                const circle = L.circleMarker([item.lat, item.lon], {
+                    radius: radius[item.severity] || 10, fillColor: colors[item.type] || colors[item.severity],
+                    color: 'rgba(255,255,255,0.8)', weight: 2, fillOpacity: 0.85
+                }).addTo(map);
+                let popupContent = `
+                    <div class="news-popup">
+                        <div class="popup-image">${icon}</div>
+                        <div class="popup-body">
+                            <span class="severity-badge badge-${item.type === 'weather' ? 'weather' : item.type === 'solar' ? 'solar' : item.severity}">${t[item.severity] || item.type.toUpperCase()}</span>
+                            <div class="popup-title">${title}</div>
+                            <div class="popup-meta">📍 ${item.location} | 📰 ${item.source}</div>
+                            <div class="popup-desc">${desc}</div>
+                `;
+                if (item.weather) {
+                    popupContent += `<div class="weather-info"><div class="weather-title">${t.temp} & ${t.condition}</div><div class="weather-grid"><div class="weather-item"><div class="weather-label">${t.temp}</div><div class="weather-value">${item.weather.temp}°C</div></div><div class="weather-item"><div class="weather-label">${t.uv}</div><div class="weather-value ${item.weather.uv > 5 ? 'uv-high' : item.weather.uv > 2 ? 'uv-moderate' : 'uv-low'}">${item.weather.uv}</div></div><div class="weather-item"><div class="weather-label">${t.wind}</div><div class="weather-value">${item.weather.wind} km/h</div></div><div class="weather-item"><div class="weather-label">${t.condition}</div><div class="weather-value">${item.weather.condition}</div></div></div></div>`;
+                }
+                if (item.solar) {
+                    popupContent += `<div class="weather-info" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="weather-title">${t.solar_activity}</div><div class="weather-grid"><div class="weather-item"><div class="weather-label">${t.kp_index}</div><div class="weather-value">${item.solar.kp}/9</div></div><div class="weather-item"><div class="weather-label">Bz</div><div class="weather-value">${item.solar.bz}nT</div></div></div><div style="margin-top:10px;font-size:12px;text-align:center;font-weight:bold;">STATUS: ${item.solar.status}</div></div>`;
+                }
+                popupContent += `<div class="popup-actions"><a href="${item.url}" target="_blank" class="btn-primary">${t.btn_info}</a><button class="btn-secondary" onclick="showEconomy('${item.location}')">${t.btn_econ}</button></div></div></div>`;
+                circle.bindPopup(popupContent);
+                markers.push(circle);
+                count++;
+            });
+            document.getElementById('countDisplay').textContent = count;
+        }
+
+        function filterData() { renderMarkers(); }
+
+        async function showEconomy(locationName) {
+            const panel = document.getElementById('economicPanel');
+            panel.classList.add('active');
+            document.getElementById('ecoLocationName').textContent = locationName;
+            const currencyCode = currencyMap[locationName] || 'USD';
+            if (currencyCode === 'USD') { document.getElementById('localCurrencyRow').style.display = 'none'; }
+            else {
+                document.getElementById('localCurrencyRow').style.display = 'flex';
+                document.getElementById('localCurrencyName').textContent = `${currencyCode}`;
+                try {
+                    const res = await fetch(`https://open.er-api.com/v6/latest/USD`);
+                    const data = await res.json();
+                    const rate = data.rates[currencyCode];
+                    if (rate) {
+                        document.getElementById('localCurrencyValue').textContent = `${rate.toFixed(2)} ${currencyCode}`;
+                        const changeEl = document.getElementById('currencyChange');
+                        if (rate > 5) { changeEl.textContent = i18n[currentLang].weaker; changeEl.className = 'currency-change change-down'; }
+                        else { changeEl.textContent = i18n[currentLang].stronger; changeEl.className = 'currency-change change-up'; }
+                    }
+                } catch (e) { console.error("Erro câmbio", e); }
+            }
+            try {
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+                const data = await res.json();
+                document.getElementById('btcValue').textContent = `$ ${data.bitcoin.usd.toLocaleString()}`;
+                const change = data.bitcoin.usd_24h_change.toFixed(2);
+                document.getElementById('btcChange').textContent = `${change > 0 ? '▲' : '▼'} ${change}% (24h)`;
+                document.getElementById('btcChange').style.color = change > 0 ? '#90EE90' : '#FFB6C1';
+            } catch (e) { console.error("Erro BTC", e); }
+        }
+
+        function closeEconomicPanel() { document.getElementById('economicPanel').classList.remove('active'); }
+
+        window.onload = function() { loadData(); setInterval(loadData, 300000); };
+    </script>
+</body>
+</html>
