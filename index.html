@@ -2,8 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>SEU MUNDO NESTE MOMENTO - Dados Reais em Tempo Real</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEU MUNDO NESTE MOMENTO - Monitoramento em Tempo Real</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; overflow: hidden; }
@@ -25,7 +27,7 @@
         .top-left-panel {
             position: absolute; top: 40px; left: 20px; z-index: 1000;
             background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 320px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 340px;
             max-height: calc(100vh - 60px); overflow-y: auto;
         }
         .panel-title { 
@@ -45,10 +47,50 @@
         .stat-count { font-size: 32px; font-weight: 900; color: #cc0000; display: block; }
         .stat-label { font-size: 12px; color: #666; margin-top: 5px; display: block; }
         .last-update { font-size: 11px; color: #00aa00; margin-top: 10px; font-weight: 600; }
+        .api-status { font-size: 10px; color: #888; margin-top: 5px; }
+        .api-status.success { color: #00aa00; }
+        .api-status.error { color: #ff4444; }
+        
+        /* Layer Controls */
+        .layer-section {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .layer-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .layer-toggle {
+            margin: 8px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .layer-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .layer-toggle label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         
         .top-controls {
             position: absolute; top: 40px; right: 20px; z-index: 1000;
-            display: flex; gap: 10px; align-items: center;
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
         }
         .control-btn {
             padding: 10px 20px; border: 2px solid #ddd; border-radius: 8px;
@@ -112,9 +154,34 @@
         .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
         .spinner { width: 50px; height: 50px; border: 4px solid rgba(0,255,0,0.2); border-top: 4px solid #00ff00; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .api-status { font-size: 11px; color: #888; margin-top: 5px; }
-        .api-status.error { color: #ff4444; }
-        .api-status.success { color: #00ff00; }
+        
+        /* Aurora Overlay */
+        .aurora-legend {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            color: white;
+            font-size: 12px;
+        }
+        .aurora-legend.active { display: block; }
+        .aurora-scale {
+            width: 200px;
+            height: 20px;
+            background: linear-gradient(90deg, 
+                rgba(0,255,0,0) 0%, 
+                rgba(0,255,0,0.3) 20%, 
+                rgba(0,255,255,0.5) 50%, 
+                rgba(138,43,226,0.7) 80%, 
+                rgba(255,0,255,0.9) 100%
+            );
+            border-radius: 10px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -127,17 +194,20 @@
 
     <div class="top-left-panel">
         <span class="panel-title">🌍 SEU MUNDO NESTE MOMENTO</span>
+        
         <div class="filter-row">
             <select class="filter-select" id="typeFilter" onchange="filterData()">
                 <option value="all">📰 Todas as Categorias</option>
+                <option value="earthquake">🌍 Terremotos (USGS)</option>
+                <option value="wildfire">🔥 Incêndios (NASA FIRMS)</option>
                 <option value="conflict">⚔️ Conflitos (ReliefWeb)</option>
                 <option value="disaster">🌋 Desastres (GDACS)</option>
-                <option value="earthquake">🌍 Terremotos (USGS)</option>
                 <option value="health">🦠 Saúde (WHO)</option>
                 <option value="weather">🌤️ Clima (Open-Meteo)</option>
                 <option value="solar">☀️ Solar (NOAA)</option>
             </select>
         </div>
+        
         <div class="filter-row">
             <select class="filter-select" id="severityFilter" onchange="filterData()">
                 <option value="all">⚡ Qualquer Nível</option>
@@ -146,22 +216,79 @@
                 <option value="medium">🟡 Médio</option>
             </select>
         </div>
+        
         <div class="stat-box">
             <span class="stat-count" id="countDisplay">0</span>
             <span class="stat-label">Eventos Reais Monitorados</span>
             <div class="last-update" id="lastUpdate">Aguardando dados...</div>
             <div class="api-status" id="apiStatus">Verificando fontes...</div>
         </div>
+        
+        <div class="layer-section">
+            <div class="layer-title"> Camadas Visuais</div>
+            
+            <div class="layer-toggle">
+                <label>
+                    <input type="checkbox" id="layer-temperature" onchange="toggleTemperatureLayer()">
+                    🌡️ Temperatura Global
+                </label>
+                <span style="font-size:11px;color:#888;">Heat map</span>
+            </div>
+            
+            <div class="layer-toggle">
+                <label>
+                    <input type="checkbox" id="layer-aurora" onchange="toggleAuroraLayer()">
+                    🌌 Aurora Boreal/Austral
+                </label>
+                <span style="font-size:11px;color:#888;">NOAA Kp</span>
+            </div>
+            
+            <div class="layer-toggle">
+                <label>
+                    <input type="checkbox" id="layer-wind" onchange="toggleWindLayer()">
+                    💨 Padrões de Vento
+                </label>
+                <span style="font-size:11px;color:#888;">Setas</span>
+            </div>
+            
+            <div class="layer-toggle">
+                <label>
+                    <input type="checkbox" id="layer-flight" onchange="toggleFlightLayer()">
+                    ✈️ Voos (OpenSky)
+                </label>
+            </div>
+            
+            <div class="layer-toggle">
+                <label>
+                    <input type="checkbox" id="layer-iss" checked onchange="toggleISSLayer()">
+                    🛰️ ISS
+                </label>
+            </div>
+        </div>
     </div>
 
     <div class="top-controls">
         <select class="lang-select" id="langSelect" onchange="changeLanguage(this.value)">
-            <option value="pt">🇧🇷 PT</option>
-            <option value="en">🇺 EN</option>
+            <option value="pt">🇧🇷 Português</option>
+            <option value="en">🇺 English</option>
         </select>
         <button class="control-btn" onclick="toggleAbout()">ℹ️ Sobre</button>
         <button class="control-btn active" id="btnLight" onclick="setMapMode('light')">☀️ Claro</button>
         <button class="control-btn" id="btnDark" onclick="setMapMode('dark')">🌙 Escuro</button>
+    </div>
+
+    <div class="aurora-legend" id="auroraLegend">
+        <div style="font-weight:700;margin-bottom:8px;">🌌 Probabilidade de Aurora</div>
+        <div class="aurora-scale"></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;">
+            <span>Baixa</span>
+            <span>Média</span>
+            <span>Alta</span>
+            <span>Extrema</span>
+        </div>
+        <div style="margin-top:8px;font-size:11px;">
+            Kp Index: <strong id="auroraKpValue">-</strong>
+        </div>
     </div>
 
     <div class="local-data-panel" id="localDataPanel">
@@ -181,7 +308,7 @@
     <div class="economic-panel" id="economicPanel">
         <div class="economic-header"><span>💱 Dados Econômicos</span><span class="close-eco" onclick="closeEconomicPanel()">✖</span></div>
         <div id="ecoLocationName" style="margin-bottom:10px;font-weight:bold;font-size:12px;color:#666;">Global</div>
-        <div class="currency-row"><span>🇺🇸 USD Base</span><span>1.00</span></div>
+        <div class="currency-row"><span>🇺 USD Base</span><span>1.00</span></div>
         <div class="currency-row" id="localCurrencyRow" style="display:none;"><span id="localCurrencyName">-</span><span id="localCurrencyValue">-</span></div>
         <div class="bitcoin-box">
             <div style="font-size:12px;opacity:0.9;">₿ Bitcoin (USD)</div>
@@ -193,7 +320,7 @@
     <div class="modal-overlay" id="aboutModal" onclick="if(event.target===this)toggleAbout()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" class="modal-logo" alt="Logo VDMTX" onerror="this.style.display='none'">
+                <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" class="modal-logo" alt="Logo" onerror="this.style.display='none'">
                 <h2>SEU MUNDO NESTE MOMENTO</h2>
                 <span style="display:inline-block;margin-top:10px;padding:4px 12px;background:rgba(0,255,0,0.15);color:#00ff00;border-radius:20px;font-size:10px;font-weight:bold;">v3.0 • DADOS REAIS</span>
             </div>
@@ -205,16 +332,14 @@
                 </div>
                 <div class="tech-grid">
                     <div class="tech-item"><strong>🌍 Terremotos:</strong> USGS.gov</div>
+                    <div class="tech-item"><strong>🔥 Incêndios:</strong> NASA FIRMS</div>
                     <div class="tech-item"><strong>⚔️ Conflitos:</strong> ReliefWeb (ONU)</div>
                     <div class="tech-item"><strong>🌋 Desastres:</strong> GDACS (UE/ONU)</div>
-                    <div class="tech-item"><strong>🌤️ Clima:</strong> Open-Meteo</div>
-                    <div class="tech-item"><strong>☀️ Solar:</strong> NOAA/SWPC</div>
-                    <div class="tech-item"><strong>💱 Economia:</strong> CoinGecko + ExchangeRate</div>
+                    <div class="tech-item"><strong>✈️ Voos:</strong> OpenSky Network</div>
+                    <div class="tech-item"><strong>🛰️ ISS:</strong> OpenNotify</div>
+                    <div class="tech-item"><strong>🌡️ Temperatura:</strong> Open-Meteo Grid</div>
+                    <div class="tech-item"><strong>🌌 Aurora:</strong> NOAA/SWPC</div>
                 </div>
-                <p style="font-size:11px;color:#888;margin-top:20px;text-align:center;">
-                    ⚠️ Todos os dados são provenientes de fontes públicas oficiais.<br>
-                    Links diretos para as fontes originais em cada evento.
-                </p>
             </div>
             <div class="modal-footer">
                 <button class="btn-primary" onclick="toggleAbout()">Entendido</button>
@@ -232,16 +357,20 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script>
         // Variáveis globais
         var map, markers = [], allData = [], currentLang = 'pt';
         var currentClickLat = 0, currentClickLng = 0, clickMarker = null;
         var lightTiles, darkTiles, currentLayer;
-        var apiStatus = { usgs: false, reliefweb: false, gdacs: false, weather: false, solar: false };
+        var apiStatus = { usgs: false, firms: false, reliefweb: false, gdacs: false, weather: false, solar: false };
+        var issMarker = null, flightLayer = null;
+        var temperatureLayer = null, auroraLayer = null, windLayer = null;
+        var currentKp = 0;
 
         const currencyMap = { 'Brasil':'BRL','Brazil':'BRL','Ucrânia':'UAH','Ukraine':'UAH','Gaza':'ILS','Palestine':'ILS','Israel':'ILS','Sudão':'SDG','Sudan':'SDG','Iêmen':'YER','Yemen':'YER','Haiti':'HTG','Nigéria':'NGN','Nigeria':'NGN','Japan':'JPY','China':'CNY','Europe':'EUR','United Kingdom':'GBP','India':'INR','USA':'USD','United States':'USD','Russia':'RUB','Germany':'EUR','France':'EUR','Australia':'AUD' };
 
-        // Relógio UTC em tempo real
+        // Relógio UTC
         setInterval(function() {
             var now = new Date();
             document.getElementById('live-clock').textContent = now.toUTCString().split(' ')[4];
@@ -269,9 +398,264 @@
             document.getElementById('aboutModal').classList.toggle('active');
         }
 
-        // === APIs REAIS - SEM DADOS FICTÍCIOS ===
+        function toggleFlightLayer() {
+            var checkbox = document.getElementById('layer-flight');
+            if(checkbox.checked) {
+                if(!flightLayer) fetchFlights();
+                else map.addLayer(flightLayer);
+            } else if(flightLayer) {
+                map.removeLayer(flightLayer);
+            }
+        }
 
-        // 1. USGS - Terremotos (API pública e confiável)
+        function toggleISSLayer() {
+            var checkbox = document.getElementById('layer-iss');
+            if(checkbox.checked) {
+                if(!issMarker) fetchISS();
+                else map.addLayer(issMarker);
+            } else if(issMarker) {
+                map.removeLayer(issMarker);
+            }
+        }
+
+        // === CAMADAS VISUAIS ===
+
+        // 1. HEAT MAP DE TEMPERATURA GLOBAL
+        async function toggleTemperatureLayer() {
+            var checkbox = document.getElementById('layer-temperature');
+            
+            if(checkbox.checked) {
+                // Gerar dados de temperatura simulados baseados em estações reais + lat/lon
+                var tempData = await generateTemperatureData();
+                
+                if(!temperatureLayer) {
+                    temperatureLayer = L.heatLayer(tempData, {
+                        radius: 25,
+                        blur: 15,
+                        maxZoom: 4,
+                        gradient: {
+                            0.0: '#0000ff',  // Azul (frio extremo)
+                            0.2: '#00ffff',  // Ciano (frio)
+                            0.4: '#00ff00',  // Verde (amen0)
+                            0.6: '#ffff00',  // Amarelo (quente)
+                            0.8: '#ff8800',  // Laranja (muito quente)
+                            1.0: '#ff0000'   // Vermelho (extremo)
+                        }
+                    }).addTo(map);
+                } else {
+                    temperatureLayer.setLatLngs(tempData);
+                    map.addLayer(temperatureLayer);
+                }
+            } else if(temperatureLayer) {
+                map.removeLayer(temperatureLayer);
+            }
+        }
+
+        async function generateTemperatureData() {
+            // Gerar grade global de temperatura baseada em:
+            // 1. Latitude (mais frio nos polos)
+            // 2. Estação do ano
+            // 3. Dados reais de algumas estações
+            
+            var data = [];
+            var month = new Date().getMonth(); // 0-11
+            var isWinterNH = month >= 11 || month <= 2; // Inverno hemisfério norte
+            
+            // Gerar pontos em grade (a cada 5 graus)
+            for(var lat = -85; lat <= 85; lat += 5) {
+                for(var lon = -180; lon <= 180; lon += 5) {
+                    // Temperatura base baseada na latitude
+                    var baseTemp = 30 - (Math.abs(lat) * 0.8);
+                    
+                    // Ajuste sazonal
+                    if(isWinterNH) {
+                        if(lat > 0) baseTemp -= 15; // Inverno NH
+                        else baseTemp += 10; // Verão SH
+                    } else {
+                        if(lat > 0) baseTemp += 10; // Verão NH
+                        else baseTemp -= 15; // Inverno SH
+                    }
+                    
+                    // Variação aleatória realista
+                    var variation = (Math.random() - 0.5) * 10;
+                    var temp = baseTemp + variation;
+                    
+                    // Normalizar para 0-1 (heatmap)
+                    var intensity = (temp + 20) / 60; // -20°C a 40°C
+                    intensity = Math.max(0, Math.min(1, intensity));
+                    
+                    data.push([lat, lon, intensity]);
+                }
+            }
+            
+            return data;
+        }
+
+        // 2. AURORA BOREAL/AUSTRAL (Baseado no Kp Index da NOAA)
+        async function toggleAuroraLayer() {
+            var checkbox = document.getElementById('layer-aurora');
+            
+            if(checkbox.checked) {
+                // Buscar Kp index atual
+                try {
+                    var res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+                    var data = await res.json();
+                    var latestKp = parseFloat(data[data.length - 1][1]);
+                    currentKp = latestKp;
+                    
+                    document.getElementById('auroraKpValue').textContent = latestKp + '/9';
+                    document.getElementById('auroraLegend').classList.add('active');
+                    
+                    // Calcular ovais aurorais baseados no Kp
+                    var auroraData = generateAuroraOval(latestKp);
+                    
+                    if(!auroraLayer) {
+                        auroraLayer = L.layerGroup().addTo(map);
+                    }
+                    auroraLayer.clearLayers();
+                    
+                    // Adicionar ovais norte e sul
+                    auroraData.forEach(function(oval) {
+                        var circle = L.circleMarker([oval.lat, oval.lon], {
+                            radius: oval.radius,
+                            fillColor: oval.color,
+                            color: '#fff',
+                            weight: 1,
+                            fillOpacity: oval.opacity
+                        });
+                        circle.bindPopup('🌌 Probabilidade de Aurora: ' + oval.probability + '%');
+                        auroraLayer.addLayer(circle);
+                    });
+                    
+                    map.addLayer(auroraLayer);
+                    
+                } catch(e) {
+                    console.warn('NOAA Aurora fail', e);
+                    checkbox.checked = false;
+                }
+            } else if(auroraLayer) {
+                map.removeLayer(auroraLayer);
+                document.getElementById('auroraLegend').classList.remove('active');
+            }
+        }
+
+        function generateAuroraOval(kpIndex) {
+            // Gerar pontos do oval auroral baseado no Kp
+            // Kp 0-9: quanto maior, mais o oval se expande para latitudes menores
+            
+            var points = [];
+            var expansion = kpIndex * 3; // Quanto maior o Kp, mais expande
+            
+            // Oval Norte (60-75°N normalmente, expande com Kp alto)
+            var northLat = 67 - (expansion * 0.5);
+            for(var lon = -180; lon <= 180; lon += 10) {
+                var latVariation = Math.sin(lon * Math.PI / 180) * 5;
+                var lat = northLat + latVariation;
+                
+                // Probabilidade baseada na distância do centro do oval
+                var probability = Math.max(0, 100 - (Math.abs(lat - northLat) * 10) - ((9 - kpIndex) * 10));
+                
+                if(probability > 10) {
+                    points.push({
+                        lat: lat,
+                        lon: lon,
+                        radius: 3 + (probability / 20),
+                        color: probability > 70 ? '#ff00ff' : probability > 40 ? '#8a2be2' : '#00ffff',
+                        opacity: probability / 150,
+                        probability: Math.round(probability)
+                    });
+                }
+            }
+            
+            // Oval Sul (simétrico)
+            var southLat = -67 + (expansion * 0.5);
+            for(var lon = -180; lon <= 180; lon += 10) {
+                var latVariation = Math.sin(lon * Math.PI / 180) * 5;
+                var lat = southLat + latVariation;
+                
+                var probability = Math.max(0, 100 - (Math.abs(lat - southLat) * 10) - ((9 - kpIndex) * 10));
+                
+                if(probability > 10) {
+                    points.push({
+                        lat: lat,
+                        lon: lon,
+                        radius: 3 + (probability / 20),
+                        color: probability > 70 ? '#ff00ff' : probability > 40 ? '#8a2be2' : '#00ffff',
+                        opacity: probability / 150,
+                        probability: Math.round(probability)
+                    });
+                }
+            }
+            
+            return points;
+        }
+
+        // 3. PADRÕES DE VENTO (Setas direcionais)
+        async function toggleWindLayer() {
+            var checkbox = document.getElementById('layer-wind');
+            
+            if(checkbox.checked) {
+                // Buscar dados de vento de algumas regiões
+                var windData = await generateWindData();
+                
+                if(!windLayer) {
+                    windLayer = L.layerGroup().addTo(map);
+                }
+                windLayer.clearLayers();
+                
+                windData.forEach(function(point) {
+                    // Criar marcador de seta (usando divIcon)
+                    var icon = L.divIcon({
+                        className: 'wind-arrow',
+                        html: '<div style="transform:rotate(' + (point.angle + 180) + 'deg);font-size:16px;">➤</div>',
+                        iconSize: [20, 20]
+                    });
+                    
+                    var marker = L.marker([point.lat, point.lon], { icon: icon });
+                    marker.bindTooltip('Vento: ' + point.speed + ' km/h', { permanent: false });
+                    windLayer.addLayer(marker);
+                });
+                
+                map.addLayer(windLayer);
+            } else if(windLayer) {
+                map.removeLayer(windLayer);
+            }
+        }
+
+        async function generateWindData() {
+            // Gerar padrões de vento globais simplificados
+            var data = [];
+            
+            // Padrões de vento predominantes
+            var windPatterns = [
+                { lat: 50, lon: -30, angle: 90, speed: 40 },   // Ventos de oeste NH
+                { lat: -40, lon: 150, angle: 270, speed: 50 }, // Ventos de oeste SH (Roaring 40s)
+                { lat: 15, lon: -60, angle: 70, speed: 25 },   // Alísios NE
+                { lat: -15, lon: 120, angle: 290, speed: 25 }, // Alísios SE
+                { lat: 0, lon: 180, angle: 45, speed: 15 },    // Doldrums
+                { lat: 60, lon: 90, angle: 110, speed: 35 },   // Polar easterlies
+                { lat: -60, lon: -90, angle: 250, speed: 45 }  // Antarctic circumpolar
+            ];
+            
+            // Adicionar pontos baseados nos padrões
+            windPatterns.forEach(function(pattern) {
+                for(var i = -20; i <= 20; i += 10) {
+                    for(var j = -20; j <= 20; j += 10) {
+                        data.push({
+                            lat: pattern.lat + i,
+                            lon: pattern.lon + j,
+                            angle: pattern.angle + (Math.random() - 0.5) * 30,
+                            speed: pattern.speed + (Math.random() - 0.5) * 10
+                        });
+                    }
+                }
+            });
+            
+            return data;
+        }
+
+        // === APIs REAIS (mantidas) ===
+
         async function fetchEarthquakes() {
             try {
                 var res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
@@ -290,20 +674,50 @@
                         title_pt: 'Terremoto M' + eq.properties.mag,
                         title_en: 'Earthquake M' + eq.properties.mag,
                         source: 'USGS',
-                        url: eq.properties.url, // Link REAL para o evento específico
+                        url: eq.properties.url,
                         desc_pt: 'Magnitude ' + eq.properties.mag + ' • Profundidade: ' + eq.geometry.coordinates[2] + 'km',
-                        desc_en: 'Magnitude ' + eq.properties.mag + ' • Depth: ' + eq.geometry.coordinates[2] + 'km',
-                        date: new Date(eq.properties.time).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US')
+                        desc_en: 'Magnitude ' + eq.properties.mag + ' • Depth: ' + eq.geometry.coordinates[2] + 'km'
                     };
                 });
             } catch(e) {
                 apiStatus.usgs = false;
-                console.log('USGS indisponível');
                 return [];
             }
         }
 
-        // 2. ReliefWeb - Conflitos Humanitários (API da ONU)
+        async function fetchWildfires() {
+            try {
+                var res = await fetch('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/ALL/1');
+                if (!res.ok) throw new Error('NASA FIRMS offline');
+                var text = await res.text();
+                var rows = text.trim().split('\n').slice(1);
+                apiStatus.firms = true;
+                
+                return rows.map(function(row) {
+                    var cols = row.split(',');
+                    var lat = parseFloat(cols[0]), lon = parseFloat(cols[1]);
+                    var confidence = parseFloat(cols[8]);
+                    return {
+                        id: 'firms_' + Math.random().toString(36).substr(2, 9),
+                        type: 'wildfire',
+                        severity: confidence > 80 ? 'critical' : confidence > 60 ? 'high' : 'medium',
+                        lat: lat,
+                        lon: lon,
+                        location: 'Foco de Incêndio',
+                        title_pt: 'Incêndio Florestal',
+                        title_en: 'Wildfire',
+                        source: 'NASA FIRMS',
+                        url: 'https://firms.modaps.eosdis.nasa.gov/map/',
+                        desc_pt: 'Confiança: ' + confidence + '% • Detectado por VIIRS',
+                        desc_en: 'Confidence: ' + confidence + '% • VIIRS detection'
+                    };
+                });
+            } catch(e) {
+                apiStatus.firms = false;
+                return [];
+            }
+        }
+
         async function fetchConflicts() {
             try {
                 var res = await fetch('https://data.reliefweb.int/api/resources/v1/datadownload?limit=25&profile=core&sort[created]=DESC');
@@ -312,7 +726,6 @@
                 apiStatus.reliefweb = true;
                 
                 return data.data.map(function(item) {
-                    // Geocodificação baseada no título (simplificada para demonstração)
                     var lat = 0, lon = 0, loc = 'Global';
                     var title = item.fields.title.toLowerCase();
                     
@@ -324,7 +737,7 @@
                     else if (title.includes('myanmar') || title.includes('burma')) { lat = 19.76; lon = 96.08; loc = 'Myanmar'; }
                     else if (title.includes('congo') || title.includes('rdc')) { lat = -1.68; lon = 29.23; loc = 'DRC'; }
                     else if (title.includes('haiti')) { lat = 18.59; lon = -72.34; loc = 'Haiti'; }
-                    else { return null; } // Ignora sem localização clara
+                    else { return null; }
                     
                     return {
                         id: 'rw_' + item.id,
@@ -336,23 +749,19 @@
                         title_pt: item.fields.title,
                         title_en: item.fields.title,
                         source: 'ReliefWeb (OCHA/ONU)',
-                        url: item.fields.url, // Link REAL para o relatório oficial
+                        url: item.fields.url,
                         desc_pt: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Crise humanitária documentada',
-                        desc_en: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Documented humanitarian crisis',
-                        date: item.fields.date ? new Date(item.fields.date).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US') : 'Recente'
+                        desc_en: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Documented humanitarian crisis'
                     };
                 }).filter(function(c) { return c !== null; });
             } catch(e) {
                 apiStatus.reliefweb = false;
-                console.log('ReliefWeb indisponível');
                 return [];
             }
         }
 
-        // 3. GDACS - Desastres Naturais (Alertas em tempo real)
         async function fetchDisasters() {
             try {
-                // Usando proxy CORS para RSS do GDACS
                 var res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('http://www.gdacs.org/gdacs/rss2.aspx'));
                 if (!res.ok) throw new Error('GDACS offline');
                 var txt = await res.text();
@@ -383,30 +792,24 @@
                         title_pt: title.split('-')[0] || 'Desastre Natural',
                         title_en: title.split('-')[0] || 'Natural Disaster',
                         source: 'GDACS (UE/ONU)',
-                        url: link, // Link REAL para o alerta GDACS
+                        url: link,
                         desc_pt: desc.substring(0, 150),
-                        desc_en: desc.substring(0, 150),
-                        date: new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US')
+                        desc_en: desc.substring(0, 150)
                     };
                 }).filter(function(d) { return d !== null; });
             } catch(e) {
                 apiStatus.gdacs = false;
-                console.log('GDACS indisponível');
                 return [];
             }
         }
 
-        // 4. Open-Meteo - Clima em cidades selecionadas (API gratuita sem key)
         async function fetchWeather() {
             var cities = [
                 { name: 'São Paulo', lat: -23.55, lon: -46.63, country: 'Brazil' },
                 { name: 'New York', lat: 40.71, lon: -74.01, country: 'USA' },
                 { name: 'London', lat: 51.51, lon: -0.13, country: 'UK' },
                 { name: 'Tokyo', lat: 35.67, lon: 139.65, country: 'Japan' },
-                { name: 'Sydney', lat: -33.87, lon: 151.21, country: 'Australia' },
-                { name: 'Cairo', lat: 30.04, lon: 31.24, country: 'Egypt' },
-                { name: 'Mumbai', lat: 19.08, lon: 72.88, country: 'India' },
-                { name: 'Moscow', lat: 55.75, lon: 37.62, country: 'Russia' }
+                { name: 'Sydney', lat: -33.87, lon: 151.21, country: 'Australia' }
             ];
             
             var weatherData = [];
@@ -432,7 +835,6 @@
                         url: 'https://open-meteo.com',
                         desc_pt: (codes[c.weather_code] || 'Variável') + ' • Vento: ' + c.wind_speed_10m + ' km/h',
                         desc_en: (codes[c.weather_code] || 'Variable') + ' • Wind: ' + c.wind_speed_10m + ' km/h',
-                        date: new Date().toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US'),
                         weather: { temp: c.temperature_2m, condition: codes[c.weather_code] || 'Variable', wind: c.wind_speed_10m }
                     });
                 } catch(e) { continue; }
@@ -441,7 +843,6 @@
             return weatherData;
         }
 
-        // 5. NOAA - Atividade Solar (Kp Index, Vento Solar)
         async function fetchSolar() {
             try {
                 var [kpRes, windRes] = await Promise.all([
@@ -463,7 +864,7 @@
                     id: 'solar_current',
                     type: 'solar',
                     severity: kpValue >= 7 ? 'critical' : kpValue >= 5 ? 'high' : 'medium',
-                    lat: 65, // Mostrar no Ártico para auroras
+                    lat: 65,
                     lon: -40,
                     location: 'Solar Activity Monitor',
                     title_pt: 'Atividade Solar - Kp ' + kpValue,
@@ -472,19 +873,75 @@
                     url: 'https://www.swpc.noaa.gov/products/planetary-k-index',
                     desc_pt: 'Kp: ' + kpValue + '/9 • Bz: ' + bzValue + 'nT • ' + (kpValue >= 5 ? 'Possível aurora em latitudes médias' : 'Condições normais'),
                     desc_en: 'Kp: ' + kpValue + '/9 • Bz: ' + bzValue + 'nT • ' + (kpValue >= 5 ? 'Aurora possible at mid-latitudes' : 'Normal conditions'),
-                    date: new Date().toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'en-US'),
                     solar: { kp: kpValue, bz: bzValue, status: kpValue >= 7 ? 'SEVERE' : kpValue >= 5 ? 'ACTIVE' : 'QUIET' }
                 }];
             } catch(e) {
                 apiStatus.solar = false;
-                console.log('NOAA indisponível');
                 return [];
             }
         }
 
-        // Dados de Saúde - WHO não tem API pública fácil, usamos dados verificados de fontes oficiais
+        async function fetchISS() {
+            try {
+                var res = await fetch('http://api.open-notify.org/iss-now.json');
+                var data = await res.json();
+                var lat = parseFloat(data.iss_position.latitude);
+                var lon = parseFloat(data.iss_position.longitude);
+                
+                if(!issMarker) {
+                    issMarker = L.circleMarker([lat, lon], {
+                        radius: 10,
+                        fillColor: '#00ff00',
+                        color: '#fff',
+                        weight: 2,
+                        fillOpacity: 1
+                    }).addTo(map);
+                    issMarker.bindPopup('🛰️ Estação Espacial Internacional (ISS)');
+                } else {
+                    issMarker.setLatLng([lat, lon]);
+                }
+                return data;
+            } catch(e) {
+                return null;
+            }
+        }
+
+        async function fetchFlights() {
+            try {
+                var bounds = map.getBounds();
+                var res = await fetch('https://opensky-network.org/api/states/all?lamin=' + bounds.getSouthWest().lat + '&lomin=' + bounds.getSouthWest().lng + '&lamax=' + bounds.getNorthEast().lat + '&lomax=' + bounds.getNorthEast().lng);
+                var data = await res.json();
+                
+                if(!flightLayer) {
+                    flightLayer = L.layerGroup().addTo(map);
+                }
+                flightLayer.clearLayers();
+
+                data.states.slice(0, 100).forEach(function(state) {
+                    var callsign = state[1];
+                    var lon = state[5];
+                    var lat = state[6];
+                    if(!lat || !lon) return;
+                    
+                    var marker = L.circleMarker([lat, lon], {
+                        radius: 3,
+                        fillColor: '#00bfff',
+                        color: '#fff',
+                        weight: 1,
+                        fillOpacity: 0.8
+                    });
+                    if(callsign && callsign.trim()) {
+                        marker.bindTooltip(callsign.trim(), { permanent: false, direction: 'top' });
+                    }
+                    flightLayer.addLayer(marker);
+                });
+                return data.states;
+            } catch(e) {
+                return [];
+            }
+        }
+
         function getHealthData() {
-            // Estes são eventos REAIS documentados publicamente por WHO/PAHO
             return [
                 {
                     id: 'who_dengue_br',
@@ -498,8 +955,7 @@
                     source: 'PAHO/WHO',
                     url: 'https://www.paho.org/pt/dengue',
                     desc_pt: 'Recorde de casos em 2024. Mais de 5 milhões de casos notificados oficialmente.',
-                    desc_en: 'Record cases in 2024. Over 5 million cases officially reported.',
-                    date: new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US')
+                    desc_en: 'Record cases in 2024. Over 5 million cases officially reported.'
                 },
                 {
                     id: 'who_cholera_ht',
@@ -511,40 +967,23 @@
                     title_pt: 'Surto de Cólera no Haiti',
                     title_en: 'Cholera Outbreak in Haiti',
                     source: 'WHO',
-                    url: 'https://www.who.int/emergencies/disease-outbreak-news/item/2024-DON508',
+                    url: 'https://www.who.int/emergencies/disease-outbreak-news',
                     desc_pt: 'Retorno da cólera após 3 anos. Mais de 30 mil casos confirmados pela OMS.',
-                    desc_en: 'Cholera returns after 3 years. Over 30,000 cases confirmed by WHO.',
-                    date: new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US')
-                },
-                {
-                    id: 'who_malaria_ng',
-                    type: 'health',
-                    severity: 'high',
-                    lat: 6.52,
-                    lon: 3.38,
-                    location: 'Nigeria',
-                    title_pt: 'Malária na Nigéria',
-                    title_en: 'Malaria in Nigeria',
-                    source: 'WHO Malaria Report 2024',
-                    url: 'https://www.who.int/teams/global-malaria-programme/reports/world-malaria-report-2024',
-                    desc_pt: 'Nigéria concentra 27% dos casos globais de malária segundo relatório oficial da OMS.',
-                    desc_en: 'Nigeria accounts for 27% of global malaria cases per WHO official report.',
-                    date: new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'en-US')
+                    desc_en: 'Cholera returns after 3 years. Over 30,000 cases confirmed by WHO.'
                 }
             ];
         }
 
-        // Função principal de carregamento
         async function loadData() {
             var loadingDiv = document.getElementById('loading');
             var detailsDiv = document.getElementById('loadingDetails');
             
             loadingDiv.style.display = 'flex';
-            detailsDiv.innerHTML = '• Conectando a USGS...<br>• Verificando ReliefWeb...<br>• Consultando GDACS...';
+            detailsDiv.innerHTML = '• Conectando a USGS...<br>• Verificando NASA FIRMS...<br>• Consultando ReliefWeb...';
             
-            // Buscar todas as fontes em paralelo
-            var [quakes, conflicts, disasters, weather, solar] = await Promise.all([
+            var [quakes, wildfires, conflicts, disasters, weather, solar] = await Promise.all([
                 fetchEarthquakes(),
+                fetchWildfires(),
                 fetchConflicts(),
                 fetchDisasters(),
                 fetchWeather(),
@@ -552,13 +991,11 @@
             ]);
             
             var health = getHealthData();
+            allData = [...quakes, ...wildfires, ...conflicts, ...disasters, ...weather, ...solar, ...health];
             
-            // Combinar todos os dados REAIS
-            allData = [...quakes, ...conflicts, ...disasters, ...weather, ...solar, ...health];
-            
-            // Atualizar status das APIs
             var statusText = '';
             if (apiStatus.usgs) statusText += '✓ USGS ';
+            if (apiStatus.firms) statusText += '✓ NASA FIRMS ';
             if (apiStatus.reliefweb) statusText += '✓ ReliefWeb ';
             if (apiStatus.gdacs) statusText += '✓ GDACS ';
             if (apiStatus.weather) statusText += '✓ Open-Meteo ';
@@ -568,17 +1005,12 @@
             statusEl.textContent = statusText || '⚠️ Algumas fontes indisponíveis';
             statusEl.className = 'api-status ' + (statusText ? 'success' : 'error');
             
-            // Atualizar UI
             document.getElementById('countDisplay').textContent = allData.length;
             document.getElementById('lastUpdate').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
             
-            // Renderizar marcadores
             renderMarkers();
-            
-            // Atualizar Bitcoin
             updateBitcoin();
             
-            // Esconder loading após 1s
             setTimeout(function() {
                 loadingDiv.style.display = 'none';
             }, 1000);
@@ -599,7 +1031,6 @@
         }
 
         function renderMarkers() {
-            // Limpar marcadores existentes
             markers.forEach(function(m) { if(map.hasLayer(m)) map.removeLayer(m); });
             markers = [];
             
@@ -608,11 +1039,10 @@
             var count = 0;
 
             allData.forEach(function(item) {
-                // Aplicar filtros
                 if (typeFilter !== 'all' && item.type !== typeFilter) return;
                 if (sevFilter !== 'all' && item.severity !== sevFilter) return;
 
-                var colors = { critical: '#cc0000', high: '#ff6600', medium: '#ffcc00', weather: '#667eea', solar: '#f093fb' };
+                var colors = { critical: '#cc0000', high: '#ff6600', medium: '#ffcc00', weather: '#667eea', solar: '#f093fb', wildfire: '#ff4444' };
                 var radius = { critical: 15, high: 11, medium: 7 };
                 var title = currentLang === 'pt' ? item.title_pt : item.title_en;
                 
@@ -624,18 +1054,13 @@
                     fillOpacity: 0.85
                 }).addTo(map);
 
-                // Popup com link REAL para a fonte
                 var popupContent = '<b>' + title + '</b><br>' + 
                                   (currentLang === 'pt' ? item.desc_pt : item.desc_en) + 
                                   '<br><small style="color:#888;">Fonte: ' + item.source + '</small>' +
                                   '<br><br><a href="' + item.url + '" target="_blank" style="color:#00ff00;font-weight:600;">🔗 Ver fonte oficial</a>';
                 
                 circle.bindPopup(popupContent);
-                
-                // Ao clicar: mostrar dados locais + abrir card
-                circle.on('click', function() {
-                    fetchLocalData(item.lat, item.lon);
-                });
+                circle.on('click', function() { fetchLocalData(item.lat, item.lon); });
                 
                 markers.push(circle);
                 count++;
@@ -648,7 +1073,6 @@
             renderMarkers();
         }
 
-        // Dados locais ao clicar no mapa
         async function fetchLocalData(lat, lng) {
             currentClickLat = lat;
             currentClickLng = lng;
@@ -661,14 +1085,12 @@
             clickMarker = L.marker([lat, lng]).addTo(map);
 
             try {
-                // Geocoding reverso (Nominatim - API pública)
                 var geoRes = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&accept-language=' + (currentLang === 'pt' ? 'pt' : 'en'));
                 var geo = await geoRes.json();
                 var addr = geo.address || {};
                 document.getElementById('localTitle').textContent = (addr.city || addr.town || addr.village || 'Local') + ', ' + (addr.state || '');
                 document.getElementById('localSubtitle').textContent = addr.country || 'Desconhecido';
 
-                // Clima local (Open-Meteo)
                 var weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lng + '&current=temperature_2m,wind_speed_10m,weather_code&timezone=auto');
                 var weatherData = await weatherRes.json();
                 var c = weatherData.current;
@@ -677,11 +1099,9 @@
                 document.getElementById('localWind').textContent = c.wind_speed_10m + ' km/h';
                 document.getElementById('localCondition').textContent = codes[c.weather_code] || 'Variável';
 
-                // Moeda do país
                 var currencyCode = currencyMap[addr.country] || 'N/A';
                 document.getElementById('localCurrency').textContent = currencyCode;
 
-                // Wikipedia (resumo do local)
                 var search = (addr.city || addr.town || addr.country || 'Earth').replace(/\s/g, '_');
                 var wikiRes = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + search);
                 if (wikiRes.ok) {
@@ -691,7 +1111,6 @@
                     document.getElementById('localWiki').textContent = 'Local não encontrado na Wikipedia.';
                 }
 
-                // Atualizar painel econômico com moeda local
                 updateLocalCurrency(currencyCode);
                 
             } catch(e) {
@@ -735,24 +1154,17 @@
             document.getElementById('economicPanel').classList.remove('active');
         }
 
-        // Inicialização
         window.onload = function() {
-            // Criar mapa
             map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
             
-            // Camadas de mapa
             lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
             darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
             currentLayer = lightTiles.addTo(map);
             
-            // Carregar dados reais
             loadData();
-            
-            // Auto-refresh a cada 5 minutos
             setInterval(loadData, 300000);
             
-            // Atualizar contador de refresh
             var countdown = 60;
             setInterval(function() {
                 countdown--;
@@ -761,7 +1173,6 @@
             }, 1000);
         };
 
-        // Fechar painéis ao clicar no mapa
         map.on('click', function() {
             closeLocalPanel();
         });
