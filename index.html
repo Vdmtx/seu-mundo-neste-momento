@@ -1,1181 +1,1564 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEU MUNDO NESTE MOMENTO - Monitoramento em Tempo Real</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css" />
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; overflow: hidden; }
-        #map { width: 100%; height: 100vh; z-index: 1; }
-        
-        .status-bar {
-            position: fixed; top: 0; left: 0; right: 0; height: 32px; 
-            background: #0a0e17; color: #00ff00; display: flex; align-items: center; 
-            justify-content: space-between; padding: 0 20px; font-size: 11px; 
-            z-index: 10000; font-family: 'Courier New', monospace;
-        }
-        .status-item { display: flex; align-items: center; gap: 6px; }
-        .live-badge { 
-            background: #ff0000; color: white; padding: 2px 8px; border-radius: 12px; 
-            font-weight: bold; animation: pulse 1.5s infinite; font-size: 10px;
-        }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
-        .top-left-panel {
-            position: absolute; top: 40px; left: 20px; z-index: 1000;
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 340px;
-            max-height: calc(100vh - 60px); overflow-y: auto;
-        }
-        .panel-title { 
-            font-weight: 800; font-size: 16px; margin-bottom: 15px; display: block; 
-            color: #1a1a1a; border-bottom: 3px solid #00ff00; padding-bottom: 10px;
-        }
-        .filter-row { margin-bottom: 12px; }
-        .filter-select {
-            width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px;
-            font-size: 13px; background: #fff; cursor: pointer;
-        }
-        .stat-box {
-            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
-            padding: 15px; border-radius: 8px; margin-top: 15px;
-            border-left: 4px solid #cc0000;
-        }
-        .stat-count { font-size: 32px; font-weight: 900; color: #cc0000; display: block; }
-        .stat-label { font-size: 12px; color: #666; margin-top: 5px; display: block; }
-        .last-update { font-size: 11px; color: #00aa00; margin-top: 10px; font-weight: 600; }
-        .api-status { font-size: 10px; color: #888; margin-top: 5px; }
-        .api-status.success { color: #00aa00; }
-        .api-status.error { color: #ff4444; }
-        
-        /* Layer Controls */
-        .layer-section {
-            margin-top: 15px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        .layer-title {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #666;
-            margin-bottom: 10px;
-        }
-        .layer-toggle {
-            margin: 8px 0;
-            padding: 10px;
-            background: white;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            font-size: 13px;
-        }
-        .layer-toggle input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-        .layer-toggle label {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .top-controls {
-            position: absolute; top: 40px; right: 20px; z-index: 1000;
-            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-        }
-        .control-btn {
-            padding: 10px 20px; border: 2px solid #ddd; border-radius: 8px;
-            cursor: pointer; font-weight: 700; font-size: 13px; background: white;
-        }
-        .control-btn.active { border-color: #00ff00; background: #00ff00; color: #000; }
-        .lang-select { padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-weight: 700; cursor: pointer; }
-        
-        .local-data-panel {
-            position: absolute; bottom: 20px; left: 20px; z-index: 1000;
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 350px; display: none;
-            border-top: 4px solid #00ff00;
-        }
-        .local-data-panel.active { display: block; }
-        .local-title { font-weight: 800; font-size: 18px; margin-bottom: 5px; }
-        .local-subtitle { font-size: 12px; color: #666; margin-bottom: 15px; }
-        .local-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .local-item { background: #f8f9fa; padding: 10px; border-radius: 6px; }
-        .local-label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: bold; }
-        .local-value { font-size: 14px; font-weight: 700; color: #333; margin-top: 3px; }
-        .wiki-box { background: #f0f4f8; padding: 10px; border-radius: 6px; font-size: 12px; max-height: 100px; overflow-y: auto; margin-bottom: 15px; }
-        .close-local { position: absolute; top: 10px; right: 10px; cursor: pointer; color: #999; font-size: 16px; }
-        .btn-street-view { display: block; width: 100%; padding: 12px; background: linear-gradient(135deg, #4285F4, #34A853); color: white; text-align: center; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; }
-        
-        .economic-panel {
-            position: absolute; top: 40px; right: 20px; z-index: 1000;
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 300px; display: none;
-        }
-        .economic-panel.active { display: block; }
-        .economic-header { font-weight: 800; font-size: 14px; margin-bottom: 15px; border-bottom: 2px solid #00bfff; padding-bottom: 8px; display: flex; justify-content: space-between; }
-        .close-eco { cursor: pointer; color: #999; font-size: 18px; }
-        .currency-row { display: flex; justify-content: space-between; padding: 10px; margin: 8px 0; background: #f8f9fa; border-radius: 6px; }
-        .bitcoin-box { background: linear-gradient(135deg, #f7931a, #ff6b00); color: white; padding: 15px; border-radius: 8px; margin-top: 15px; }
-        
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 20000;
-            display: none; align-items: center; justify-content: center;
-            backdrop-filter: blur(6px);
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-content {
-            background: #fff; width: 92%; max-width: 500px; border-radius: 14px;
-            overflow: hidden; position: relative;
-        }
-        .modal-header {
-            background: linear-gradient(135deg, #0a0e27, #1a1f3a);
-            padding: 20px; color: white; text-align: center;
-            border-bottom: 2px solid #00ff00;
-        }
-        .modal-logo { max-width: 200px; height: auto; margin-bottom: 12px; }
-        .modal-body { padding: 25px; }
-        .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px; margin-top: 20px; }
-        .tech-item { background: #f0f4f8; padding: 10px; border-radius: 8px; }
-        .modal-footer { padding: 20px; text-align: center; }
-        .btn-primary { width: 100%; padding: 12px; background: #00ff00; color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
-        
-        .watermark { position: fixed; bottom: 10px; right: 15px; z-index: 10000; font-size: 10px; font-weight: 800; color: rgba(0,255,0,0.4); pointer-events: none; }
-        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
-        .spinner { width: 50px; height: 50px; border: 4px solid rgba(0,255,0,0.2); border-top: 4px solid #00ff00; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Aurora Overlay */
-        .aurora-legend {
-            position: absolute;
-            bottom: 80px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            padding: 15px;
-            border-radius: 8px;
-            z-index: 1000;
-            display: none;
-            color: white;
-            font-size: 12px;
-        }
-        .aurora-legend.active { display: block; }
-        .aurora-scale {
-            width: 200px;
-            height: 20px;
-            background: linear-gradient(90deg, 
-                rgba(0,255,0,0) 0%, 
-                rgba(0,255,0,0.3) 20%, 
-                rgba(0,255,255,0.5) 50%, 
-                rgba(138,43,226,0.7) 80%, 
-                rgba(255,0,255,0.9) 100%
-            );
-            border-radius: 10px;
-            margin: 10px 0;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O SEU MUNDO AGORA • Monitoramento Global em Tempo Real</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060c18;
+  --bg2:       #0b1525;
+  --bg3:       #111e33;
+  --border:    rgba(0,200,150,0.18);
+  --green:     #00e5a0;
+  --green-dim: rgba(0,229,160,0.12);
+  --blue:      #38b6ff;
+  --red:       #ff3b5c;
+  --orange:    #ff8c2a;
+  --yellow:    #ffd43b;
+  --text:      #c8d6e5;
+  --text-dim:  #6a7d95;
+  --mono:      'IBM Plex Mono', monospace;
+  --sans:      'Syne', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+/* ─── STATUS BAR ─── */
+#status-bar {
+  position: fixed; top:0; left:0; right:0; height:30px;
+  background: rgba(6,12,24,0.96);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  z-index: 9000;
+  backdrop-filter: blur(8px);
+}
+#status-bar .s-left { display:flex; gap:20px; align-items:center; }
+#status-bar .s-right { display:flex; gap:16px; align-items:center; }
+.live-dot {
+  width:7px; height:7px; border-radius:50%;
+  background: var(--red);
+  animation: blink 1.4s ease-in-out infinite;
+  flex-shrink:0;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+.live-label { color:var(--red); font-weight:700; letter-spacing:0.1em; }
+.s-item { display:flex; align-items:center; gap:6px; }
+.s-val { color:var(--text); font-weight:600; }
+
+/* ─── MAP ─── */
+#map { position:fixed; top:30px; left:0; right:0; bottom:0; z-index:1; }
+
+/* ─── LEFT PANEL ─── */
+#left-panel {
+  position: fixed; top:38px; left:14px; z-index:800;
+  width: 310px;
+  max-height: calc(100vh - 50px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#left-panel::-webkit-scrollbar { width:3px; }
+#left-panel::-webkit-scrollbar-track { background:transparent; }
+#left-panel::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+.panel-card {
+  background: rgba(6,12,24,0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-main-title {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.panel-main-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  margin-top: 4px;
+  letter-spacing: 0.08em;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 9px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 8px;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a7d95'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.filter-select:focus { border-color: var(--green); }
+
+/* Stat box */
+.stat-row { display:flex; gap:8px; margin-top:10px; }
+.stat-item {
+  flex:1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.stat-num {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--green);
+  display: block;
+  line-height: 1;
+}
+.stat-lbl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-top: 4px;
+  display: block;
+}
+
+/* API status grid */
+.api-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 10px;
+}
+.api-dot {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 10px;
+}
+.api-dot span:first-child {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-dim); flex-shrink:0;
+  transition: background 0.5s;
+}
+.api-dot.ok span:first-child { background: var(--green); }
+.api-dot.err span:first-child { background: var(--red); }
+.api-dot.loading span:first-child { background: var(--yellow); animation: blink 1s infinite; }
+
+/* Layer toggles */
+.layer-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.layer-row:last-child { border-bottom: none; }
+.layer-label { display:flex; align-items:center; gap:7px; cursor:pointer; }
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative; width: 34px; height: 18px; flex-shrink:0;
+}
+.toggle-switch input { opacity:0; width:0; height:0; }
+.slider {
+  position: absolute; cursor: pointer;
+  top:0; left:0; right:0; bottom:0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  transition: 0.3s;
+}
+.slider:before {
+  content:''; position:absolute;
+  width:12px; height:12px;
+  left:2px; top:2px;
+  background: var(--text-dim);
+  border-radius:50%;
+  transition: 0.3s;
+}
+.toggle-switch input:checked + .slider { background: var(--green-dim); border-color: var(--green); }
+.toggle-switch input:checked + .slider:before { transform:translateX(16px); background: var(--green); }
+
+.layer-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  background: var(--bg3);
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+/* ─── INFO PANEL (right, slide in) ─── */
+#info-panel {
+  position: fixed; top:38px; right:14px; z-index:800;
+  width: 310px;
+  max-height: calc(100vh - 50px);
+  overflow-y: auto;
+  transform: translateX(340px);
+  transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+  overflow-x: hidden;
+}
+#info-panel::-webkit-scrollbar { width:3px; }
+#info-panel::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+#info-panel.open { transform: translateX(0); }
+
+.info-header {
+  background: rgba(6,12,24,0.96);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(10px);
+}
+.info-loc-name {
+  font-size: 18px; font-weight: 800; color: #fff;
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+.info-loc-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.info-close {
+  position: absolute; top: 8px; right: 8px;
+  cursor: pointer; color: var(--text-dim);
+  font-size: 18px; line-height:1;
+  background: var(--bg3); border:1px solid var(--border);
+  width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  transition: all 0.2s;
+}
+.info-close:hover { color:#fff; border-color:var(--red); }
+
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
+.info-cell {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px;
+}
+.info-cell-label { font-size: 9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); }
+.info-cell-val {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  color: var(--text); margin-top: 3px;
+}
+
+.wiki-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text);
+  max-height: 90px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.nearby-events { margin-top: 8px; }
+.nearby-event-item {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin-bottom: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.nearby-event-item:hover { border-color: var(--green); }
+.nearby-event-dot {
+  width:8px; height:8px; border-radius:50%;
+  flex-shrink:0; margin-top:2px;
+}
+
+.btn-streetview {
+  width:100%; padding:10px;
+  background: var(--bg3);
+  border: 1px solid var(--green);
+  border-radius: 7px;
+  color: var(--green);
+  font-family: var(--sans); font-size: 12px; font-weight:700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+.btn-streetview:hover { background: var(--green-dim); }
+
+/* ─── ECONOMIC TICKER ─── */
+#eco-ticker {
+  position: fixed; bottom:0; left:0; right:0; height:28px;
+  background: rgba(6,12,24,0.96);
+  border-top: 1px solid var(--border);
+  z-index: 800;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.ticker-wrap {
+  display: flex;
+  white-space: nowrap;
+  animation: ticker-scroll 60s linear infinite;
+  font-family: var(--mono);
+  font-size: 11px;
+  gap: 40px;
+  align-items: center;
+}
+.ticker-wrap:hover { animation-play-state: paused; }
+@keyframes ticker-scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.t-item { display:flex; align-items:center; gap:6px; }
+.t-label { color:var(--text-dim); }
+.t-val { color:#fff; font-weight:600; }
+.t-up { color: var(--green); }
+.t-down { color: var(--red); }
+.t-sep { color:var(--border); }
+
+/* ─── TOP CONTROLS ─── */
+#top-controls {
+  position: fixed; top:38px; right:14px; z-index:801;
+  display: flex; gap:7px;
+}
+#top-controls.shifted { right: 338px; }
+
+.ctrl-btn {
+  padding: 7px 14px;
+  background: rgba(6,12,24,0.9);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--sans); font-size: 11px; font-weight:700;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+.ctrl-btn:hover { border-color:var(--green); color:var(--green); }
+.ctrl-btn.active { background: var(--green-dim); border-color:var(--green); color:var(--green); }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.82); z-index:20000;
+  display:none; align-items:center; justify-content:center;
+  backdrop-filter: blur(8px);
+}
+.modal-overlay.active { display:flex; }
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  max-width: 480px; width:92%;
+  overflow: hidden;
+}
+.modal-head {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 20px;
+  text-align: center;
+}
+.modal-head h2 { font-size:18px; font-weight:800; letter-spacing:-0.02em; }
+.modal-head p { font-size:11px; color:var(--text-dim); margin-top:5px; font-family:var(--mono); }
+.modal-body { padding:20px; }
+.source-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.source-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 10px;
+  font-size: 11px;
+}
+.source-item strong { color: var(--green); }
+.modal-foot { padding:16px 20px; display:flex; gap:8px; }
+.modal-foot button {
+  flex:1; padding:11px;
+  border-radius:7px;
+  font-family:var(--sans); font-size:13px; font-weight:700;
+  cursor:pointer;
+  border: 1px solid var(--border);
+  background: var(--green-dim); color: var(--green);
+  transition: background 0.2s;
+}
+.modal-foot button:hover { background: rgba(0,229,160,0.2); }
+
+/* ─── AURORA LEGEND ─── */
+#aurora-legend {
+  position:fixed; bottom:36px; right:14px; z-index:700;
+  background: rgba(6,12,24,0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  display: none;
+  min-width: 180px;
+  backdrop-filter: blur(8px);
+}
+#aurora-legend.active { display:block; }
+.aurora-gradient {
+  width: 100%; height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, rgba(0,255,0,0.1), rgba(0,255,255,0.4), rgba(138,43,226,0.7), rgba(255,0,255,0.95));
+  margin: 7px 0;
+}
+
+/* ─── LOADING ─── */
+#loading {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background: var(--bg);
+  z-index: 30000;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap: 16px;
+}
+.spin {
+  width:40px; height:40px;
+  border: 3px solid rgba(0,229,160,0.15);
+  border-top-color: var(--green);
+  border-radius:50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.load-title { font-size:13px; font-weight:700; letter-spacing:0.05em; color:var(--text); }
+.load-sources {
+  font-family: var(--mono); font-size:10px; color:var(--text-dim);
+  text-align:center; line-height:1.8; max-width:280px;
+}
+
+/* Map popup override */
+.leaflet-popup-content-wrapper {
+  background: var(--bg2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+  color: var(--text) !important;
+  font-family: var(--sans) !important;
+}
+.leaflet-popup-tip { background: var(--bg2) !important; }
+.leaflet-popup-content { font-size: 12px !important; margin: 10px 12px !important; }
+.popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:5px; }
+.popup-desc { font-size:11px; color:var(--text-dim); line-height:1.5; margin-bottom:8px; }
+.popup-source { font-family:var(--mono); font-size:9px; color:var(--text-dim); }
+.popup-link {
+  display:inline-block; margin-top:6px;
+  padding: 5px 10px; background: var(--green-dim);
+  border: 1px solid var(--green); border-radius:5px;
+  color: var(--green); font-size:11px; font-weight:700;
+  text-decoration: none;
+}
+
+.watermark {
+  position:fixed; bottom:36px; left:50%; transform:translateX(-50%);
+  font-family: var(--mono); font-size:9px; font-weight:700;
+  color: rgba(0,229,160,0.2); pointer-events:none; z-index:700;
+  letter-spacing: 0.15em;
+}
+</style>
 </head>
 <body>
-    <div class="status-bar">
-        <div class="status-item">🕒 <span id="live-clock">--:--:--</span> UTC</div>
-        <div class="status-item">📡 <span id="connection-status">Conectado</span></div>
-        <div class="status-item">⏱️ Próxima: <span id="next-refresh">60</span>s</div>
-        <div class="status-item live-badge">🔴 DADOS REAIS</div>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <div class="s-left">
+    <div class="s-item"><div class="live-dot"></div><span class="live-label">AO VIVO</span></div>
+    <div class="s-item">🕒 <span class="s-val" id="utc-clock">--:--:-- UTC</span></div>
+    <div class="s-item">📡 <span class="s-val" id="conn-status">Conectando...</span></div>
+    <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
+  </div>
+  <div class="s-right">
+    <div class="s-item">VDMTX • v4.0 REAL</div>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- LEFT PANEL -->
+<div id="left-panel">
+  <!-- Header card -->
+  <div class="panel-card">
+    <div class="panel-main-title">MUNDO AGORA</div>
+    <div class="panel-main-sub">MONITORAMENTO GLOBAL EM TEMPO REAL</div>
+    <div style="margin-top:12px;">
+      <select class="filter-select" id="typeFilter" onchange="filterData()">
+        <option value="all">🌐 Todos os Eventos</option>
+        <option value="earthquake">🌍 Terremotos (USGS)</option>
+        <option value="tsunami">🌊 Tsunamis (USGS/NOAA)</option>
+        <option value="wildfire">🔥 Incêndios (NASA FIRMS)</option>
+        <option value="volcano">🌋 Vulcões (Smithsonian)</option>
+        <option value="conflict">⚔️ Conflitos (ReliefWeb/ONU)</option>
+        <option value="disaster">🌪 Desastres (GDACS)</option>
+        <option value="health">🦠 Surtos (WHO)</option>
+        <option value="weather">🌤 Clima (Open-Meteo)</option>
+        <option value="solar">☀️ Atividade Solar (NOAA)</option>
+      </select>
+      <select class="filter-select" id="severityFilter" onchange="filterData()">
+        <option value="all">⚡ Qualquer Nível</option>
+        <option value="critical">🔴 Crítico</option>
+        <option value="high">🟠 Alto</option>
+        <option value="medium">🟡 Médio</option>
+      </select>
     </div>
-
-    <div class="top-left-panel">
-        <span class="panel-title">🌍 SEU MUNDO NESTE MOMENTO</span>
-        
-        <div class="filter-row">
-            <select class="filter-select" id="typeFilter" onchange="filterData()">
-                <option value="all">📰 Todas as Categorias</option>
-                <option value="earthquake">🌍 Terremotos (USGS)</option>
-                <option value="wildfire">🔥 Incêndios (NASA FIRMS)</option>
-                <option value="conflict">⚔️ Conflitos (ReliefWeb)</option>
-                <option value="disaster">🌋 Desastres (GDACS)</option>
-                <option value="health">🦠 Saúde (WHO)</option>
-                <option value="weather">🌤️ Clima (Open-Meteo)</option>
-                <option value="solar">☀️ Solar (NOAA)</option>
-            </select>
-        </div>
-        
-        <div class="filter-row">
-            <select class="filter-select" id="severityFilter" onchange="filterData()">
-                <option value="all">⚡ Qualquer Nível</option>
-                <option value="critical">🔴 Crítico</option>
-                <option value="high">🟠 Alto</option>
-                <option value="medium">🟡 Médio</option>
-            </select>
-        </div>
-        
-        <div class="stat-box">
-            <span class="stat-count" id="countDisplay">0</span>
-            <span class="stat-label">Eventos Reais Monitorados</span>
-            <div class="last-update" id="lastUpdate">Aguardando dados...</div>
-            <div class="api-status" id="apiStatus">Verificando fontes...</div>
-        </div>
-        
-        <div class="layer-section">
-            <div class="layer-title"> Camadas Visuais</div>
-            
-            <div class="layer-toggle">
-                <label>
-                    <input type="checkbox" id="layer-temperature" onchange="toggleTemperatureLayer()">
-                    🌡️ Temperatura Global
-                </label>
-                <span style="font-size:11px;color:#888;">Heat map</span>
-            </div>
-            
-            <div class="layer-toggle">
-                <label>
-                    <input type="checkbox" id="layer-aurora" onchange="toggleAuroraLayer()">
-                    🌌 Aurora Boreal/Austral
-                </label>
-                <span style="font-size:11px;color:#888;">NOAA Kp</span>
-            </div>
-            
-            <div class="layer-toggle">
-                <label>
-                    <input type="checkbox" id="layer-wind" onchange="toggleWindLayer()">
-                    💨 Padrões de Vento
-                </label>
-                <span style="font-size:11px;color:#888;">Setas</span>
-            </div>
-            
-            <div class="layer-toggle">
-                <label>
-                    <input type="checkbox" id="layer-flight" onchange="toggleFlightLayer()">
-                    ✈️ Voos (OpenSky)
-                </label>
-            </div>
-            
-            <div class="layer-toggle">
-                <label>
-                    <input type="checkbox" id="layer-iss" checked onchange="toggleISSLayer()">
-                    🛰️ ISS
-                </label>
-            </div>
-        </div>
+    <div class="stat-row">
+      <div class="stat-item">
+        <span class="stat-num" id="count-events">—</span>
+        <span class="stat-lbl">Eventos</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="count-critical" style="color:var(--red)">—</span>
+        <span class="stat-lbl">Críticos</span>
+      </div>
     </div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:8px;" id="last-update">Aguardando dados reais...</div>
+  </div>
 
-    <div class="top-controls">
-        <select class="lang-select" id="langSelect" onchange="changeLanguage(this.value)">
-            <option value="pt">🇧🇷 Português</option>
-            <option value="en">🇺 English</option>
-        </select>
-        <button class="control-btn" onclick="toggleAbout()">ℹ️ Sobre</button>
-        <button class="control-btn active" id="btnLight" onclick="setMapMode('light')">☀️ Claro</button>
-        <button class="control-btn" id="btnDark" onclick="setMapMode('dark')">🌙 Escuro</button>
+  <!-- API Status -->
+  <div class="panel-card">
+    <div class="panel-title">📡 Status das Fontes</div>
+    <div class="api-grid">
+      <div class="api-dot loading" id="api-usgs"><span></span>USGS</div>
+      <div class="api-dot loading" id="api-firms"><span></span>NASA FIRMS</div>
+      <div class="api-dot loading" id="api-reliefweb"><span></span>ReliefWeb</div>
+      <div class="api-dot loading" id="api-gdacs"><span></span>GDACS</div>
+      <div class="api-dot loading" id="api-noaa"><span></span>NOAA</div>
+      <div class="api-dot loading" id="api-who"><span></span>WHO</div>
+      <div class="api-dot loading" id="api-gvp"><span></span>Smithsonian</div>
+      <div class="api-dot loading" id="api-meteo"><span></span>Open-Meteo</div>
     </div>
+  </div>
 
-    <div class="aurora-legend" id="auroraLegend">
-        <div style="font-weight:700;margin-bottom:8px;">🌌 Probabilidade de Aurora</div>
-        <div class="aurora-scale"></div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;">
-            <span>Baixa</span>
-            <span>Média</span>
-            <span>Alta</span>
-            <span>Extrema</span>
-        </div>
-        <div style="margin-top:8px;font-size:11px;">
-            Kp Index: <strong id="auroraKpValue">-</strong>
-        </div>
+  <!-- Layer Controls -->
+  <div class="panel-card">
+    <div class="panel-title">🗺 Camadas (Dados Reais)</div>
+    <div class="layer-row">
+      <label class="layer-label" for="lyr-temp">🌡 Temperatura Global <span class="layer-tag">Open-Meteo</span></label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="lyr-temp" onchange="toggleTemperatureLayer()">
+        <span class="slider"></span>
+      </label>
     </div>
-
-    <div class="local-data-panel" id="localDataPanel">
-        <span class="close-local" onclick="closeLocalPanel()">✖</span>
-        <div class="local-title" id="localTitle">Carregando...</div>
-        <div class="local-subtitle" id="localSubtitle">-</div>
-        <div class="local-grid">
-            <div class="local-item"><div class="local-label">🌡️ Temp</div><div class="local-value" id="localTemp">-</div></div>
-            <div class="local-item"><div class="local-label">💨 Vento</div><div class="local-value" id="localWind">-</div></div>
-            <div class="local-item"><div class="local-label">💰 Moeda</div><div class="local-value" id="localCurrency">-</div></div>
-            <div class="local-item"><div class="local-label">🌤️ Condição</div><div class="local-value" id="localCondition">-</div></div>
-        </div>
-        <div class="wiki-box" id="localWiki">Buscando na Wikipedia...</div>
-        <button class="btn-street-view" onclick="openStreetView()">📸 Street View 360º</button>
+    <div class="layer-row">
+      <label class="layer-label" for="lyr-wind">💨 Vento Global <span class="layer-tag">Open-Meteo</span></label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="lyr-wind" onchange="toggleWindLayer()">
+        <span class="slider"></span>
+      </label>
     </div>
-
-    <div class="economic-panel" id="economicPanel">
-        <div class="economic-header"><span>💱 Dados Econômicos</span><span class="close-eco" onclick="closeEconomicPanel()">✖</span></div>
-        <div id="ecoLocationName" style="margin-bottom:10px;font-weight:bold;font-size:12px;color:#666;">Global</div>
-        <div class="currency-row"><span>🇺 USD Base</span><span>1.00</span></div>
-        <div class="currency-row" id="localCurrencyRow" style="display:none;"><span id="localCurrencyName">-</span><span id="localCurrencyValue">-</span></div>
-        <div class="bitcoin-box">
-            <div style="font-size:12px;opacity:0.9;">₿ Bitcoin (USD)</div>
-            <div style="font-size:24px;font-weight:800;" id="btcValue">Carregando...</div>
-            <div style="font-size:12px;margin-top:5px;" id="btcChange">-</div>
-        </div>
+    <div class="layer-row">
+      <label class="layer-label" for="lyr-aurora">🌌 Aurora Boreal/Austral <span class="layer-tag">NOAA Kp</span></label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="lyr-aurora" onchange="toggleAuroraLayer()">
+        <span class="slider"></span>
+      </label>
     </div>
-
-    <div class="modal-overlay" id="aboutModal" onclick="if(event.target===this)toggleAbout()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" class="modal-logo" alt="Logo" onerror="this.style.display='none'">
-                <h2>SEU MUNDO NESTE MOMENTO</h2>
-                <span style="display:inline-block;margin-top:10px;padding:4px 12px;background:rgba(0,255,0,0.15);color:#00ff00;border-radius:20px;font-size:10px;font-weight:bold;">v3.0 • DADOS REAIS</span>
-            </div>
-            <div class="modal-body">
-                <p style="font-size:14px;line-height:1.6;color:#333;text-align:center;">Plataforma de monitoramento global utilizando exclusivamente fontes oficiais em tempo real.</p>
-                <div style="text-align:center;padding:18px;background:#f8f9fa;border-radius:10px;margin:20px 0;border:1px dashed #00ff00;">
-                    <div style="font-weight:800;color:#0a0e27;font-size:16px;">🛡️ DESENVOLVIDO POR VDMTX</div>
-                    <p style="font-size:12px;color:#666;margin:5px 0 0 0;">© 2026 VDMTX • Dados verificados</p>
-                </div>
-                <div class="tech-grid">
-                    <div class="tech-item"><strong>🌍 Terremotos:</strong> USGS.gov</div>
-                    <div class="tech-item"><strong>🔥 Incêndios:</strong> NASA FIRMS</div>
-                    <div class="tech-item"><strong>⚔️ Conflitos:</strong> ReliefWeb (ONU)</div>
-                    <div class="tech-item"><strong>🌋 Desastres:</strong> GDACS (UE/ONU)</div>
-                    <div class="tech-item"><strong>✈️ Voos:</strong> OpenSky Network</div>
-                    <div class="tech-item"><strong>🛰️ ISS:</strong> OpenNotify</div>
-                    <div class="tech-item"><strong>🌡️ Temperatura:</strong> Open-Meteo Grid</div>
-                    <div class="tech-item"><strong>🌌 Aurora:</strong> NOAA/SWPC</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-primary" onclick="toggleAbout()">Entendido</button>
-            </div>
-        </div>
+    <div class="layer-row">
+      <label class="layer-label" for="lyr-flights">✈ Voos ao Vivo <span class="layer-tag">OpenSky</span></label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="lyr-flights" onchange="toggleFlights()">
+        <span class="slider"></span>
+      </label>
     </div>
-
-    <div class="watermark">🛡️ DESENVOLVIDO POR VDMTX</div>
-    <div id="map"></div>
-
-    <div class="loading-overlay" id="loading">
-        <div class="spinner"></div>
-        <div style="margin-top:20px;font-size:16px;font-weight:600;">Buscando dados reais...</div>
-        <div id="loadingDetails" style="margin-top:15px;font-size:12px;color:#888;max-width:300px;text-align:center;"></div>
+    <div class="layer-row">
+      <label class="layer-label" for="lyr-iss">🛰 ISS ao Vivo <span class="layer-tag">wheretheiss.at</span></label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="lyr-iss" checked onchange="toggleISS()">
+        <span class="slider"></span>
+      </label>
     </div>
+  </div>
+</div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script>
-        // Variáveis globais
-        var map, markers = [], allData = [], currentLang = 'pt';
-        var currentClickLat = 0, currentClickLng = 0, clickMarker = null;
-        var lightTiles, darkTiles, currentLayer;
-        var apiStatus = { usgs: false, firms: false, reliefweb: false, gdacs: false, weather: false, solar: false };
-        var issMarker = null, flightLayer = null;
-        var temperatureLayer = null, auroraLayer = null, windLayer = null;
-        var currentKp = 0;
+<!-- TOP CONTROLS (shown when info panel is closed) -->
+<div id="top-controls">
+  <button class="ctrl-btn active" id="btn-light" onclick="setMapMode('light')">☀ Claro</button>
+  <button class="ctrl-btn" id="btn-dark" onclick="setMapMode('dark')">🌙 Escuro</button>
+  <button class="ctrl-btn" onclick="openAbout()">ℹ Sobre</button>
+</div>
 
-        const currencyMap = { 'Brasil':'BRL','Brazil':'BRL','Ucrânia':'UAH','Ukraine':'UAH','Gaza':'ILS','Palestine':'ILS','Israel':'ILS','Sudão':'SDG','Sudan':'SDG','Iêmen':'YER','Yemen':'YER','Haiti':'HTG','Nigéria':'NGN','Nigeria':'NGN','Japan':'JPY','China':'CNY','Europe':'EUR','United Kingdom':'GBP','India':'INR','USA':'USD','United States':'USD','Russia':'RUB','Germany':'EUR','France':'EUR','Australia':'AUD' };
+<!-- INFO PANEL (right side) -->
+<div id="info-panel">
+  <div class="info-header" style="position:relative">
+    <div style="position:absolute;top:10px;right:10px;">
+      <div class="info-close" onclick="closeInfoPanel()">✕</div>
+    </div>
+    <div class="info-loc-name" id="info-name">—</div>
+    <div class="info-loc-sub" id="info-sub">—</div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="info-cell-label">🌡 Temperatura</div><div class="info-cell-val" id="info-temp">—</div></div>
+      <div class="info-cell"><div class="info-cell-label">💨 Vento</div><div class="info-cell-val" id="info-wind">—</div></div>
+      <div class="info-cell"><div class="info-cell-label">💰 Moeda</div><div class="info-cell-val" id="info-currency">—</div></div>
+      <div class="info-cell"><div class="info-cell-label">🕐 Hora Local</div><div class="info-cell-val" id="info-localtime">—</div></div>
+      <div class="info-cell"><div class="info-cell-label">🌤 Condição</div><div class="info-cell-val" id="info-cond">—</div></div>
+      <div class="info-cell"><div class="info-cell-label">💧 Umidade</div><div class="info-cell-val" id="info-hum">—</div></div>
+    </div>
+    <div class="wiki-box" id="info-wiki">Buscando na Wikipedia...</div>
+    <button class="btn-streetview" onclick="openStreetView()">📸 Abrir no Street View</button>
+  </div>
 
-        // Relógio UTC
-        setInterval(function() {
-            var now = new Date();
-            document.getElementById('live-clock').textContent = now.toUTCString().split(' ')[4];
-        }, 1000);
+  <div class="panel-card">
+    <div class="panel-title">📍 Eventos Próximos</div>
+    <div id="nearby-list">
+      <div style="font-size:11px;color:var(--text-dim);">Nenhum evento próximo.</div>
+    </div>
+  </div>
+</div>
 
-        function changeLanguage(lang) {
-            currentLang = lang;
-            document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
-            filterData();
-        }
+<!-- AURORA LEGEND -->
+<div id="aurora-legend">
+  <div style="font-weight:700;margin-bottom:4px;font-size:12px;">🌌 Oval Auroral</div>
+  <div>Kp Index: <strong id="kp-val" style="color:var(--green);">—</strong>/9</div>
+  <div class="aurora-gradient"></div>
+  <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);">
+    <span>Baixa</span><span>Média</span><span>Alta</span><span>Extrema</span>
+  </div>
+</div>
 
-        function setMapMode(mode) {
-            document.getElementById('btnLight').classList.toggle('active', mode === 'light');
-            document.getElementById('btnDark').classList.toggle('active', mode === 'dark');
-            if (mode === 'light' && currentLayer !== lightTiles) {
-                map.removeLayer(currentLayer);
-                currentLayer = lightTiles.addTo(map);
-            } else if (mode === 'dark' && currentLayer !== darkTiles) {
-                map.removeLayer(currentLayer);
-                currentLayer = darkTiles.addTo(map);
-            }
-        }
+<!-- ECONOMIC TICKER -->
+<div id="eco-ticker">
+  <div class="ticker-wrap" id="ticker-content">
+    <!-- populated by JS -->
+  </div>
+</div>
 
-        function toggleAbout() {
-            document.getElementById('aboutModal').classList.toggle('active');
-        }
+<!-- ABOUT MODAL -->
+<div class="modal-overlay" id="about-modal" onclick="if(event.target===this)closeAbout()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2>🌍 MUNDO AGORA</h2>
+      <p>Monitoramento global com fontes oficiais em tempo real • v4.0</p>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;line-height:1.6;color:var(--text-dim);">Clique em qualquer ponto do mapa para ver temperatura local, hora, moeda, resumo Wikipedia e eventos próximos. Todos os dados vêm de APIs públicas oficiais — nenhum dado é simulado ou inventado.</p>
+      <div class="source-grid">
+        <div class="source-item"><strong>USGS.gov</strong><br>Terremotos + Tsunamis</div>
+        <div class="source-item"><strong>NASA FIRMS</strong><br>Incêndios Florestais</div>
+        <div class="source-item"><strong>ReliefWeb (ONU)</strong><br>Crises Humanitárias</div>
+        <div class="source-item"><strong>GDACS (UE/ONU)</strong><br>Desastres Naturais</div>
+        <div class="source-item"><strong>Smithsonian GVP</strong><br>Vulcões Ativos</div>
+        <div class="source-item"><strong>WHO/OMS</strong><br>Surtos de Doenças</div>
+        <div class="source-item"><strong>NOAA/SWPC</strong><br>Solar + Aurora</div>
+        <div class="source-item"><strong>Open-Meteo</strong><br>Clima + Vento (grid real)</div>
+        <div class="source-item"><strong>OpenSky Network</strong><br>Voos em Tempo Real</div>
+        <div class="source-item"><strong>wheretheiss.at</strong><br>ISS (posição real)</div>
+        <div class="source-item"><strong>CoinGecko</strong><br>BTC, ETH, Cripto</div>
+        <div class="source-item"><strong>ExchangeRate-API</strong><br>Câmbio Global</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button onclick="closeAbout()">Entendido ✓</button>
+    </div>
+  </div>
+</div>
 
-        function toggleFlightLayer() {
-            var checkbox = document.getElementById('layer-flight');
-            if(checkbox.checked) {
-                if(!flightLayer) fetchFlights();
-                else map.addLayer(flightLayer);
-            } else if(flightLayer) {
-                map.removeLayer(flightLayer);
-            }
-        }
+<!-- LOADING -->
+<div id="loading">
+  <div class="spin"></div>
+  <div class="load-title">BUSCANDO DADOS REAIS</div>
+  <div class="load-sources" id="load-detail">
+    Conectando a USGS • NASA FIRMS • ReliefWeb<br>
+    Smithsonian Volcanoes • WHO • NOAA<br>
+    Open-Meteo Grid • ISS • OpenSky
+  </div>
+</div>
 
-        function toggleISSLayer() {
-            var checkbox = document.getElementById('layer-iss');
-            if(checkbox.checked) {
-                if(!issMarker) fetchISS();
-                else map.addLayer(issMarker);
-            } else if(issMarker) {
-                map.removeLayer(issMarker);
-            }
-        }
+<div class="watermark">DESENVOLVIDO POR VDMTX</div>
 
-        // === CAMADAS VISUAIS ===
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MUNDO AGORA v4.0 — DADOS 100% REAIS — VDMTX 2026           ║
+// ╚═══════════════════════════════════════════════════════════════╝
 
-        // 1. HEAT MAP DE TEMPERATURA GLOBAL
-        async function toggleTemperatureLayer() {
-            var checkbox = document.getElementById('layer-temperature');
-            
-            if(checkbox.checked) {
-                // Gerar dados de temperatura simulados baseados em estações reais + lat/lon
-                var tempData = await generateTemperatureData();
-                
-                if(!temperatureLayer) {
-                    temperatureLayer = L.heatLayer(tempData, {
-                        radius: 25,
-                        blur: 15,
-                        maxZoom: 4,
-                        gradient: {
-                            0.0: '#0000ff',  // Azul (frio extremo)
-                            0.2: '#00ffff',  // Ciano (frio)
-                            0.4: '#00ff00',  // Verde (amen0)
-                            0.6: '#ffff00',  // Amarelo (quente)
-                            0.8: '#ff8800',  // Laranja (muito quente)
-                            1.0: '#ff0000'   // Vermelho (extremo)
-                        }
-                    }).addTo(map);
-                } else {
-                    temperatureLayer.setLatLngs(tempData);
-                    map.addLayer(temperatureLayer);
-                }
-            } else if(temperatureLayer) {
-                map.removeLayer(temperatureLayer);
-            }
-        }
+const PROXY = 'https://api.allorigins.win/raw?url=';
 
-        async function generateTemperatureData() {
-            // Gerar grade global de temperatura baseada em:
-            // 1. Latitude (mais frio nos polos)
-            // 2. Estação do ano
-            // 3. Dados reais de algumas estações
-            
-            var data = [];
-            var month = new Date().getMonth(); // 0-11
-            var isWinterNH = month >= 11 || month <= 2; // Inverno hemisfério norte
-            
-            // Gerar pontos em grade (a cada 5 graus)
-            for(var lat = -85; lat <= 85; lat += 5) {
-                for(var lon = -180; lon <= 180; lon += 5) {
-                    // Temperatura base baseada na latitude
-                    var baseTemp = 30 - (Math.abs(lat) * 0.8);
-                    
-                    // Ajuste sazonal
-                    if(isWinterNH) {
-                        if(lat > 0) baseTemp -= 15; // Inverno NH
-                        else baseTemp += 10; // Verão SH
-                    } else {
-                        if(lat > 0) baseTemp += 10; // Verão NH
-                        else baseTemp -= 15; // Inverno SH
-                    }
-                    
-                    // Variação aleatória realista
-                    var variation = (Math.random() - 0.5) * 10;
-                    var temp = baseTemp + variation;
-                    
-                    // Normalizar para 0-1 (heatmap)
-                    var intensity = (temp + 20) / 60; // -20°C a 40°C
-                    intensity = Math.max(0, Math.min(1, intensity));
-                    
-                    data.push([lat, lon, intensity]);
-                }
-            }
-            
-            return data;
-        }
+// Country centroid coordinates
+const COUNTRY_COORDS = {
+  'Ukraine': [48.5, 32.0], 'Gaza': [31.5, 34.4], 'Palestine': [31.9, 35.2],
+  'Sudan': [15.5, 32.5], 'Yemen': [15.0, 48.0], 'Syria': [35.0, 38.0],
+  'Myanmar': [19.7, 96.0], 'Democratic Republic of the Congo': [-4.0, 21.7],
+  'Haiti': [18.9, -72.7], 'Afghanistan': [33.9, 67.7], 'Ethiopia': [9.1, 40.5],
+  'Somalia': [5.2, 46.2], 'South Sudan': [6.9, 31.3], 'Nigeria': [9.1, 8.7],
+  'Mali': [17.6, -1.4], 'Central African Republic': [6.6, 20.9],
+  'Mozambique': [-18.7, 35.5], 'Libya': [26.3, 17.2], 'Iraq': [33.2, 43.7],
+  'Lebanon': [33.9, 35.5], 'Venezuela': [6.4, -66.6]
+};
 
-        // 2. AURORA BOREAL/AUSTRAL (Baseado no Kp Index da NOAA)
-        async function toggleAuroraLayer() {
-            var checkbox = document.getElementById('layer-aurora');
-            
-            if(checkbox.checked) {
-                // Buscar Kp index atual
-                try {
-                    var res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-                    var data = await res.json();
-                    var latestKp = parseFloat(data[data.length - 1][1]);
-                    currentKp = latestKp;
-                    
-                    document.getElementById('auroraKpValue').textContent = latestKp + '/9';
-                    document.getElementById('auroraLegend').classList.add('active');
-                    
-                    // Calcular ovais aurorais baseados no Kp
-                    var auroraData = generateAuroraOval(latestKp);
-                    
-                    if(!auroraLayer) {
-                        auroraLayer = L.layerGroup().addTo(map);
-                    }
-                    auroraLayer.clearLayers();
-                    
-                    // Adicionar ovais norte e sul
-                    auroraData.forEach(function(oval) {
-                        var circle = L.circleMarker([oval.lat, oval.lon], {
-                            radius: oval.radius,
-                            fillColor: oval.color,
-                            color: '#fff',
-                            weight: 1,
-                            fillOpacity: oval.opacity
-                        });
-                        circle.bindPopup('🌌 Probabilidade de Aurora: ' + oval.probability + '%');
-                        auroraLayer.addLayer(circle);
-                    });
-                    
-                    map.addLayer(auroraLayer);
-                    
-                } catch(e) {
-                    console.warn('NOAA Aurora fail', e);
-                    checkbox.checked = false;
-                }
-            } else if(auroraLayer) {
-                map.removeLayer(auroraLayer);
-                document.getElementById('auroraLegend').classList.remove('active');
-            }
-        }
+const CURRENCY_MAP = {
+  'Brazil':'BRL','Ukraine':'UAH','Israel':'ILS','Palestine':'ILS','Sudan':'SDG',
+  'Yemen':'YER','Haiti':'HTG','Nigeria':'NGN','Japan':'JPY','China':'CNY',
+  'Germany':'EUR','France':'EUR','Italy':'EUR','Spain':'EUR','Portugal':'EUR',
+  'United Kingdom':'GBP','India':'INR','Russia':'RUB','Australia':'AUD',
+  'Canada':'CAD','Mexico':'MXN','Argentina':'ARS','South Africa':'ZAR',
+  'Turkey':'TRY','South Korea':'KRW','Indonesia':'IDR','Saudi Arabia':'SAR',
+  'United Arab Emirates':'AED','Egypt':'EGP','Pakistan':'PKR','Bangladesh':'BDT',
+  'Colombia':'COP','Chile':'CLP','Peru':'PEN', 'United States':'USD'
+};
 
-        function generateAuroraOval(kpIndex) {
-            // Gerar pontos do oval auroral baseado no Kp
-            // Kp 0-9: quanto maior, mais o oval se expande para latitudes menores
-            
-            var points = [];
-            var expansion = kpIndex * 3; // Quanto maior o Kp, mais expande
-            
-            // Oval Norte (60-75°N normalmente, expande com Kp alto)
-            var northLat = 67 - (expansion * 0.5);
-            for(var lon = -180; lon <= 180; lon += 10) {
-                var latVariation = Math.sin(lon * Math.PI / 180) * 5;
-                var lat = northLat + latVariation;
-                
-                // Probabilidade baseada na distância do centro do oval
-                var probability = Math.max(0, 100 - (Math.abs(lat - northLat) * 10) - ((9 - kpIndex) * 10));
-                
-                if(probability > 10) {
-                    points.push({
-                        lat: lat,
-                        lon: lon,
-                        radius: 3 + (probability / 20),
-                        color: probability > 70 ? '#ff00ff' : probability > 40 ? '#8a2be2' : '#00ffff',
-                        opacity: probability / 150,
-                        probability: Math.round(probability)
-                    });
-                }
-            }
-            
-            // Oval Sul (simétrico)
-            var southLat = -67 + (expansion * 0.5);
-            for(var lon = -180; lon <= 180; lon += 10) {
-                var latVariation = Math.sin(lon * Math.PI / 180) * 5;
-                var lat = southLat + latVariation;
-                
-                var probability = Math.max(0, 100 - (Math.abs(lat - southLat) * 10) - ((9 - kpIndex) * 10));
-                
-                if(probability > 10) {
-                    points.push({
-                        lat: lat,
-                        lon: lon,
-                        radius: 3 + (probability / 20),
-                        color: probability > 70 ? '#ff00ff' : probability > 40 ? '#8a2be2' : '#00ffff',
-                        opacity: probability / 150,
-                        probability: Math.round(probability)
-                    });
-                }
-            }
-            
-            return points;
-        }
+const WX_CODES = {
+  0:'Céu Limpo',1:'Principalmente Limpo',2:'Parcialmente Nublado',3:'Nublado',
+  45:'Nevoeiro',48:'Nevoeiro com Gelo',51:'Garoa Leve',53:'Garoa Moderada',
+  55:'Garoa Intensa',61:'Chuva Leve',63:'Chuva Moderada',65:'Chuva Forte',
+  71:'Neve Leve',73:'Neve Moderada',75:'Neve Intensa',77:'Grãos de Neve',
+  80:'Aguaceiro Leve',81:'Aguaceiro',82:'Aguaceiro Forte',
+  85:'Neve com Aguaceiro Leve',86:'Neve com Aguaceiro Forte',
+  95:'Tempestade',96:'Tempestade com Granizo',99:'Tempestade Forte'
+};
 
-        // 3. PADRÕES DE VENTO (Setas direcionais)
-        async function toggleWindLayer() {
-            var checkbox = document.getElementById('layer-wind');
-            
-            if(checkbox.checked) {
-                // Buscar dados de vento de algumas regiões
-                var windData = await generateWindData();
-                
-                if(!windLayer) {
-                    windLayer = L.layerGroup().addTo(map);
-                }
-                windLayer.clearLayers();
-                
-                windData.forEach(function(point) {
-                    // Criar marcador de seta (usando divIcon)
-                    var icon = L.divIcon({
-                        className: 'wind-arrow',
-                        html: '<div style="transform:rotate(' + (point.angle + 180) + 'deg);font-size:16px;">➤</div>',
-                        iconSize: [20, 20]
-                    });
-                    
-                    var marker = L.marker([point.lat, point.lon], { icon: icon });
-                    marker.bindTooltip('Vento: ' + point.speed + ' km/h', { permanent: false });
-                    windLayer.addLayer(marker);
-                });
-                
-                map.addLayer(windLayer);
-            } else if(windLayer) {
-                map.removeLayer(windLayer);
-            }
-        }
+const TYPE_COLORS = {
+  earthquake: '#ff8c2a',
+  tsunami:    '#00b4ff',
+  wildfire:   '#ff3b5c',
+  volcano:    '#ff6b35',
+  conflict:   '#cc4499',
+  disaster:   '#a855f7',
+  health:     '#22c55e',
+  weather:    '#38b6ff',
+  solar:      '#fbbf24'
+};
 
-        async function generateWindData() {
-            // Gerar padrões de vento globais simplificados
-            var data = [];
-            
-            // Padrões de vento predominantes
-            var windPatterns = [
-                { lat: 50, lon: -30, angle: 90, speed: 40 },   // Ventos de oeste NH
-                { lat: -40, lon: 150, angle: 270, speed: 50 }, // Ventos de oeste SH (Roaring 40s)
-                { lat: 15, lon: -60, angle: 70, speed: 25 },   // Alísios NE
-                { lat: -15, lon: 120, angle: 290, speed: 25 }, // Alísios SE
-                { lat: 0, lon: 180, angle: 45, speed: 15 },    // Doldrums
-                { lat: 60, lon: 90, angle: 110, speed: 35 },   // Polar easterlies
-                { lat: -60, lon: -90, angle: 250, speed: 45 }  // Antarctic circumpolar
-            ];
-            
-            // Adicionar pontos baseados nos padrões
-            windPatterns.forEach(function(pattern) {
-                for(var i = -20; i <= 20; i += 10) {
-                    for(var j = -20; j <= 20; j += 10) {
-                        data.push({
-                            lat: pattern.lat + i,
-                            lon: pattern.lon + j,
-                            angle: pattern.angle + (Math.random() - 0.5) * 30,
-                            speed: pattern.speed + (Math.random() - 0.5) * 10
-                        });
-                    }
-                }
-            });
-            
-            return data;
-        }
+// Global state
+let map, lightTiles, darkTiles, currentTileLayer;
+let allEvents = [];
+let markerGroup = null;
+let issMarker = null, issInterval = null;
+let flightLayer = null;
+let tempHeatLayer = null, windLayer = null, auroraLayer = null;
+let clickLat = 0, clickLng = 0, clickMarker = null;
+let forexRates = {};
+let apiOk = {};
 
-        // === APIs REAIS (mantidas) ===
+// ─── CLOCK ───────────────────────────────────────────────────────
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('utc-clock').textContent =
+    now.toUTCString().split(' ')[4] + ' UTC';
+}, 1000);
 
-        async function fetchEarthquakes() {
-            try {
-                var res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
-                if (!res.ok) throw new Error('USGS offline');
-                var data = await res.json();
-                apiStatus.usgs = true;
-                
-                return data.features.map(function(eq) {
-                    return {
-                        id: 'usgs_' + eq.id,
-                        type: 'earthquake',
-                        severity: eq.properties.mag >= 6 ? 'critical' : eq.properties.mag >= 5 ? 'high' : 'medium',
-                        lat: eq.geometry.coordinates[1],
-                        lon: eq.geometry.coordinates[0],
-                        location: eq.properties.place,
-                        title_pt: 'Terremoto M' + eq.properties.mag,
-                        title_en: 'Earthquake M' + eq.properties.mag,
-                        source: 'USGS',
-                        url: eq.properties.url,
-                        desc_pt: 'Magnitude ' + eq.properties.mag + ' • Profundidade: ' + eq.geometry.coordinates[2] + 'km',
-                        desc_en: 'Magnitude ' + eq.properties.mag + ' • Depth: ' + eq.geometry.coordinates[2] + 'km'
-                    };
-                });
-            } catch(e) {
-                apiStatus.usgs = false;
-                return [];
-            }
-        }
+// Refresh countdown
+let countdown = 300;
+setInterval(() => {
+  countdown--;
+  if (countdown < 0) countdown = 300;
+  const m = Math.floor(countdown / 60);
+  const s = countdown % 60;
+  document.getElementById('next-refresh').textContent =
+    m + ':' + String(s).padStart(2,'0');
+}, 1000);
 
-        async function fetchWildfires() {
-            try {
-                var res = await fetch('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/ALL/1');
-                if (!res.ok) throw new Error('NASA FIRMS offline');
-                var text = await res.text();
-                var rows = text.trim().split('\n').slice(1);
-                apiStatus.firms = true;
-                
-                return rows.map(function(row) {
-                    var cols = row.split(',');
-                    var lat = parseFloat(cols[0]), lon = parseFloat(cols[1]);
-                    var confidence = parseFloat(cols[8]);
-                    return {
-                        id: 'firms_' + Math.random().toString(36).substr(2, 9),
-                        type: 'wildfire',
-                        severity: confidence > 80 ? 'critical' : confidence > 60 ? 'high' : 'medium',
-                        lat: lat,
-                        lon: lon,
-                        location: 'Foco de Incêndio',
-                        title_pt: 'Incêndio Florestal',
-                        title_en: 'Wildfire',
-                        source: 'NASA FIRMS',
-                        url: 'https://firms.modaps.eosdis.nasa.gov/map/',
-                        desc_pt: 'Confiança: ' + confidence + '% • Detectado por VIIRS',
-                        desc_en: 'Confidence: ' + confidence + '% • VIIRS detection'
-                    };
-                });
-            } catch(e) {
-                apiStatus.firms = false;
-                return [];
-            }
-        }
+// ─── MAP INIT ─────────────────────────────────────────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([20, 10], 2);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        async function fetchConflicts() {
-            try {
-                var res = await fetch('https://data.reliefweb.int/api/resources/v1/datadownload?limit=25&profile=core&sort[created]=DESC');
-                if (!res.ok) throw new Error('ReliefWeb offline');
-                var data = await res.json();
-                apiStatus.reliefweb = true;
-                
-                return data.data.map(function(item) {
-                    var lat = 0, lon = 0, loc = 'Global';
-                    var title = item.fields.title.toLowerCase();
-                    
-                    if (title.includes('ukraine') || title.includes('russia')) { lat = 48.5; lon = 31.0; loc = 'Ukraine'; }
-                    else if (title.includes('gaza') || title.includes('palestine') || title.includes('israel')) { lat = 31.5; lon = 34.5; loc = 'Gaza'; }
-                    else if (title.includes('sudan')) { lat = 15.5; lon = 32.5; loc = 'Sudan'; }
-                    else if (title.includes('yemen')) { lat = 15.5; lon = 48.5; loc = 'Yemen'; }
-                    else if (title.includes('syria')) { lat = 35.0; lon = 38.0; loc = 'Syria'; }
-                    else if (title.includes('myanmar') || title.includes('burma')) { lat = 19.76; lon = 96.08; loc = 'Myanmar'; }
-                    else if (title.includes('congo') || title.includes('rdc')) { lat = -1.68; lon = 29.23; loc = 'DRC'; }
-                    else if (title.includes('haiti')) { lat = 18.59; lon = -72.34; loc = 'Haiti'; }
-                    else { return null; }
-                    
-                    return {
-                        id: 'rw_' + item.id,
-                        type: 'conflict',
-                        severity: 'critical',
-                        lat: lat,
-                        lon: lon,
-                        location: loc,
-                        title_pt: item.fields.title,
-                        title_en: item.fields.title,
-                        source: 'ReliefWeb (OCHA/ONU)',
-                        url: item.fields.url,
-                        desc_pt: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Crise humanitária documentada',
-                        desc_en: item.fields.summary ? item.fields.summary.substring(0, 150) + '...' : 'Documented humanitarian crisis'
-                    };
-                }).filter(function(c) { return c !== null; });
-            } catch(e) {
-                apiStatus.reliefweb = false;
-                return [];
-            }
-        }
+  lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:19, attribution:'© CartoDB' });
+  darkTiles  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',  { maxZoom:19, attribution:'© CartoDB' });
+  currentTileLayer = lightTiles.addTo(map);
 
-        async function fetchDisasters() {
-            try {
-                var res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('http://www.gdacs.org/gdacs/rss2.aspx'));
-                if (!res.ok) throw new Error('GDACS offline');
-                var txt = await res.text();
-                var parser = new DOMParser();
-                var xml = parser.parseFromString(txt, 'text/xml');
-                var items = xml.querySelectorAll('item');
-                apiStatus.gdacs = true;
-                
-                return Array.from(items).slice(0, 15).map(function(item) {
-                    var title = item.querySelector('title').textContent;
-                    var link = item.querySelector('link').textContent;
-                    var desc = item.querySelector('description')?.textContent || '';
-                    
-                    var lat = 0, lon = 0, loc = 'Unknown';
-                    if (title.includes('Volcano')) { lat = -1; lon = 30; loc = 'Volcanic Region'; }
-                    else if (title.includes('Flood')) { lat = 20; lon = 80; loc = 'Flood Area'; }
-                    else if (title.includes('Cyclone') || title.includes('Storm') || title.includes('Typhoon')) { lat = -20; lon = 55; loc = 'Cyclone Zone'; }
-                    else if (title.includes('Earthquake')) { lat = 35; lon = 139; loc = 'Seismic Zone'; }
-                    else { return null; }
-                    
-                    return {
-                        id: 'gdacs_' + Math.random().toString(36).substr(2, 9),
-                        type: 'disaster',
-                        severity: title.includes('Red') ? 'critical' : 'high',
-                        lat: lat,
-                        lon: lon,
-                        location: loc,
-                        title_pt: title.split('-')[0] || 'Desastre Natural',
-                        title_en: title.split('-')[0] || 'Natural Disaster',
-                        source: 'GDACS (UE/ONU)',
-                        url: link,
-                        desc_pt: desc.substring(0, 150),
-                        desc_en: desc.substring(0, 150)
-                    };
-                }).filter(function(d) { return d !== null; });
-            } catch(e) {
-                apiStatus.gdacs = false;
-                return [];
-            }
-        }
+  markerGroup = L.layerGroup().addTo(map);
 
-        async function fetchWeather() {
-            var cities = [
-                { name: 'São Paulo', lat: -23.55, lon: -46.63, country: 'Brazil' },
-                { name: 'New York', lat: 40.71, lon: -74.01, country: 'USA' },
-                { name: 'London', lat: 51.51, lon: -0.13, country: 'UK' },
-                { name: 'Tokyo', lat: 35.67, lon: 139.65, country: 'Japan' },
-                { name: 'Sydney', lat: -33.87, lon: 151.21, country: 'Australia' }
-            ];
-            
-            var weatherData = [];
-            for (var i = 0; i < cities.length; i++) {
-                try {
-                    var city = cities[i];
-                    var res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + city.lat + '&longitude=' + city.lon + '&current=temperature_2m,wind_speed_10m,weather_code&timezone=auto');
-                    if (!res.ok) continue;
-                    var data = await res.json();
-                    var c = data.current;
-                    var codes = {0:'Céu Limpo',1:'Limpo',2:'Parc. Nublado',3:'Nublado',45:'Nevoeiro',51:'Garoa',61:'Chuva',71:'Neve',95:'Tempestade'};
-                    
-                    weatherData.push({
-                        id: 'weather_' + city.name,
-                        type: 'weather',
-                        severity: c.temperature_2m > 40 || c.temperature_2m < -15 ? 'critical' : c.temperature_2m > 35 || c.temperature_2m < -5 ? 'high' : 'medium',
-                        lat: city.lat,
-                        lon: city.lon,
-                        location: city.name + ', ' + city.country,
-                        title_pt: 'Clima: ' + c.temperature_2m + '°C',
-                        title_en: 'Weather: ' + c.temperature_2m + '°C',
-                        source: 'Open-Meteo',
-                        url: 'https://open-meteo.com',
-                        desc_pt: (codes[c.weather_code] || 'Variável') + ' • Vento: ' + c.wind_speed_10m + ' km/h',
-                        desc_en: (codes[c.weather_code] || 'Variable') + ' • Wind: ' + c.wind_speed_10m + ' km/h',
-                        weather: { temp: c.temperature_2m, condition: codes[c.weather_code] || 'Variable', wind: c.wind_speed_10m }
-                    });
-                } catch(e) { continue; }
-            }
-            apiStatus.weather = weatherData.length > 0;
-            return weatherData;
-        }
+  map.on('click', (e) => {
+    openInfoPanel(e.latlng.lat, e.latlng.lng);
+  });
+}
 
-        async function fetchSolar() {
-            try {
-                var [kpRes, windRes] = await Promise.all([
-                    fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'),
-                    fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json')
-                ]);
-                if (!kpRes.ok || !windRes.ok) throw new Error('NOAA offline');
-                
-                var kpData = await kpRes.json();
-                var windData = await windRes.json();
-                apiStatus.solar = true;
-                
-                var latestKp = kpData[kpData.length - 1];
-                var latestWind = windData[windData.length - 1];
-                var kpValue = parseFloat(latestKp[1]);
-                var bzValue = parseFloat(latestWind[2]);
-                
-                return [{
-                    id: 'solar_current',
-                    type: 'solar',
-                    severity: kpValue >= 7 ? 'critical' : kpValue >= 5 ? 'high' : 'medium',
-                    lat: 65,
-                    lon: -40,
-                    location: 'Solar Activity Monitor',
-                    title_pt: 'Atividade Solar - Kp ' + kpValue,
-                    title_en: 'Solar Activity - Kp ' + kpValue,
-                    source: 'NOAA/SWPC',
-                    url: 'https://www.swpc.noaa.gov/products/planetary-k-index',
-                    desc_pt: 'Kp: ' + kpValue + '/9 • Bz: ' + bzValue + 'nT • ' + (kpValue >= 5 ? 'Possível aurora em latitudes médias' : 'Condições normais'),
-                    desc_en: 'Kp: ' + kpValue + '/9 • Bz: ' + bzValue + 'nT • ' + (kpValue >= 5 ? 'Aurora possible at mid-latitudes' : 'Normal conditions'),
-                    solar: { kp: kpValue, bz: bzValue, status: kpValue >= 7 ? 'SEVERE' : kpValue >= 5 ? 'ACTIVE' : 'QUIET' }
-                }];
-            } catch(e) {
-                apiStatus.solar = false;
-                return [];
-            }
-        }
+function setMapMode(mode) {
+  document.getElementById('btn-light').classList.toggle('active', mode === 'light');
+  document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
+  if (mode === 'light' && currentTileLayer !== lightTiles) {
+    map.removeLayer(currentTileLayer);
+    currentTileLayer = lightTiles.addTo(map);
+  } else if (mode === 'dark' && currentTileLayer !== darkTiles) {
+    map.removeLayer(currentTileLayer);
+    currentTileLayer = darkTiles.addTo(map);
+  }
+}
 
-        async function fetchISS() {
-            try {
-                var res = await fetch('http://api.open-notify.org/iss-now.json');
-                var data = await res.json();
-                var lat = parseFloat(data.iss_position.latitude);
-                var lon = parseFloat(data.iss_position.longitude);
-                
-                if(!issMarker) {
-                    issMarker = L.circleMarker([lat, lon], {
-                        radius: 10,
-                        fillColor: '#00ff00',
-                        color: '#fff',
-                        weight: 2,
-                        fillOpacity: 1
-                    }).addTo(map);
-                    issMarker.bindPopup('🛰️ Estação Espacial Internacional (ISS)');
-                } else {
-                    issMarker.setLatLng([lat, lon]);
-                }
-                return data;
-            } catch(e) {
-                return null;
-            }
-        }
+// ─── API STATUS ───────────────────────────────────────────────────
+function setApiStatus(id, status) { // status: 'ok' | 'err' | 'loading'
+  const el = document.getElementById('api-' + id);
+  if (el) { el.className = 'api-dot ' + status; apiOk[id] = (status === 'ok'); }
+}
 
-        async function fetchFlights() {
-            try {
-                var bounds = map.getBounds();
-                var res = await fetch('https://opensky-network.org/api/states/all?lamin=' + bounds.getSouthWest().lat + '&lomin=' + bounds.getSouthWest().lng + '&lamax=' + bounds.getNorthEast().lat + '&lomax=' + bounds.getNorthEast().lng);
-                var data = await res.json();
-                
-                if(!flightLayer) {
-                    flightLayer = L.layerGroup().addTo(map);
-                }
-                flightLayer.clearLayers();
-
-                data.states.slice(0, 100).forEach(function(state) {
-                    var callsign = state[1];
-                    var lon = state[5];
-                    var lat = state[6];
-                    if(!lat || !lon) return;
-                    
-                    var marker = L.circleMarker([lat, lon], {
-                        radius: 3,
-                        fillColor: '#00bfff',
-                        color: '#fff',
-                        weight: 1,
-                        fillOpacity: 0.8
-                    });
-                    if(callsign && callsign.trim()) {
-                        marker.bindTooltip(callsign.trim(), { permanent: false, direction: 'top' });
-                    }
-                    flightLayer.addLayer(marker);
-                });
-                return data.states;
-            } catch(e) {
-                return [];
-            }
-        }
-
-        function getHealthData() {
-            return [
-                {
-                    id: 'who_dengue_br',
-                    type: 'health',
-                    severity: 'high',
-                    lat: -15.5,
-                    lon: -50.0,
-                    location: 'Brazil',
-                    title_pt: 'Epidemia de Dengue no Brasil',
-                    title_en: 'Dengue Epidemic in Brazil',
-                    source: 'PAHO/WHO',
-                    url: 'https://www.paho.org/pt/dengue',
-                    desc_pt: 'Recorde de casos em 2024. Mais de 5 milhões de casos notificados oficialmente.',
-                    desc_en: 'Record cases in 2024. Over 5 million cases officially reported.'
-                },
-                {
-                    id: 'who_cholera_ht',
-                    type: 'health',
-                    severity: 'critical',
-                    lat: 18.59,
-                    lon: -72.34,
-                    location: 'Haiti',
-                    title_pt: 'Surto de Cólera no Haiti',
-                    title_en: 'Cholera Outbreak in Haiti',
-                    source: 'WHO',
-                    url: 'https://www.who.int/emergencies/disease-outbreak-news',
-                    desc_pt: 'Retorno da cólera após 3 anos. Mais de 30 mil casos confirmados pela OMS.',
-                    desc_en: 'Cholera returns after 3 years. Over 30,000 cases confirmed by WHO.'
-                }
-            ];
-        }
-
-        async function loadData() {
-            var loadingDiv = document.getElementById('loading');
-            var detailsDiv = document.getElementById('loadingDetails');
-            
-            loadingDiv.style.display = 'flex';
-            detailsDiv.innerHTML = '• Conectando a USGS...<br>• Verificando NASA FIRMS...<br>• Consultando ReliefWeb...';
-            
-            var [quakes, wildfires, conflicts, disasters, weather, solar] = await Promise.all([
-                fetchEarthquakes(),
-                fetchWildfires(),
-                fetchConflicts(),
-                fetchDisasters(),
-                fetchWeather(),
-                fetchSolar()
-            ]);
-            
-            var health = getHealthData();
-            allData = [...quakes, ...wildfires, ...conflicts, ...disasters, ...weather, ...solar, ...health];
-            
-            var statusText = '';
-            if (apiStatus.usgs) statusText += '✓ USGS ';
-            if (apiStatus.firms) statusText += '✓ NASA FIRMS ';
-            if (apiStatus.reliefweb) statusText += '✓ ReliefWeb ';
-            if (apiStatus.gdacs) statusText += '✓ GDACS ';
-            if (apiStatus.weather) statusText += '✓ Open-Meteo ';
-            if (apiStatus.solar) statusText += '✓ NOAA ';
-            
-            var statusEl = document.getElementById('apiStatus');
-            statusEl.textContent = statusText || '⚠️ Algumas fontes indisponíveis';
-            statusEl.className = 'api-status ' + (statusText ? 'success' : 'error');
-            
-            document.getElementById('countDisplay').textContent = allData.length;
-            document.getElementById('lastUpdate').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
-            
-            renderMarkers();
-            updateBitcoin();
-            
-            setTimeout(function() {
-                loadingDiv.style.display = 'none';
-            }, 1000);
-        }
-
-        async function updateBitcoin() {
-            try {
-                var res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
-                var data = await res.json();
-                var price = data.bitcoin.usd;
-                var change = data.bitcoin.usd_24h_change;
-                document.getElementById('btcValue').textContent = '$ ' + price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById('btcChange').textContent = (change >= 0 ? '▲' : '▼') + ' ' + Math.abs(change).toFixed(2) + '% (24h)';
-                document.getElementById('btcChange').style.color = change >= 0 ? '#90EE90' : '#FFB6C1';
-            } catch(e) {
-                document.getElementById('btcValue').textContent = 'Indisponível';
-            }
-        }
-
-        function renderMarkers() {
-            markers.forEach(function(m) { if(map.hasLayer(m)) map.removeLayer(m); });
-            markers = [];
-            
-            var typeFilter = document.getElementById('typeFilter').value;
-            var sevFilter = document.getElementById('severityFilter').value;
-            var count = 0;
-
-            allData.forEach(function(item) {
-                if (typeFilter !== 'all' && item.type !== typeFilter) return;
-                if (sevFilter !== 'all' && item.severity !== sevFilter) return;
-
-                var colors = { critical: '#cc0000', high: '#ff6600', medium: '#ffcc00', weather: '#667eea', solar: '#f093fb', wildfire: '#ff4444' };
-                var radius = { critical: 15, high: 11, medium: 7 };
-                var title = currentLang === 'pt' ? item.title_pt : item.title_en;
-                
-                var circle = L.circleMarker([item.lat, item.lon], {
-                    radius: radius[item.severity] || 10,
-                    fillColor: colors[item.type] || colors[item.severity],
-                    color: '#fff',
-                    weight: 2,
-                    fillOpacity: 0.85
-                }).addTo(map);
-
-                var popupContent = '<b>' + title + '</b><br>' + 
-                                  (currentLang === 'pt' ? item.desc_pt : item.desc_en) + 
-                                  '<br><small style="color:#888;">Fonte: ' + item.source + '</small>' +
-                                  '<br><br><a href="' + item.url + '" target="_blank" style="color:#00ff00;font-weight:600;">🔗 Ver fonte oficial</a>';
-                
-                circle.bindPopup(popupContent);
-                circle.on('click', function() { fetchLocalData(item.lat, item.lon); });
-                
-                markers.push(circle);
-                count++;
-            });
-
-            document.getElementById('countDisplay').textContent = count;
-        }
-
-        function filterData() {
-            renderMarkers();
-        }
-
-        async function fetchLocalData(lat, lng) {
-            currentClickLat = lat;
-            currentClickLng = lng;
-            var panel = document.getElementById('localDataPanel');
-            panel.classList.add('active');
-            document.getElementById('localTitle').textContent = "Buscando localização...";
-            document.getElementById('localSubtitle').textContent = "Aguarde...";
-            
-            if (clickMarker) map.removeLayer(clickMarker);
-            clickMarker = L.marker([lat, lng]).addTo(map);
-
-            try {
-                var geoRes = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&accept-language=' + (currentLang === 'pt' ? 'pt' : 'en'));
-                var geo = await geoRes.json();
-                var addr = geo.address || {};
-                document.getElementById('localTitle').textContent = (addr.city || addr.town || addr.village || 'Local') + ', ' + (addr.state || '');
-                document.getElementById('localSubtitle').textContent = addr.country || 'Desconhecido';
-
-                var weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lng + '&current=temperature_2m,wind_speed_10m,weather_code&timezone=auto');
-                var weatherData = await weatherRes.json();
-                var c = weatherData.current;
-                var codes = {0:'Céu Limpo',1:'Limpo',2:'Parc. Nublado',3:'Nublado',61:'Chuva',71:'Neve',95:'Tempestade'};
-                document.getElementById('localTemp').textContent = c.temperature_2m + '°C';
-                document.getElementById('localWind').textContent = c.wind_speed_10m + ' km/h';
-                document.getElementById('localCondition').textContent = codes[c.weather_code] || 'Variável';
-
-                var currencyCode = currencyMap[addr.country] || 'N/A';
-                document.getElementById('localCurrency').textContent = currencyCode;
-
-                var search = (addr.city || addr.town || addr.country || 'Earth').replace(/\s/g, '_');
-                var wikiRes = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + search);
-                if (wikiRes.ok) {
-                    var wikiData = await wikiRes.json();
-                    document.getElementById('localWiki').textContent = wikiData.extract ? wikiData.extract.substring(0, 150) + '...' : 'Sem informações na Wikipedia.';
-                } else {
-                    document.getElementById('localWiki').textContent = 'Local não encontrado na Wikipedia.';
-                }
-
-                updateLocalCurrency(currencyCode);
-                
-            } catch(e) {
-                document.getElementById('localTitle').textContent = "Erro ao carregar dados";
-                document.getElementById('localWiki').textContent = 'Verifique sua conexão com a internet.';
-            }
-        }
-
-        async function updateLocalCurrency(code) {
-            if (code === 'USD' || code === 'N/A') {
-                document.getElementById('localCurrencyRow').style.display = 'none';
-                return;
-            }
-            document.getElementById('localCurrencyRow').style.display = 'flex';
-            document.getElementById('localCurrencyName').textContent = code;
-            
-            try {
-                var res = await fetch('https://open.er-api.com/v6/latest/USD');
-                var data = await res.json();
-                var rate = data.rates[code];
-                if (rate) {
-                    document.getElementById('localCurrencyValue').textContent = rate.toFixed(4) + ' ' + code;
-                }
-            } catch(e) {
-                document.getElementById('localCurrencyValue').textContent = 'Indisponível';
-            }
-        }
-
-        function openStreetView() {
-            if (currentClickLat && currentClickLng) {
-                window.open('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + currentClickLat + ',' + currentClickLng + '&heading=0&pitch=0&fov=80', '_blank');
-            }
-        }
-
-        function closeLocalPanel() {
-            document.getElementById('localDataPanel').classList.remove('active');
-            if (clickMarker) map.removeLayer(clickMarker);
-        }
-
-        function closeEconomicPanel() {
-            document.getElementById('economicPanel').classList.remove('active');
-        }
-
-        window.onload = function() {
-            map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-            
-            lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-            darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-            currentLayer = lightTiles.addTo(map);
-            
-            loadData();
-            setInterval(loadData, 300000);
-            
-            var countdown = 60;
-            setInterval(function() {
-                countdown--;
-                if (countdown <= 0) countdown = 60;
-                document.getElementById('next-refresh').textContent = countdown;
-            }, 1000);
-        };
-
-        map.on('click', function() {
-            closeLocalPanel();
+// ─── EARTHQUAKE + TSUNAMI (USGS) ─────────────────────────────────
+async function fetchEarthquakes() {
+  setApiStatus('usgs', 'loading');
+  try {
+    const res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    setApiStatus('usgs', 'ok');
+    const events = [];
+    data.features.forEach(eq => {
+      const mag = eq.properties.mag;
+      const hasTsunami = eq.properties.tsunami > 0;
+      const depth = eq.geometry.coordinates[2];
+      // Base earthquake event
+      events.push({
+        id: 'eq_' + eq.id, type: 'earthquake',
+        severity: mag >= 6.5 ? 'critical' : mag >= 5.5 ? 'high' : 'medium',
+        lat: eq.geometry.coordinates[1], lon: eq.geometry.coordinates[0],
+        location: eq.properties.place || 'Desconhecido',
+        title: 'Terremoto M' + mag.toFixed(1),
+        source: 'USGS',
+        url: eq.properties.url,
+        desc: `Magnitude ${mag.toFixed(1)} • Profundidade: ${depth.toFixed(0)} km` +
+              (hasTsunami ? ' • ⚠️ POTENCIAL TSUNAMI' : '')
+      });
+      // If USGS flagged tsunami potential
+      if (hasTsunami) {
+        events.push({
+          id: 'tsun_' + eq.id, type: 'tsunami',
+          severity: 'critical',
+          lat: eq.geometry.coordinates[1], lon: eq.geometry.coordinates[0],
+          location: eq.properties.place || 'Região oceânica',
+          title: '🌊 Alerta Tsunami (USGS)',
+          source: 'USGS',
+          url: eq.properties.url,
+          desc: `Gerado por terremoto M${mag.toFixed(1)} • Profundidade ${depth.toFixed(0)} km`
         });
-    </script>
+      }
+    });
+    return events;
+  } catch(e) { setApiStatus('usgs', 'err'); return []; }
+}
+
+// ─── TSUNAMI (NOAA PTWC RSS) ──────────────────────────────────────
+async function fetchTsunamiAlerts() {
+  try {
+    const url = PROXY + encodeURIComponent('https://www.tsunami.gov/events/xml/PHEBrss.xml');
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const txt = await res.text();
+    const xml = new DOMParser().parseFromString(txt, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 8);
+    return items.map(item => {
+      const title = item.querySelector('title')?.textContent || '';
+      const desc  = item.querySelector('description')?.textContent || '';
+      const link  = item.querySelector('link')?.textContent || 'https://www.tsunami.gov';
+      if (title.toLowerCase().includes('no threat') || title.toLowerCase().includes('cancel')) return null;
+      return {
+        id: 'noaa_tsun_' + Math.random().toString(36).slice(2,8),
+        type: 'tsunami', severity: 'critical',
+        lat: 20, lon: -155, // Pacific basin default
+        location: 'Bacia do Pacífico', title: title.slice(0, 60),
+        source: 'NOAA/PTWC', url: link,
+        desc: desc.replace(/<[^>]+>/g,'').slice(0, 150)
+      };
+    }).filter(Boolean);
+  } catch(e) { return []; }
+}
+
+// ─── WILDFIRES (NASA FIRMS) ───────────────────────────────────────
+async function fetchWildfires() {
+  setApiStatus('firms', 'loading');
+  try {
+    // Public demo key — limited but real
+    const res = await fetch('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/BRA/1');
+    if (!res.ok) throw new Error();
+    const text = await res.text();
+    const rows = text.trim().split('\n').slice(1).filter(r => r.trim());
+    setApiStatus('firms', 'ok');
+    return rows.slice(0, 200).map(row => {
+      const cols = row.split(',');
+      const lat = parseFloat(cols[0]), lon = parseFloat(cols[1]);
+      const conf = parseFloat(cols[8]) || 0;
+      if (isNaN(lat) || isNaN(lon)) return null;
+      return {
+        id: 'fire_' + lat.toFixed(3) + '_' + lon.toFixed(3),
+        type: 'wildfire', severity: conf > 80 ? 'critical' : conf > 60 ? 'high' : 'medium',
+        lat, lon, location: 'Foco detectado',
+        title: 'Incêndio Florestal',
+        source: 'NASA FIRMS (VIIRS)',
+        url: 'https://firms.modaps.eosdis.nasa.gov/map/',
+        desc: `Confiança: ${conf.toFixed(0)}% • VIIRS/SNPP • Satélite NASA`
+      };
+    }).filter(Boolean);
+  } catch(e) { setApiStatus('firms', 'err'); return []; }
+}
+
+// ─── CONFLICTS (ReliefWeb — endpoint correto) ─────────────────────
+async function fetchConflicts() {
+  setApiStatus('reliefweb', 'loading');
+  try {
+    const url = 'https://api.reliefweb.int/v1/disasters?appname=mundoagora&limit=20&sort[]=date:desc&fields[include][]=name&fields[include][]=status&fields[include][]=primary_country&fields[include][]=date&filter[field]=status&filter[value][]=ongoing';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    setApiStatus('reliefweb', 'ok');
+    return (data.data || []).map(item => {
+      const f = item.fields;
+      const country = f.primary_country?.name || '';
+      const coords = COUNTRY_COORDS[country] || [0, 0];
+      return {
+        id: 'rw_' + item.id, type: 'conflict', severity: 'critical',
+        lat: coords[0], lon: coords[1],
+        location: country || 'Global',
+        title: (f.name || 'Crise Humanitária').slice(0, 70),
+        source: 'ReliefWeb (OCHA/ONU)',
+        url: `https://reliefweb.int/disaster/${item.id}`,
+        desc: `Crise em ${country} • Status: ${f.status || 'Ongoing'} • Fonte ONU`
+      };
+    }).filter(e => e.lat !== 0 || e.lon !== 0);
+  } catch(e) { setApiStatus('reliefweb', 'err'); return []; }
+}
+
+// ─── DISASTERS (GDACS) ────────────────────────────────────────────
+async function fetchDisasters() {
+  setApiStatus('gdacs', 'loading');
+  try {
+    const url = PROXY + encodeURIComponent('http://www.gdacs.org/gdacs/rss2.aspx');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error();
+    const txt = await res.text();
+    const xml = new DOMParser().parseFromString(txt, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 15);
+    setApiStatus('gdacs', 'ok');
+    return items.map(item => {
+      const title = item.querySelector('title')?.textContent || '';
+      const desc  = item.querySelector('description')?.textContent || '';
+      const link  = item.querySelector('link')?.textContent || 'https://gdacs.org';
+      let lat = 0, lon = 0, type = 'disaster';
+      // Try to extract geo:lat/lon
+      const geoLat = item.querySelector('lat')?.textContent || item.getElementsByTagNameNS('*','lat')[0]?.textContent;
+      const geoLon = item.querySelector('long')?.textContent || item.getElementsByTagNameNS('*','long')[0]?.textContent;
+      if (geoLat && geoLon) { lat = parseFloat(geoLat); lon = parseFloat(geoLon); }
+      else {
+        // Fallback by keyword
+        const t = title.toLowerCase();
+        if (t.includes('flood')) { lat = 25; lon = 85; }
+        else if (t.includes('cyclone') || t.includes('typhoon') || t.includes('storm')) { lat = -15; lon = 60; }
+        else if (t.includes('volcano')) { lat = -1; lon = 37; type = 'volcano'; }
+        else if (t.includes('earthquake')) { lat = 35; lon = 100; type = 'earthquake'; }
+        else if (t.includes('drought')) { lat = 12; lon = 35; }
+        else return null;
+      }
+      return {
+        id: 'gdacs_' + Math.random().toString(36).slice(2,9),
+        type, severity: title.includes('Red') ? 'critical' : title.includes('Orange') ? 'high' : 'medium',
+        lat, lon, location: 'GDACS',
+        title: title.split(/ - | – /)[0].slice(0, 70) || 'Desastre Natural',
+        source: 'GDACS (UE/ONU)', url: link,
+        desc: desc.replace(/<[^>]+>/g,'').slice(0, 150)
+      };
+    }).filter(Boolean);
+  } catch(e) { setApiStatus('gdacs', 'err'); return []; }
+}
+
+// ─── VOLCANOES (Smithsonian GVP) ──────────────────────────────────
+async function fetchVolcanoes() {
+  setApiStatus('gvp', 'loading');
+  try {
+    const url = PROXY + encodeURIComponent('https://volcano.si.edu/news/WeeklyVolcanoRSS.xml');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error();
+    const txt = await res.text();
+    const xml = new DOMParser().parseFromString(txt, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 20);
+    setApiStatus('gvp', 'ok');
+    return items.map(item => {
+      const title   = item.querySelector('title')?.textContent || '';
+      const desc    = item.querySelector('description')?.textContent || '';
+      const link    = item.querySelector('link')?.textContent || 'https://volcano.si.edu';
+      // Try to find lat/lon in the description
+      let lat = 0, lon = 0;
+      const latM = desc.match(/Latitude:\s*([-\d.]+)/i) || desc.match(/([-]?\d{1,2}\.\d+)\s*[NS]/);
+      const lonM = desc.match(/Longitude:\s*([-\d.]+)/i) || desc.match(/([-]?\d{1,3}\.\d+)\s*[EW]/);
+      if (latM) lat = parseFloat(latM[1]);
+      if (lonM) lon = parseFloat(lonM[1]);
+      if (!lat && !lon) {
+        // Major known volcanoes - default coords
+        const knownVolcs = {
+          'Etna': [37.7, 15.0], 'Stromboli': [38.8, 15.2], 'Merapi': [-7.5, 110.4],
+          'Kilauea': [19.4, -155.3], 'Fuego': [14.5, -90.9], 'Popocatépetl': [19.0, -98.6],
+          'Sinabung': [3.2, 98.4], 'Ruapehu': [-39.3, 175.6], 'Sakurajima': [31.6, 130.7],
+          'Erebus': [-77.5, 167.2], 'Nyiragongo': [-1.5, 29.3], 'Ol Doinyo Lengai': [-2.8, 35.9],
+          'Villarrica': [-39.4, -71.9], 'Piton de la Fournaise': [-21.2, 55.7],
+          'Veniaminof': [56.2, -159.4], 'Sheveluch': [56.6, 161.4]
+        };
+        for (const [name, coords] of Object.entries(knownVolcs)) {
+          if (title.includes(name)) { lat = coords[0]; lon = coords[1]; break; }
+        }
+      }
+      if (!lat && !lon) return null;
+      return {
+        id: 'volc_' + Math.random().toString(36).slice(2,9),
+        type: 'volcano', severity: 'high',
+        lat, lon, location: title.split(/[:(]/)[0].trim(),
+        title: 'Vulcão: ' + title.split(/[:(]/)[0].trim(),
+        source: 'Smithsonian GVP', url: link,
+        desc: desc.replace(/<[^>]+>/g,'').slice(0, 160)
+      };
+    }).filter(Boolean);
+  } catch(e) { setApiStatus('gvp', 'err'); return []; }
+}
+
+// ─── DISEASE OUTBREAKS (WHO RSS) ─────────────────────────────────
+async function fetchDiseaseOutbreaks() {
+  setApiStatus('who', 'loading');
+  try {
+    const url = PROXY + encodeURIComponent('https://www.who.int/rss-feeds/news-en.xml');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error();
+    const txt = await res.text();
+    const xml = new DOMParser().parseFromString(txt, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item'));
+    setApiStatus('who', 'ok');
+    const diseaseKeywords = ['outbreak','disease','epidemic','cholera','dengue','ebola','mpox','monkeypox','plague','measles','polio','influenza','flu','virus','yellow fever','lassa','marburg','rabies','hantavirus'];
+    const found = [];
+    items.forEach(item => {
+      const title = item.querySelector('title')?.textContent || '';
+      const desc  = item.querySelector('description')?.textContent || '';
+      const link  = item.querySelector('link')?.textContent || 'https://www.who.int';
+      const combined = (title + ' ' + desc).toLowerCase();
+      if (!diseaseKeywords.some(k => combined.includes(k))) return;
+      // Find country
+      let lat = 0, lon = 0, loc = 'Global';
+      for (const [country, coords] of Object.entries(COUNTRY_COORDS)) {
+        if (combined.includes(country.toLowerCase())) {
+          lat = coords[0]; lon = coords[1]; loc = country; break;
+        }
+      }
+      // Also common disease locations
+      if (!lat) {
+        const regionMap = { 'africa': [5, 20], 'asia': [20, 100], 'americas': [10, -75], 'europe': [50, 15], 'brazil': [-15, -50], 'india': [20, 78], 'china': [35, 105] };
+        for (const [r, c] of Object.entries(regionMap)) {
+          if (combined.includes(r)) { lat = c[0]; lon = c[1]; break; }
+        }
+      }
+      if (!lat) return;
+      found.push({
+        id: 'who_' + Math.random().toString(36).slice(2,9),
+        type: 'health', severity: 'high',
+        lat, lon, location: loc,
+        title: title.slice(0, 70),
+        source: 'WHO/OMS', url: link,
+        desc: desc.replace(/<[^>]+>/g,'').slice(0, 150)
+      });
+    });
+    return found.slice(0, 12);
+  } catch(e) { setApiStatus('who', 'err'); return []; }
+}
+
+// ─── WEATHER (Open-Meteo — cidades reais) ─────────────────────────
+async function fetchWeatherCities() {
+  setApiStatus('meteo', 'loading');
+  const cities = [
+    { name:'São Paulo',     lat:-23.55, lon:-46.63 },
+    { name:'New York',      lat: 40.71, lon:-74.01 },
+    { name:'London',        lat: 51.51, lon: -0.13 },
+    { name:'Tokyo',         lat: 35.67, lon:139.65 },
+    { name:'Sydney',        lat:-33.87, lon:151.21 },
+    { name:'Dubai',         lat: 25.20, lon: 55.27 },
+    { name:'Mumbai',        lat: 19.08, lon: 72.88 },
+    { name:'Moscow',        lat: 55.75, lon: 37.62 },
+    { name:'Cairo',         lat: 30.05, lon: 31.24 },
+    { name:'Lagos',         lat:  6.52, lon:  3.38 },
+    { name:'Buenos Aires',  lat:-34.60, lon:-58.38 },
+    { name:'Beijing',       lat: 39.91, lon:116.39 }
+  ];
+  try {
+    const lats = cities.map(c => c.lat).join(',');
+    const lons = cities.map(c => c.lon).join(',');
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,wind_speed_10m,weather_code,relative_humidity_2m&timezone=auto&forecast_days=1`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : [data];
+    setApiStatus('meteo', 'ok');
+    return items.map((item, i) => {
+      const city = cities[i]; if (!city) return null;
+      const c = item.current || {};
+      const temp = c.temperature_2m ?? '--';
+      const wind = c.wind_speed_10m ?? '--';
+      const code = c.weather_code ?? 0;
+      return {
+        id: 'wx_' + city.name, type: 'weather',
+        severity: (temp > 42 || temp < -20) ? 'critical' : (temp > 37 || temp < -5) ? 'high' : 'medium',
+        lat: city.lat, lon: city.lon,
+        location: city.name,
+        title: `${city.name}: ${temp}°C`,
+        source: 'Open-Meteo',
+        url: 'https://open-meteo.com',
+        desc: `${WX_CODES[code] || 'Variável'} • Vento: ${wind} km/h • Umidade: ${c.relative_humidity_2m ?? '--'}%`
+      };
+    }).filter(Boolean);
+  } catch(e) { setApiStatus('meteo', 'err'); return []; }
+}
+
+// ─── SOLAR (NOAA SWPC) ────────────────────────────────────────────
+async function fetchSolar() {
+  setApiStatus('noaa', 'loading');
+  try {
+    const [kpRes, windRes] = await Promise.all([
+      fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'),
+      fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json')
+    ]);
+    if (!kpRes.ok || !windRes.ok) throw new Error();
+    const kpData   = await kpRes.json();
+    const windData = await windRes.json();
+    setApiStatus('noaa', 'ok');
+    const kp = parseFloat(kpData[kpData.length - 1][1]);
+    const bz = parseFloat(windData[windData.length - 1][2]);
+    return [{
+      id: 'solar_now', type: 'solar',
+      severity: kp >= 7 ? 'critical' : kp >= 5 ? 'high' : 'medium',
+      lat: 65, lon: -40,
+      location: 'Monitor de Atividade Solar',
+      title: `Atividade Solar — Kp ${kp.toFixed(1)}`,
+      source: 'NOAA/SWPC',
+      url: 'https://www.swpc.noaa.gov/products/planetary-k-index',
+      desc: `Kp: ${kp.toFixed(1)}/9 • Bz: ${bz.toFixed(1)} nT • ${kp >= 5 ? '⚠ Aurora visível em latitudes médias' : 'Condições geomagnéticas normais'}`
+    }];
+  } catch(e) { setApiStatus('noaa', 'err'); return []; }
+}
+
+// ─── ISS (wheretheiss.at — HTTPS) ────────────────────────────────
+async function startISSTracking() {
+  if (!document.getElementById('lyr-iss').checked) return;
+  async function updateISS() {
+    if (!document.getElementById('lyr-iss').checked) return;
+    try {
+      const res  = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+      const data = await res.json();
+      const lat = data.latitude, lon = data.longitude;
+      const alt = data.altitude?.toFixed(0) || '~420';
+      const vel = data.velocity?.toFixed(0) || '~27000';
+      if (!issMarker) {
+        const icon = L.divIcon({
+          className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+          html: `<div style="font-size:22px;filter:drop-shadow(0 0 4px #00e5a0);">🛰</div>`
+        });
+        issMarker = L.marker([lat, lon], { icon }).addTo(map);
+        issMarker.bindPopup(`<div class="popup-title">🛰 ISS — Estação Espacial Internacional</div><div class="popup-desc">Altitude: ${alt} km • Velocidade: ${vel} km/h<br>Latitude: ${lat.toFixed(2)}° • Longitude: ${lon.toFixed(2)}°</div><div class="popup-source">Fonte: wheretheiss.at (NASA)</div>`);
+      } else {
+        issMarker.setLatLng([lat, lon]);
+        issMarker.setPopupContent(`<div class="popup-title">🛰 ISS — Estação Espacial Internacional</div><div class="popup-desc">Altitude: ${alt} km • Velocidade: ${vel} km/h<br>Latitude: ${lat.toFixed(2)}° • Longitude: ${lon.toFixed(2)}°</div><div class="popup-source">Fonte: wheretheiss.at</div>`);
+      }
+    } catch(e) {}
+  }
+  await updateISS();
+  issInterval = setInterval(updateISS, 5000);
+}
+
+function toggleISS() {
+  const on = document.getElementById('lyr-iss').checked;
+  if (on) {
+    startISSTracking();
+  } else {
+    if (issInterval) clearInterval(issInterval);
+    if (issMarker) { map.removeLayer(issMarker); issMarker = null; }
+  }
+}
+
+// ─── FLIGHTS (OpenSky) ─────────────────────────────────────────────
+async function toggleFlights() {
+  const on = document.getElementById('lyr-flights').checked;
+  if (!on) { if (flightLayer) map.removeLayer(flightLayer); return; }
+  try {
+    const b = map.getBounds();
+    const url = `https://opensky-network.org/api/states/all?lamin=${b.getSouthWest().lat.toFixed(2)}&lomin=${b.getSouthWest().lng.toFixed(2)}&lamax=${b.getNorthEast().lat.toFixed(2)}&lomax=${b.getNorthEast().lng.toFixed(2)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!flightLayer) flightLayer = L.layerGroup();
+    else flightLayer.clearLayers();
+    if (!map.hasLayer(flightLayer)) flightLayer.addTo(map);
+    (data.states || []).slice(0, 150).forEach(s => {
+      const lon = s[5], lat = s[6], cs = (s[1] || '').trim();
+      if (!lat || !lon) return;
+      const hdg = s[10] || 0;
+      const icon = L.divIcon({
+        className: '', iconSize: [16, 16], iconAnchor: [8, 8],
+        html: `<div style="transform:rotate(${hdg}deg);font-size:13px;color:#38b6ff;filter:drop-shadow(0 0 2px #000);">✈</div>`
+      });
+      const m = L.marker([lat, lon], { icon });
+      if (cs) m.bindTooltip(cs, { permanent: false });
+      flightLayer.addLayer(m);
+    });
+  } catch(e) {}
+}
+
+// ─── TEMPERATURE LAYER (Open-Meteo REAL — grid batched) ────────────
+async function toggleTemperatureLayer() {
+  const on = document.getElementById('lyr-temp').checked;
+  if (!on) { if (tempHeatLayer) map.removeLayer(tempHeatLayer); return; }
+
+  // Grid: every 20 degrees
+  const pts = [];
+  for (let lat = -80; lat <= 80; lat += 20)
+    for (let lon = -160; lon <= 160; lon += 20)
+      pts.push({ lat, lon });
+
+  const heatData = [];
+  const batchSize = 50;
+  for (let i = 0; i < pts.length; i += batchSize) {
+    const batch = pts.slice(i, i + batchSize);
+    const lats  = batch.map(p => p.lat).join(',');
+    const lons  = batch.map(p => p.lon).join(',');
+    try {
+      const res  = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m&timezone=UTC&forecast_days=1`);
+      const json = await res.json();
+      const items = Array.isArray(json) ? json : [json];
+      items.forEach((item, j) => {
+        const pt = batch[j]; if (!pt || item.error) return;
+        const temp = item.current?.temperature_2m ?? 15;
+        // Normalize: -35°C → 0.0, +45°C → 1.0
+        const intensity = Math.max(0, Math.min(1, (temp + 35) / 80));
+        heatData.push([pt.lat, pt.lon, intensity]);
+      });
+      await new Promise(r => setTimeout(r, 80)); // polite delay
+    } catch(e) {}
+  }
+
+  if (tempHeatLayer) { map.removeLayer(tempHeatLayer); tempHeatLayer = null; }
+  if (heatData.length === 0) return;
+  tempHeatLayer = L.heatLayer(heatData, {
+    radius: 45, blur: 35, maxZoom: 5,
+    gradient: { 0.0:'#0000cc', 0.2:'#0088ff', 0.4:'#00ddaa', 0.6:'#ffee00', 0.8:'#ff7700', 1.0:'#cc0000' }
+  }).addTo(map);
+}
+
+// ─── WIND LAYER (Open-Meteo REAL — grid batched) ───────────────────
+async function toggleWindLayer() {
+  const on = document.getElementById('lyr-wind').checked;
+  if (!on) { if (windLayer) map.removeLayer(windLayer); return; }
+
+  const pts = [];
+  for (let lat = -70; lat <= 70; lat += 30)
+    for (let lon = -150; lon <= 150; lon += 30)
+      pts.push({ lat, lon });
+
+  const lats = pts.map(p => p.lat).join(',');
+  const lons  = pts.map(p => p.lon).join(',');
+
+  try {
+    const res  = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&timezone=UTC&forecast_days=1`);
+    const json = await res.json();
+    const items = Array.isArray(json) ? json : [json];
+
+    if (!windLayer) windLayer = L.layerGroup();
+    else windLayer.clearLayers();
+    if (!map.hasLayer(windLayer)) windLayer.addTo(map);
+
+    items.forEach((item, i) => {
+      const pt = pts[i]; if (!pt) return;
+      const speed = item.current?.wind_speed_10m ?? 0;
+      const dir   = item.current?.wind_direction_10m ?? 0;
+      const arrowDir = (dir + 180) % 360; // Wind blows TO this direction
+      const col = speed > 50 ? '#ff3b5c' : speed > 30 ? '#ff8c2a' : '#38b6ff';
+      const size = Math.max(12, Math.min(22, 10 + speed / 5));
+      const icon = L.divIcon({
+        className: '', iconSize: [size, size], iconAnchor: [size/2, size/2],
+        html: `<div style="transform:rotate(${arrowDir}deg);font-size:${size}px;color:${col};opacity:0.85;">➤</div>`
+      });
+      const m = L.marker([pt.lat, pt.lon], { icon });
+      m.bindTooltip(`${speed.toFixed(0)} km/h (${dir.toFixed(0)}°)`, { permanent: false });
+      windLayer.addLayer(m);
+    });
+  } catch(e) {}
+}
+
+// ─── AURORA LAYER (NOAA Kp — real) ───────────────────────────────
+async function toggleAuroraLayer() {
+  const on = document.getElementById('lyr-aurora').checked;
+  if (!on) {
+    if (auroraLayer) map.removeLayer(auroraLayer);
+    document.getElementById('aurora-legend').classList.remove('active');
+    return;
+  }
+  try {
+    const res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+    const data = await res.json();
+    const kp = parseFloat(data[data.length - 1][1]);
+    document.getElementById('kp-val').textContent = kp.toFixed(1);
+    document.getElementById('aurora-legend').classList.add('active');
+    const expansion = kp * 2.5;
+    if (!auroraLayer) auroraLayer = L.layerGroup();
+    else auroraLayer.clearLayers();
+    if (!map.hasLayer(auroraLayer)) auroraLayer.addTo(map);
+    // Generate oval for north and south
+    [67, -67].forEach(baseLat => {
+      const southFactor = baseLat < 0 ? -1 : 1;
+      const ovalLat = baseLat - (expansion * 0.5 * southFactor);
+      for (let lon = -180; lon <= 180; lon += 8) {
+        const latVar = Math.sin(lon * Math.PI / 180) * 4;
+        const lat = ovalLat + latVar;
+        const prob = Math.max(0, 100 - ((9 - kp) * 12));
+        if (prob < 8) continue;
+        const col = prob > 70 ? '#ff00ff' : prob > 40 ? '#8a2be2' : '#00ffcc';
+        const c = L.circleMarker([lat, lon], {
+          radius: 3 + prob / 25, fillColor: col, color: col,
+          weight: 0, fillOpacity: prob / 160
+        });
+        c.bindPopup(`<div class="popup-title">🌌 Aurora ${baseLat > 0 ? 'Boreal' : 'Austral'}</div><div class="popup-desc">Probabilidade: ~${Math.round(prob)}%<br>Kp Index: ${kp.toFixed(1)}/9</div><div class="popup-source">Fonte: NOAA/SWPC</div>`);
+        auroraLayer.addLayer(c);
+      }
+    });
+  } catch(e) { document.getElementById('lyr-aurora').checked = false; }
+}
+
+// ─── RENDER MARKERS ──────────────────────────────────────────────
+function renderMarkers() {
+  markerGroup.clearLayers();
+  const typeF = document.getElementById('typeFilter').value;
+  const sevF  = document.getElementById('severityFilter').value;
+  let shown = 0, crit = 0;
+
+  allEvents.forEach(ev => {
+    if (typeF !== 'all' && ev.type !== typeF) return;
+    if (sevF  !== 'all' && ev.severity !== sevF) return;
+    if (ev.severity === 'critical') crit++;
+
+    const col = TYPE_COLORS[ev.type] || '#aaa';
+    const r   = ev.severity === 'critical' ? 12 : ev.severity === 'high' ? 8 : 5;
+
+    const m = L.circleMarker([ev.lat, ev.lon], {
+      radius: r, fillColor: col, color: '#000',
+      weight: 1.5, fillOpacity: 0.88
+    });
+
+    m.bindPopup(`
+      <div class="popup-title">${ev.title}</div>
+      <div class="popup-desc">📍 ${ev.location}<br>${ev.desc}</div>
+      <div class="popup-source">Fonte: ${ev.source}</div>
+      ${ev.url ? `<a class="popup-link" href="${ev.url}" target="_blank">🔗 Fonte Oficial</a>` : ''}
+    `);
+
+    m.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      openInfoPanel(ev.lat, ev.lon);
+    });
+
+    markerGroup.addLayer(m);
+    shown++;
+  });
+
+  document.getElementById('count-events').textContent = shown;
+  document.getElementById('count-critical').textContent = crit;
+}
+
+function filterData() { renderMarkers(); }
+
+// ─── INFO PANEL (click any point) ────────────────────────────────
+async function openInfoPanel(lat, lng) {
+  clickLat = lat; clickLng = lng;
+  document.getElementById('info-panel').classList.add('open');
+  document.getElementById('top-controls').classList.add('shifted');
+
+  // Reset
+  document.getElementById('info-name').textContent = '⟳ Buscando...';
+  document.getElementById('info-sub').textContent = '';
+  document.getElementById('info-temp').textContent = '—';
+  document.getElementById('info-wind').textContent = '—';
+  document.getElementById('info-currency').textContent = '—';
+  document.getElementById('info-localtime').textContent = '—';
+  document.getElementById('info-cond').textContent = '—';
+  document.getElementById('info-hum').textContent = '—';
+  document.getElementById('info-wiki').textContent = 'Buscando na Wikipedia...';
+  document.getElementById('nearby-list').innerHTML = '<div style="font-size:11px;color:var(--text-dim);">Calculando...</div>';
+
+  if (clickMarker) map.removeLayer(clickMarker);
+  const icon = L.divIcon({ className:'', iconSize:[14,14], iconAnchor:[7,7], html:'<div style="width:14px;height:14px;border-radius:50%;border:2px solid #00e5a0;background:rgba(0,229,160,0.2);"></div>' });
+  clickMarker = L.marker([lat, lng], { icon }).addTo(map);
+
+  // 1. Reverse geocode
+  let country = '', city = '', currCode = 'N/A', tz = 'UTC';
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=8&accept-language=pt`);
+    const g = await r.json();
+    const a = g.address || {};
+    city    = a.city || a.town || a.village || a.county || '';
+    country = a.country || '';
+    tz      = g.timezone || 'UTC';
+    document.getElementById('info-name').textContent = city || country || 'Oceano';
+    document.getElementById('info-sub').textContent  = country || `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+    currCode = CURRENCY_MAP[country] || 'N/A';
+    document.getElementById('info-currency').textContent = currCode;
+  } catch(e) {
+    document.getElementById('info-name').textContent = `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+  }
+
+  // 2. Weather (Open-Meteo)
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code,relative_humidity_2m&timezone=auto&forecast_days=1`);
+    const d = await r.json();
+    const c = d.current || {};
+    document.getElementById('info-temp').textContent = (c.temperature_2m ?? '--') + '°C';
+    document.getElementById('info-wind').textContent = (c.wind_speed_10m ?? '--') + ' km/h';
+    document.getElementById('info-cond').textContent = WX_CODES[c.weather_code] || 'Variável';
+    document.getElementById('info-hum').textContent  = (c.relative_humidity_2m ?? '--') + '%';
+    // Local time from timezone
+    if (d.timezone) {
+      try {
+        const localTime = new Date().toLocaleTimeString('pt-BR', { timeZone: d.timezone, hour:'2-digit', minute:'2-digit' });
+        document.getElementById('info-localtime').textContent = localTime;
+      } catch(e) { document.getElementById('info-localtime').textContent = '—'; }
+    }
+  } catch(e) {}
+
+  // 3. Currency exchange rate
+  if (currCode !== 'N/A' && currCode !== 'USD' && forexRates[currCode]) {
+    document.getElementById('info-currency').textContent = `${currCode} (${forexRates[currCode].toFixed(2)}/USD)`;
+  }
+
+  // 4. Wikipedia
+  try {
+    const term = (city || country || 'Earth').replace(/ /g,'_');
+    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${term}?redirect=true`);
+    if (r.ok) {
+      const w = await r.json();
+      document.getElementById('info-wiki').textContent = w.extract ? w.extract.slice(0, 200) + '…' : 'Sem resumo disponível.';
+    } else {
+      document.getElementById('info-wiki').textContent = 'Não encontrado na Wikipedia.';
+    }
+  } catch(e) { document.getElementById('info-wiki').textContent = 'Erro ao carregar Wikipedia.'; }
+
+  // 5. Nearby events (within ~500km)
+  const nearby = allEvents.filter(ev => {
+    const dlat = ev.lat - lat, dlon = ev.lon - lng;
+    return Math.sqrt(dlat*dlat + dlon*dlon) < 5; // ~500km
+  }).slice(0, 5);
+
+  const nl = document.getElementById('nearby-list');
+  if (nearby.length === 0) {
+    nl.innerHTML = '<div style="font-size:11px;color:var(--text-dim);">Nenhum evento próximo.</div>';
+  } else {
+    nl.innerHTML = nearby.map(ev => `
+      <div class="nearby-event-item" onclick="map.setView([${ev.lat},${ev.lon}],6)">
+        <div class="nearby-event-dot" style="background:${TYPE_COLORS[ev.type]||'#aaa'}"></div>
+        <div><div style="font-weight:700;color:#fff">${ev.title}</div><div style="color:var(--text-dim);font-size:10px;">${ev.desc.slice(0,80)}</div></div>
+      </div>`).join('');
+  }
+}
+
+function closeInfoPanel() {
+  document.getElementById('info-panel').classList.remove('open');
+  document.getElementById('top-controls').classList.remove('shifted');
+  if (clickMarker) { map.removeLayer(clickMarker); clickMarker = null; }
+}
+
+function openStreetView() {
+  if (clickLat && clickLng)
+    window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${clickLat},${clickLng}&heading=0&pitch=0&fov=80`, '_blank');
+}
+
+// ─── ECONOMIC TICKER ──────────────────────────────────────────────
+async function loadEconomicTicker() {
+  const items = [];
+  // Forex
+  try {
+    const res  = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if (data.rates) {
+      forexRates = data.rates;
+      const pairs = [['EUR','€'],['GBP','£'],['JPY','¥'],['BRL','R$'],['ARS','AR$'],['CNY','¥CN'],['RUB','₽'],['CAD','CA$'],['AUD','A$'],['INR','₹'],['TRY','₺']];
+      pairs.forEach(([code, sym]) => {
+        if (data.rates[code]) {
+          items.push(`<span class="t-item"><span class="t-label">${sym} ${code}/USD</span> <span class="t-val">${data.rates[code].toFixed(3)}</span></span>`);
+        }
+      });
+    }
+  } catch(e) {}
+  // Crypto
+  try {
+    const res  = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
+    const data = await res.json();
+    if (data.bitcoin) {
+      const btc  = data.bitcoin;
+      const chg  = btc.usd_24h_change || 0;
+      items.push(`<span class="t-item"><span class="t-label">₿ Bitcoin</span> <span class="t-val">$${btc.usd.toLocaleString('en-US',{maximumFractionDigits:0})}</span> <span class="${chg>=0?'t-up':'t-down'}">${chg>=0?'▲':'▼'}${Math.abs(chg).toFixed(1)}%</span></span>`);
+    }
+    if (data.ethereum) {
+      const eth = data.ethereum;
+      const ce  = eth.usd_24h_change || 0;
+      items.push(`<span class="t-item"><span class="t-label">Ξ Ethereum</span> <span class="t-val">$${eth.usd.toLocaleString('en-US',{maximumFractionDigits:0})}</span> <span class="${ce>=0?'t-up':'t-down'}">${ce>=0?'▲':'▼'}${Math.abs(ce).toFixed(1)}%</span></span>`);
+    }
+    if (data.solana) {
+      const sol = data.solana;
+      const cs  = sol.usd_24h_change || 0;
+      items.push(`<span class="t-item"><span class="t-label">◎ Solana</span> <span class="t-val">$${sol.usd.toFixed(2)}</span> <span class="${cs>=0?'t-up':'t-down'}">${cs>=0?'▲':'▼'}${Math.abs(cs).toFixed(1)}%</span></span>`);
+    }
+  } catch(e) {}
+
+  if (items.length > 0) {
+    const sep = '<span class="t-sep"> • </span>';
+    const html = items.join(sep);
+    const dup  = html + sep + html; // duplicate for seamless scroll
+    document.getElementById('ticker-content').innerHTML = dup;
+  }
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────
+function openAbout()  { document.getElementById('about-modal').classList.add('active'); }
+function closeAbout() { document.getElementById('about-modal').classList.remove('active'); }
+
+// ─── MAIN LOAD ────────────────────────────────────────────────────
+async function loadAllData() {
+  document.getElementById('conn-status').textContent = 'Buscando dados...';
+
+  const [quakes, fires, conflicts, disasters, volcs, diseases, weather, solar, tsunamis] = await Promise.all([
+    fetchEarthquakes(),
+    fetchWildfires(),
+    fetchConflicts(),
+    fetchDisasters(),
+    fetchVolcanoes(),
+    fetchDiseaseOutbreaks(),
+    fetchWeatherCities(),
+    fetchSolar(),
+    fetchTsunamiAlerts()
+  ]);
+
+  allEvents = [...quakes, ...fires, ...conflicts, ...disasters, ...volcs, ...diseases, ...weather, ...solar, ...tsunamis];
+
+  // Deduplicate by id
+  const seen = new Set();
+  allEvents = allEvents.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+
+  const activeSources = Object.values(apiOk).filter(Boolean).length;
+  document.getElementById('conn-status').textContent = activeSources + ' fontes ativas';
+  document.getElementById('last-update').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR') + ' • ' + allEvents.length + ' eventos totais';
+
+  renderMarkers();
+  document.getElementById('loading').style.display = 'none';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  initMap();
+  await loadAllData();
+  loadEconomicTicker();
+  startISSTracking();
+  setInterval(loadAllData, 300000);       // Refresh data every 5 min
+  setInterval(loadEconomicTicker, 120000); // Refresh ticker every 2 min
+});
+</script>
 </body>
 </html>
