@@ -17,6 +17,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .s-item{display:flex;align-items:center;gap:6px;}
 .s-val{color:var(--text);font-weight:600;}
 #map{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:1;}
+#globe-container{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:2;display:none;}
 #left-panel{position:fixed;top:38px;left:14px;z-index:800;width:310px;max-height:calc(100vh - 50px);overflow-y:auto;overflow-x:hidden;}
 .panel-card{background:rgba(6,12,24,0.92);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;backdrop-filter:blur(10px);}
 .panel-title{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;}
@@ -28,11 +29,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .stat-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--green);}
 .stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-top:4px;}
 .api-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;}
-.api-dot{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;}
-.api-dot span:first-child{width:6px;height:6px;border-radius:50%;background:var(--text-dim);}
+.api-dot{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;cursor:help;}
+.api-dot span:first-child{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
 .api-dot.ok span:first-child{background:var(--green);}
 .api-dot.err span:first-child{background:var(--red);}
 .api-dot.loading span:first-child{background:var(--yellow);animation:blink 1s infinite;}
+.api-dot:hover::after{content:attr(data-freshness);position:absolute;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:9px;white-space:nowrap;z-index:1000;margin-left:10px;}
 .layer-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .layer-row:last-child{border-bottom:none;}
 .layer-label{display:flex;align-items:center;gap:7px;cursor:pointer;}
@@ -104,10 +106,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="s-item"> <span class="s-val" id="conn-status">Inicializando...</span></div>
     <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
   </div>
-  <div class="s-right"><div class="s-item">VDMTX • v4.0</div></div>
+  <div class="s-right"><div class="s-item">VDMTX • v4.1</div></div>
 </div>
 
 <div id="map"></div>
+<div id="globe-container"></div>
 
 <div id="left-panel">
   <div class="panel-card">
@@ -146,12 +149,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
   <div class="panel-card">
     <div class="panel-title" id="lbl-sources">📡 Status das Fontes</div>
     <div class="api-grid">
-      <div class="api-dot loading" id="api-usgs"><span></span>USGS</div>
-      <div class="api-dot loading" id="api-firms"><span></span>NASA FIRMS</div>
-      <div class="api-dot loading" id="api-reliefweb"><span></span>ReliefWeb</div>
-      <div class="api-dot loading" id="api-gdacs"><span></span>GDACS</div>
-      <div class="api-dot loading" id="api-noaa"><span></span>NOAA</div>
-      <div class="api-dot loading" id="api-meteo"><span></span>Open-Meteo</div>
+      <div class="api-dot loading" id="api-usgs" data-freshness=""><span></span>USGS</div>
+      <div class="api-dot loading" id="api-firms" data-freshness=""><span></span>NASA FIRMS</div>
+      <div class="api-dot loading" id="api-reliefweb" data-freshness=""><span></span>ReliefWeb</div>
+      <div class="api-dot loading" id="api-gdacs" data-freshness=""><span></span>GDACS</div>
+      <div class="api-dot loading" id="api-noaa" data-freshness=""><span></span>NOAA</div>
+      <div class="api-dot loading" id="api-meteo" data-freshness=""><span></span>Open-Meteo</div>
     </div>
   </div>
 
@@ -185,6 +188,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
   <button class="ctrl-btn" id="btn-en" onclick="setLang('en')"> English</button>
   <button class="ctrl-btn" id="btn-light" onclick="setTheme('light')">☀ Claro</button>
   <button class="ctrl-btn" id="btn-dark" onclick="setTheme('dark')">🌙 Escuro</button>
+  <button class="ctrl-btn" id="btn-globe" onclick="toggleGlobe()">🌐 Globo 3D</button>
   <button class="ctrl-btn" onclick="openAbout()">ℹ Sobre</button>
 </div>
 
@@ -223,7 +227,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-head">
       <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
       <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global • v4.0</p>
+      <p>Monitoramento global • v4.1</p>
     </div>
     <div class="modal-body">
       <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais.</p>
@@ -250,10 +254,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ==================== TRADUÇÕES ====================
+// ==================== CONFIGURAÇÕES GLOBAIS ====================
 const TXT = {
-  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:' HORA LOCAL',cond:'🌤 CONDIÇÃO',hum:'💧 UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',checkConn:'Verifique conexão',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:'📍 Eventos Próximos',geoAny:'🌍 Qualquer Localização',geoCity:'️ Apenas Cidades',geoCountry:'️ Apenas Países'},
-  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:' CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',checkConn:'Check connection',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:' API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',geoAny:' Any Location',geoCity:'🏙️ Cities Only',geoCountry:'🗺️ Countries Only'}
+  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:' HORA LOCAL',cond:'🌤 CONDIÇÃO',hum:'💧 UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',checkConn:'Verifique conexão',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:'📍 Eventos Próximos',geoAny:'🌍 Qualquer Localização',geoCity:'️ Apenas Cidades',geoCountry:'️ Apenas Países',freshness:'Atualizado há ',minutes:' min',justNow:'agora'},
+  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:' CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',checkConn:'Check connection',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:' API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',geoAny:' Any Location',geoCity:'🏙️ Cities Only',geoCountry:'🗺️ Countries Only',freshness:'Updated ',minutes:' min ago',justNow:'just now'}
 };
 
 const WX = {
@@ -263,51 +267,97 @@ const WX = {
 
 const CURRENCY = {'Brazil':'BRL','USA':'USD','United Kingdom':'GBP','Germany':'EUR','France':'EUR','Japan':'JPY','China':'CNY','India':'INR','Russia':'RUB','Australia':'AUD','Canada':'CAD','Mexico':'MXN','Nigeria':'NGN','Haiti':'HTG','Sudan':'SDG','Yemen':'YER','Ukraine':'UAH','Israel':'ILS','Syria':'SYP','Myanmar':'MMK','Egypt':'EGP','South Africa':'ZAR','Turkey':'TRY','South Korea':'KRW'};
 
-// ==================== CACHE DE GEOCODING ====================
-const geoCache = new Map();
-const GEO_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+// Cache com TTL no localStorage (inspirado no worldmonitor)
+const STORAGE_KEY = 'mundoagora_geo_v1';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+const MAX_CACHE_ENTRIES = 500;
+
+function getCachedLocation(key) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    const cache = JSON.parse(raw);
+    const entry = cache[key];
+    if(!entry) return null;
+    if(Date.now() - entry.ts > CACHE_TTL) {
+      delete cache[key];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+      return null;
+    }
+    return entry.data;
+  } catch(e) { return null; }
+}
+
+function setCachedLocation(key, data) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) || '{}';
+    const cache = JSON.parse(raw);
+    cache[key] = { data, ts: Date.now() };
+    const keys = Object.keys(cache);
+    if(keys.length > MAX_CACHE_ENTRIES) {
+      keys.sort((a,b)=>cache[a].ts-cache[b].ts);
+      keys.slice(0, keys.length-MAX_CACHE_ENTRIES).forEach(k=>delete cache[k]);
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+  } catch(e) {}
+}
 
 async function enrichLocation(lat, lon, lang = 'pt') {
   const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
-  const cached = geoCache.get(key);
-  
-  if (cached && Date.now() - cached.timestamp < GEO_CACHE_TTL) {
-    return cached.data;
-  }
+  const cached = getCachedLocation(key);
+  if(cached) return cached;
   
   try {
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000)); // Rate limit Nominatim
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=${lang}`);
-    if (!r.ok) throw new Error();
+    if(!r.ok) throw new Error();
     const g = await r.json();
     const addr = g.address || {};
-    
     const city = addr.city || addr.town || addr.village || addr.county || addr.suburb || '';
     const state = addr.state || addr.province || addr.region || '';
     const country = addr.country || 'Unknown';
     const display = city && country ? `${city}, ${country}` : state && country ? `${state}, ${country}` : country;
-    
     const result = { display, city, state, country, timezone: g.timezone || 'UTC' };
-    geoCache.set(key, { data: result, timestamp: Date.now() });
+    setCachedLocation(key, result);
     return result;
   } catch(e) {
     const fallback = { display: `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`, city: '', state: '', country: '', timezone: 'UTC' };
-    geoCache.set(key, { data: fallback, timestamp: Date.now() });
+    setCachedLocation(key, fallback);
     return fallback;
   }
+}
+
+// Freshness tracking por fonte
+const sourceTimestamps = {};
+function updateSourceFreshness(source) {
+  sourceTimestamps[source] = Date.now();
+  const el = document.getElementById('api-'+source);
+  if(!el) return;
+  updateFreshnessDisplay(el, source);
+}
+
+function updateFreshnessDisplay(el, source) {
+  const t = TXT[currentLang];
+  const ts = sourceTimestamps[source];
+  if(!ts) { el.setAttribute('data-freshness',''); return; }
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  const text = mins < 1 ? t.justNow : `${t.freshness}${mins}${t.minutes}`;
+  el.setAttribute('data-freshness', text);
 }
 
 // ==================== ESTADO GLOBAL ====================
 let map,clickMarker,clickLat=0,clickLng=0,currentLang='pt',forexRates={},allEvents=[],markerGroup,issMarker,issInterval,tempLayer,windLayer,auroraLayer,flightLayer,apiOk={},lightTiles,darkTiles,currentTile;
 let refreshTimer=null,isTabVisible=true,lastDataHash='';
-let wsOpenSky=null;
+let wsOpenSky=null,globe=null,isGlobeMode=false;
 
 // ==================== RELÓGIO ====================
 setInterval(()=>{document.getElementById('utc-clock').textContent=new Date().toUTCString().split(' ')[4]+' UTC';},1000);
 let countdown=300;
 setInterval(()=>{countdown--;if(countdown<0)countdown=300;const m=Math.floor(countdown/60),s=countdown%60;document.getElementById('next-refresh').textContent=m+':'+String(s).padStart(2,'0');},1000);
+// Atualizar freshness a cada minuto
+setInterval(()=>{Object.keys(sourceTimestamps).forEach(src=>{const el=document.getElementById('api-'+src);if(el)updateFreshnessDisplay(el,src);});},60000);
 
-function setApiStatus(id,st){const el=document.getElementById('api-'+id);if(el){el.className='api-dot '+st;apiOk[id]=(st==='ok');}}
+function setApiStatus(id,st){const el=document.getElementById('api-'+id);if(el){el.className='api-dot '+st;apiOk[id]=(st==='ok');if(st==='ok')updateSourceFreshness(id);}}
 
 // ==================== POLLING INTELIGENTE ====================
 document.addEventListener('visibilitychange',()=>{
@@ -346,6 +396,8 @@ function setLang(lang){
   document.getElementById('lbl-nearby').textContent=t.nearby;
   document.getElementById('txt-no-event').textContent=t.noEvent;
   document.getElementById('geoFilter').innerHTML=`<option value="all">${t.geoAny}</option><option value="city">${t.geoCity}</option><option value="country">${t.geoCountry}</option>`;
+  // Atualizar freshness labels
+  Object.keys(sourceTimestamps).forEach(src=>{const el=document.getElementById('api-'+src);if(el)updateFreshnessDisplay(el,src);});
   if(clickLat&&clickLng)openPanel(clickLat,clickLng);
   renderMarkers();
 }
@@ -358,8 +410,72 @@ function setTheme(m){
   else if(m==='dark'&&currentTile!==darkTiles){map.removeLayer(currentTile);currentTile=darkTiles.addTo(map);}
 }
 
+// ==================== GLOBO 3D (globe.gl) ====================
+async function toggleGlobe() {
+  const btn = document.getElementById('btn-globe');
+  
+  if(isGlobeMode) {
+    // Voltar para mapa 2D
+    if(globe) { globe._renderer.domElement.remove(); globe = null; }
+    document.getElementById('globe-container').style.display = 'none';
+    document.getElementById('map').style.display = 'block';
+    btn.classList.remove('active');
+    isGlobeMode = false;
+    return;
+  }
+  
+  // Ativar modo globo
+  btn.classList.add('active');
+  document.getElementById('map').style.display = 'none';
+  document.getElementById('globe-container').style.display = 'block';
+  
+  // Carregar globe.gl dinamicamente se necessário
+  if(!window.Globe) {
+    await new Promise(resolve => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/globe.gl';
+      script.onload = resolve;
+      document.head.appendChild(script);
+    });
+  }
+  
+  // Inicializar globo
+  globe = Globe()
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+    .backgroundColor('#060c18')
+    .pointsData(allEvents.map(e => ({
+      lat: e.lat, lng: e.lon, 
+      color: TYPE_COLORS[e.type] || '#aaa',
+      title: e.title, desc: e.desc, source: e.source, url: e.url
+    })))
+    .pointLabel(d => `<div style="font-weight:700">${d.title}</div><div style="font-size:11px;color:#6a7d95">${d.desc}</div><div style="font-size:9px;margin-top:4px">Source: ${d.source}</div>`)
+    .pointColor('color')
+    .pointAltitude(0.01)
+    .pointRadius(0.4)
+    .onPointClick(d => {
+      if(d.lat && d.lng) openPanel(d.lat, d.lng);
+    })
+    (document.getElementById('globe-container'));
+  
+  // Auto-rotate suave
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.3;
+  
+  isGlobeMode = true;
+}
+
 // ==================== PAINEL INFO ====================
 async function openPanel(lat,lng){
+  // Se estiver no modo globo, voltar para mapa 2D para mostrar painel
+  if(isGlobeMode) {
+    if(globe) { globe._renderer.domElement.remove(); globe = null; }
+    document.getElementById('globe-container').style.display = 'none';
+    document.getElementById('map').style.display = 'block';
+    document.getElementById('btn-globe').classList.remove('active');
+    isGlobeMode = false;
+  }
+  
   clickLat=lat;clickLng=lng;
   document.getElementById('info-panel').classList.add('open');
   document.getElementById('top-controls').classList.add('shifted');
@@ -524,6 +640,14 @@ async function loadAllData(){
   const active=Object.values(apiOk).filter(Boolean).length;
   document.getElementById('conn-status').textContent=active+' sources active';
   renderMarkers();
+  // Atualizar globo se estiver ativo
+  if(isGlobeMode && globe) {
+    globe.pointsData(allEvents.map(e => ({
+      lat: e.lat, lng: e.lon, 
+      color: TYPE_COLORS[e.type] || '#aaa',
+      title: e.title, desc: e.desc, source: e.source, url: e.url
+    })));
+  }
   document.getElementById('loading').style.display='none';
 }
 
