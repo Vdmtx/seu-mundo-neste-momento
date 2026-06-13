@@ -17,7 +17,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .s-item{display:flex;align-items:center;gap:6px;}
 .s-val{color:var(--text);font-weight:600;}
 #map{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:1;}
-#globe-container{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:2;display:none;}
+#globe-container{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:2;display:none;background:var(--bg);}
+.leaflet-temp-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;opacity:0.85;mix-blend-mode:screen;}
 #left-panel{position:fixed;top:38px;left:14px;z-index:800;width:310px;max-height:calc(100vh - 50px);overflow-y:auto;overflow-x:hidden;}
 .panel-card{background:rgba(6,12,24,0.92);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;backdrop-filter:blur(10px);}
 .panel-title{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;}
@@ -29,12 +30,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .stat-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--green);}
 .stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-top:4px;}
 .api-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;}
-.api-dot{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;cursor:help;}
+.api-dot{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;cursor:help;position:relative;}
 .api-dot span:first-child{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
 .api-dot.ok span:first-child{background:var(--green);}
 .api-dot.err span:first-child{background:var(--red);}
 .api-dot.loading span:first-child{background:var(--yellow);animation:blink 1s infinite;}
-.api-dot:hover::after{content:attr(data-freshness);position:absolute;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:9px;white-space:nowrap;z-index:1000;margin-left:10px;}
+.api-dot:hover::after{content:attr(data-freshness);position:absolute;left:100%;top:50%;transform:translateY(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:9px;white-space:nowrap;z-index:1000;margin-left:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .layer-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .layer-row:last-child{border-bottom:none;}
 .layer-label{display:flex;align-items:center;gap:7px;cursor:pointer;}
@@ -106,7 +107,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="s-item"> <span class="s-val" id="conn-status">Inicializando...</span></div>
     <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
   </div>
-  <div class="s-right"><div class="s-item">VDMTX • v4.1</div></div>
+  <div class="s-right"><div class="s-item">VDMTX • v4.2</div></div>
 </div>
 
 <div id="map"></div>
@@ -227,7 +228,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-head">
       <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
       <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global • v4.1</p>
+      <p>Monitoramento global • v4.2</p>
     </div>
     <div class="modal-body">
       <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais.</p>
@@ -267,9 +268,9 @@ const WX = {
 
 const CURRENCY = {'Brazil':'BRL','USA':'USD','United Kingdom':'GBP','Germany':'EUR','France':'EUR','Japan':'JPY','China':'CNY','India':'INR','Russia':'RUB','Australia':'AUD','Canada':'CAD','Mexico':'MXN','Nigeria':'NGN','Haiti':'HTG','Sudan':'SDG','Yemen':'YER','Ukraine':'UAH','Israel':'ILS','Syria':'SYP','Myanmar':'MMK','Egypt':'EGP','South Africa':'ZAR','Turkey':'TRY','South Korea':'KRW'};
 
-// Cache com TTL no localStorage (inspirado no worldmonitor)
+// Cache com TTL no localStorage
 const STORAGE_KEY = 'mundoagora_geo_v1';
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
 
 function getCachedLocation(key) {
@@ -308,7 +309,7 @@ async function enrichLocation(lat, lon, lang = 'pt') {
   if(cached) return cached;
   
   try {
-    await new Promise(r => setTimeout(r, 1000)); // Rate limit Nominatim
+    await new Promise(r => setTimeout(r, 1000));
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=${lang}`);
     if(!r.ok) throw new Error();
     const g = await r.json();
@@ -327,7 +328,7 @@ async function enrichLocation(lat, lon, lang = 'pt') {
   }
 }
 
-// Freshness tracking por fonte
+// Freshness tracking
 const sourceTimestamps = {};
 function updateSourceFreshness(source) {
   sourceTimestamps[source] = Date.now();
@@ -354,7 +355,6 @@ let wsOpenSky=null,globe=null,isGlobeMode=false;
 setInterval(()=>{document.getElementById('utc-clock').textContent=new Date().toUTCString().split(' ')[4]+' UTC';},1000);
 let countdown=300;
 setInterval(()=>{countdown--;if(countdown<0)countdown=300;const m=Math.floor(countdown/60),s=countdown%60;document.getElementById('next-refresh').textContent=m+':'+String(s).padStart(2,'0');},1000);
-// Atualizar freshness a cada minuto
 setInterval(()=>{Object.keys(sourceTimestamps).forEach(src=>{const el=document.getElementById('api-'+src);if(el)updateFreshnessDisplay(el,src);});},60000);
 
 function setApiStatus(id,st){const el=document.getElementById('api-'+id);if(el){el.className='api-dot '+st;apiOk[id]=(st==='ok');if(st==='ok')updateSourceFreshness(id);}}
@@ -396,7 +396,6 @@ function setLang(lang){
   document.getElementById('lbl-nearby').textContent=t.nearby;
   document.getElementById('txt-no-event').textContent=t.noEvent;
   document.getElementById('geoFilter').innerHTML=`<option value="all">${t.geoAny}</option><option value="city">${t.geoCity}</option><option value="country">${t.geoCountry}</option>`;
-  // Atualizar freshness labels
   Object.keys(sourceTimestamps).forEach(src=>{const el=document.getElementById('api-'+src);if(el)updateFreshnessDisplay(el,src);});
   if(clickLat&&clickLng)openPanel(clickLat,clickLng);
   renderMarkers();
@@ -410,70 +409,290 @@ function setTheme(m){
   else if(m==='dark'&&currentTile!==darkTiles){map.removeLayer(currentTile);currentTile=darkTiles.addTo(map);}
 }
 
-// ==================== GLOBO 3D (globe.gl) ====================
+// ==================== GLOBO 3D CORREGIDO ====================
 async function toggleGlobe() {
   const btn = document.getElementById('btn-globe');
+  const mapEl = document.getElementById('map');
+  const globeEl = document.getElementById('globe-container');
   
   if(isGlobeMode) {
-    // Voltar para mapa 2D
-    if(globe) { globe._renderer.domElement.remove(); globe = null; }
-    document.getElementById('globe-container').style.display = 'none';
-    document.getElementById('map').style.display = 'block';
+    // Desativar globo, voltar para mapa 2D
+    if(globe) {
+      if(globe._renderer && globe._renderer.domElement && globe._renderer.domElement.parentNode) {
+        globe._renderer.domElement.parentNode.removeChild(globe._renderer.domElement);
+      }
+      globe = null;
+    }
+    globeEl.style.display = 'none';
+    mapEl.style.display = 'block';
     btn.classList.remove('active');
     isGlobeMode = false;
+    // Redesenhar mapa Leaflet
+    if(map) map.invalidateSize();
     return;
   }
   
   // Ativar modo globo
   btn.classList.add('active');
-  document.getElementById('map').style.display = 'none';
-  document.getElementById('globe-container').style.display = 'block';
+  mapEl.style.display = 'none';
+  globeEl.style.display = 'block';
   
-  // Carregar globe.gl dinamicamente se necessário
+  // Limpar container
+  globeEl.innerHTML = '';
+  
+  // Carregar globe.gl se necessário
   if(!window.Globe) {
     await new Promise(resolve => {
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/globe.gl';
       script.onload = resolve;
+      script.onerror = () => { console.error('Erro ao carregar globe.gl'); resolve(); };
       document.head.appendChild(script);
     });
   }
   
-  // Inicializar globo
+  if(!window.Globe) {
+    alert('Não foi possível carregar o modo 3D. Verifique sua conexão.');
+    btn.classList.remove('active');
+    globeEl.style.display = 'none';
+    mapEl.style.display = 'block';
+    isGlobeMode = false;
+    return;
+  }
+  
+  // Inicializar globo com sizing correto
   globe = Globe()
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
     .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
     .backgroundColor('#060c18')
+    .width(globeEl.clientWidth)
+    .height(globeEl.clientHeight)
     .pointsData(allEvents.map(e => ({
       lat: e.lat, lng: e.lon, 
       color: TYPE_COLORS[e.type] || '#aaa',
       title: e.title, desc: e.desc, source: e.source, url: e.url
     })))
-    .pointLabel(d => `<div style="font-weight:700">${d.title}</div><div style="font-size:11px;color:#6a7d95">${d.desc}</div><div style="font-size:9px;margin-top:4px">Source: ${d.source}</div>`)
+    .pointLabel(d => `<div style="font-weight:700;font-size:13px">${d.title}</div><div style="font-size:11px;color:#6a7d95;margin:4px 0">${d.desc}</div><div style="font-size:9px;color:var(--green)">Source: ${d.source}</div>`)
     .pointColor('color')
     .pointAltitude(0.01)
     .pointRadius(0.4)
     .onPointClick(d => {
-      if(d.lat && d.lng) openPanel(d.lat, d.lng);
+      if(d.lat && d.lng) {
+        // Voltar para mapa 2D e abrir painel
+        if(globe) {
+          if(globe._renderer && globe._renderer.domElement && globe._renderer.domElement.parentNode) {
+            globe._renderer.domElement.parentNode.removeChild(globe._renderer.domElement);
+          }
+          globe = null;
+        }
+        globeEl.style.display = 'none';
+        mapEl.style.display = 'block';
+        btn.classList.remove('active');
+        isGlobeMode = false;
+        if(map) { map.invalidateSize(); openPanel(d.lat, d.lng); }
+      }
     })
-    (document.getElementById('globe-container'));
+    (globeEl);
   
-  // Auto-rotate suave
+  // Configurar controles
   globe.controls().autoRotate = true;
-  globe.controls().autoRotateSpeed = 0.3;
+  globe.controls().autoRotateSpeed = 0.2;
+  globe.controls().enableDamping = true;
+  
+  // Responsividade
+  const resizeObserver = new ResizeObserver(() => {
+    if(globe) {
+      globe.width(globeEl.clientWidth);
+      globe.height(globeEl.clientHeight);
+    }
+  });
+  resizeObserver.observe(globeEl);
   
   isGlobeMode = true;
 }
 
+// ==================== TEMPERATURA VENTUSKY-STYLE ====================
+async function toggleTemp() {
+  const on = document.getElementById('lyr-temp').checked;
+  
+  // Cleanup anterior
+  if(tempLayer) {
+    if(tempLayer._animation) cancelAnimationFrame(tempLayer._animation);
+    if(tempLayer._canvas && tempLayer._canvas.parentNode) {
+      tempLayer._canvas.parentNode.removeChild(tempLayer._canvas);
+    }
+    if(tempLayer._resizeHandler) map.off('resize', tempLayer._resizeHandler);
+    if(tempLayer._moveHandler) map.off('moveend zoomend', tempLayer._moveHandler);
+    tempLayer = null;
+  }
+  
+  if(!on) return;
+  
+  // Criar canvas overlay
+  const canvas = document.createElement('canvas');
+  canvas.className = 'leaflet-temp-layer';
+  map.getPanes().overlayPane.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  
+  // Resize handler
+  function resizeCanvas() {
+    const size = map.getSize();
+    canvas.width = size.x;
+    canvas.height = size.y;
+  }
+  const resizeHandler = () => resizeCanvas();
+  map.on('resize', resizeHandler);
+  resizeCanvas();
+  
+  // Grid de pontos para interpolação
+  const step = 2; // graus entre pontos (balance performance/qualidade)
+  const points = [];
+  for(let lat = -85; lat <= 85; lat += step) {
+    for(let lon = -180; lon <= 180; lon += step) {
+      points.push({ lat, lon, temp: null, fetched: false });
+    }
+  }
+  
+  // Fetch em batches com rate limit
+  let fetchedCount = 0;
+  const batchSize = 30;
+  
+  async function fetchBatch(startIdx) {
+    const batch = points.slice(startIdx, startIdx + batchSize);
+    if(batch.length === 0) return;
+    
+    const lats = batch.map(p => p.lat).join(',');
+    const lons = batch.map(p => p.lon).join(',');
+    
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m&timezone=UTC&forecast_days=1`);
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : [data];
+      
+      items.forEach((item, i) => {
+        const pt = batch[i];
+        if(!pt || item.error) return;
+        pt.temp = item.current?.temperature_2m ?? 15;
+        pt.fetched = true;
+        fetchedCount++;
+      });
+      
+      // Update status
+      if(fetchedCount % 50 === 0) {
+        const pct = Math.round(fetchedCount / points.length * 100);
+        document.getElementById('conn-status').textContent = `Temperatura: ${pct}%`;
+      }
+      
+      await new Promise(r => setTimeout(r, 80)); // Rate limit
+      fetchBatch(startIdx + batchSize);
+    } catch(e) {
+      fetchBatch(startIdx + batchSize);
+    }
+  }
+  
+  fetchBatch(0);
+  
+  // Animação estilo Ventusky
+  let animationFrame = null;
+  let timeOffset = 0;
+  
+  function draw() {
+    if(!tempLayer) return;
+    
+    // Fade suave para criar efeito de rastro
+    ctx.fillStyle = 'rgba(6, 12, 24, 0.12)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Desenhar pontos com interpolação visual
+    points.forEach(pt => {
+      if(!pt.fetched || pt.temp === null) return;
+      
+      const point = map.latLngToContainerPoint(L.latLng(pt.lat, pt.lon));
+      if(!point || point.x < -50 || point.x > canvas.width + 50 || point.y < -50 || point.y > canvas.height + 50) return;
+      
+      const x = point.x;
+      const y = point.y;
+      
+      // Normalizar temperatura: -40°C a +50°C
+      const normTemp = Math.max(0, Math.min(1, (pt.temp + 40) / 90));
+      
+      // Pulsação sutil animada
+      const pulse = 0.92 + 0.08 * Math.sin(timeOffset + pt.lat * 0.15 + pt.lon * 0.08);
+      
+      // Raio baseado na temperatura (mais quente = maior)
+      const baseRadius = 6;
+      const radius = baseRadius + normTemp * 4 * pulse;
+      
+      // Alpha baseado na temperatura
+      const alpha = 0.4 + normTemp * 0.4;
+      
+      // Gradiente radial para efeito de brilho
+      const radial = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      
+      // Cores dinâmicas baseadas na temperatura
+      const r = Math.round(255 * normTemp);
+      const g = Math.round(200 * (1 - Math.abs(normTemp - 0.5) * 2));
+      const b = Math.round(255 * (1 - normTemp));
+      
+      radial.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+      radial.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${alpha * 0.5})`);
+      radial.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      ctx.fillStyle = radial;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Atualizar animação
+    timeOffset += 0.015;
+    animationFrame = requestAnimationFrame(draw);
+  }
+  
+  // Iniciar animação após delay para dados chegarem
+  setTimeout(() => {
+    if(tempLayer) {
+      document.getElementById('conn-status').textContent = 'Temperatura: ativo';
+      draw();
+    }
+  }, 2000);
+  
+  // Handler para redraw ao mover mapa
+  const moveHandler = () => {
+    if(animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = requestAnimationFrame(draw);
+  };
+  map.on('moveend zoomend', moveHandler);
+  
+  // Salvar referência
+  tempLayer = {
+    _canvas: canvas,
+    _animation: animationFrame,
+    _resizeHandler: resizeHandler,
+    _moveHandler: moveHandler,
+    remove: function() {
+      if(animationFrame) cancelAnimationFrame(animationFrame);
+      if(canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      map.off('resize', resizeHandler);
+      map.off('moveend zoomend', moveHandler);
+    }
+  };
+}
+
 // ==================== PAINEL INFO ====================
 async function openPanel(lat,lng){
-  // Se estiver no modo globo, voltar para mapa 2D para mostrar painel
   if(isGlobeMode) {
-    if(globe) { globe._renderer.domElement.remove(); globe = null; }
+    if(globe) {
+      if(globe._renderer && globe._renderer.domElement && globe._renderer.domElement.parentNode) {
+        globe._renderer.domElement.parentNode.removeChild(globe._renderer.domElement);
+      }
+      globe = null;
+    }
     document.getElementById('globe-container').style.display = 'none';
     document.getElementById('map').style.display = 'block';
     document.getElementById('btn-globe').classList.remove('active');
     isGlobeMode = false;
+    if(map) map.invalidateSize();
   }
   
   clickLat=lat;clickLng=lng;
@@ -488,7 +707,6 @@ async function openPanel(lat,lng){
   if(clickMarker)map.removeLayer(clickMarker);
   clickMarker=L.marker([lat,lng]).addTo(map);
   
-  // Geocoding
   try{
     const loc=await enrichLocation(lat,lng,currentLang==='pt'?'pt':'en');
     document.getElementById('info-name').textContent=loc.display;
@@ -498,7 +716,6 @@ async function openPanel(lat,lng){
     if(curr!=='N/A'&&curr!=='USD'&&forexRates[curr])document.getElementById('val-curr').textContent=curr+' ('+forexRates[curr].toFixed(2)+'/USD)';
   }catch(e){}
   
-  // Weather
   try{
     const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code,relative_humidity_2m&timezone=auto`);
     const d=await r.json();
@@ -510,7 +727,6 @@ async function openPanel(lat,lng){
     if(d.timezone){const localTime=new Date().toLocaleTimeString(currentLang==='pt'?'pt-BR':'en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit'});document.getElementById('val-time').textContent=localTime;}
   }catch(e){}
   
-  // Wikipedia
   try{
     const term=(document.getElementById('info-name').textContent||'Earth').replace(/ /g,'_');
     const lang=currentLang==='pt'?'pt':'en';
@@ -519,7 +735,6 @@ async function openPanel(lat,lng){
     else{document.getElementById('wiki-text').textContent=t.notFound;}
   }catch(e){document.getElementById('wiki-text').textContent=t.wikiError;}
   
-  // Nearby events
   const nearby=allEvents.filter(ev=>{const dlat=ev.lat-lat,dlon=ev.lon-lng;return Math.sqrt(dlat*dlat+dlon*dlon)<5;}).slice(0,5);
   const nl=document.getElementById('nearby-list');
   if(nearby.length===0){nl.innerHTML='<div style="font-size:11px;color:var(--text-dim);">'+t.noEvent+'</div>';}
@@ -640,7 +855,6 @@ async function loadAllData(){
   const active=Object.values(apiOk).filter(Boolean).length;
   document.getElementById('conn-status').textContent=active+' sources active';
   renderMarkers();
-  // Atualizar globo se estiver ativo
   if(isGlobeMode && globe) {
     globe.pointsData(allEvents.map(e => ({
       lat: e.lat, lng: e.lon, 
@@ -668,18 +882,6 @@ async function startISS(){
 }
 
 function toggleISS(){const on=document.getElementById('lyr-iss').checked;if(on){startISS();}else{if(issInterval)clearInterval(issInterval);if(issMarker){map.removeLayer(issMarker);issMarker=null;}}}
-
-async function toggleTemp(){
-  const on=document.getElementById('lyr-temp').checked;
-  if(!on){if(tempLayer)map.removeLayer(tempLayer);return;}
-  const pts=[];for(let lat=-80;lat<=80;lat+=20)for(let lon=-160;lon<=160;lon+=20)pts.push({lat,lon});
-  const heatData=[];
-  for(let i=0;i<pts.length;i+=50){const batch=pts.slice(i,i+50);const lats=batch.map(p=>p.lat).join(','),lons=batch.map(p=>p.lon).join(',');
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m&timezone=UTC`);const d=await r.json();(Array.isArray(d)?d:[d]).forEach((item,j)=>{const pt=batch[j];if(!pt||item.error)return;const temp=item.current?.temperature_2m??15;heatData.push([pt.lat,pt.lon,Math.max(0,Math.min(1,(temp+35)/80))]);});await new Promise(r=>setTimeout(r,80));}catch(e){}}
-  if(tempLayer)map.removeLayer(tempLayer);
-  if(heatData.length===0)return;
-  tempLayer=L.heatLayer(heatData,{radius:45,blur:35,maxZoom:5,gradient:{0:'#0000cc',0.5:'#00ddaa',1:'#cc0000'}}).addTo(map);
-}
 
 async function toggleWind(){
   const on=document.getElementById('lyr-wind').checked;
