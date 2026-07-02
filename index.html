@@ -105,7 +105,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="s-item"> <span class="s-val" id="conn-status">Inicializando...</span></div>
     <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
   </div>
-  <div class="s-right"><div class="s-item">VDMTX • v4.3</div></div>
+  <div class="s-right"><div class="s-item">VDMTX • v4.4</div></div>
 </div>
 
 <div id="map"></div>
@@ -223,7 +223,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-head">
       <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
       <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global • v4.3</p>
+      <p>Monitoramento global • v4.4</p>
     </div>
     <div class="modal-body">
       <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais.</p>
@@ -254,6 +254,127 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 <script src="https://unpkg.com/globe.gl"></script>
 
 <script>
+// ==================== NER HEURÍSTICO (substitui Transformers.js) ====================
+// Dicionário de cidades/regiões de conflitos atuais com coordenadas conhecidas
+const CONFLICT_LOCATIONS = {
+  // Ucrânia
+  'ukraine': [48.38, 31.17], 'kyiv': [50.45, 30.52], 'kharkiv': [49.99, 36.23],
+  'kherson': [46.63, 32.61], 'zaporizhzhia': [47.84, 35.14], 'donetsk': [48.00, 37.80],
+  'luhansk': [48.57, 39.31], 'mykolaiv': [46.97, 32.00], 'odesa': [46.48, 30.73],
+  'dnipro': [48.46, 35.04], 'lviv': [49.84, 24.03], 'bakhmut': [48.60, 38.00],
+  'avdiivka': [48.14, 37.75], 'kupiansk': [49.71, 37.62], 'pokrovsk': [48.28, 37.18],
+  
+  // Israel/Gaza
+  'gaza': [31.50, 34.47], 'israel': [31.05, 34.85], 'tel aviv': [32.08, 34.78],
+  'jerusalem': [31.77, 35.23], 'haifa': [32.79, 34.99], 'rafah': [31.28, 34.25],
+  'khan younis': [31.35, 34.30], 'jabalia': [31.53, 34.49], 'beer sheva': [31.25, 34.79],
+  'lebanon': [33.85, 35.86], 'beirut': [33.89, 35.50], 'hezbollah': [33.85, 35.86],
+  
+  // Sudão
+  'sudan': [15.59, 32.53], 'khartoum': [15.50, 32.56], 'darfur': [13.00, 25.00],
+  'omdurman': [15.64, 32.48], 'port sudan': [19.62, 37.22], 'el fasher': [13.45, 25.35],
+  'nyala': [12.05, 24.88], 'geneina': [13.48, 22.45], 'kordofan': [12.00, 29.00],
+  
+  // Iêmen
+  'yemen': [15.55, 48.52], 'sanaa': [15.37, 44.19], 'aden': [12.78, 45.04],
+  'hodeidah': [14.80, 42.95], 'taiz': [13.58, 44.02], 'marib': [15.47, 45.32],
+  'houthi': [15.37, 44.19],
+  
+  // Síria
+  'syria': [35.00, 38.00], 'damascus': [33.51, 36.29], 'aleppo': [36.20, 37.13],
+  'homs': [34.73, 36.71], 'idlib': [35.93, 36.63], 'deir ez-zor': [35.34, 40.14],
+  'raqqa': [35.95, 39.01], 'lattakia': [35.53, 35.79],
+  
+  // Myanmar
+  'myanmar': [19.76, 96.08], 'burma': [19.76, 96.08], 'yangon': [16.87, 96.20],
+  'mandalay': [21.97, 96.08], 'naypyidaw': [19.76, 96.08], 'rakhine': [20.15, 93.18],
+  'shan': [21.50, 98.00], 'karen': [17.00, 97.50],
+  
+  // Haiti
+  'haiti': [18.97, -72.30], 'port-au-prince': [18.54, -72.34], 'cap-haitien': [19.76, -72.20],
+  'gang': [18.54, -72.34],
+  
+  // RDC/Congo
+  'congo': [-4.04, 21.76], 'drc': [-4.04, 21.76], 'kinshasa': [-4.32, 15.31],
+  'goma': [-1.68, 29.23], 'kivu': [-2.50, 28.80], 'ituri': [1.50, 30.50],
+  'north kivu': [-1.68, 29.23], 'south kivu': [-3.00, 28.50],
+  
+  // Etiópia
+  'ethiopia': [9.15, 40.49], 'addis ababa': [9.02, 38.75], 'tigray': [13.49, 39.47],
+  'amhara': [11.50, 38.00], 'oromia': [8.00, 40.00],
+  
+  // Somália
+  'somalia': [5.15, 46.20], 'mogadishu': [2.05, 45.32], 'al-shabaab': [2.05, 45.32],
+  
+  // Afeganistão
+  'afghanistan': [33.94, 67.71], 'kabul': [34.53, 69.17], 'taliban': [34.53, 69.17],
+  'kandahar': [31.63, 65.72], 'herat': [34.35, 62.20],
+  
+  // Paquistão
+  'pakistan': [30.38, 69.35], 'islamabad': [33.69, 73.04], 'karachi': [24.86, 67.01],
+  'lahore': [31.55, 74.35], 'balochistan': [28.00, 65.00],
+  
+  // Líbia
+  'libya': [26.34, 17.23], 'tripoli': [32.90, 13.18], 'benghazi': [32.12, 20.09],
+  
+  // Mali/Sahel
+  'mali': [17.57, -4.00], 'bamako': [12.65, -8.00], 'sahel': [17.00, 0.00],
+  'burkina faso': [12.37, -1.52], 'niger': [17.61, 8.08],
+  
+  // Colômbia
+  'colombia': [4.57, -74.30], 'bogota': [4.71, -74.07], 'medellin': [6.25, -75.56],
+  
+  // México
+  'mexico': [23.63, -102.55], 'cartel': [23.63, -102.55], 'sinaloa': [25.82, -108.25],
+  
+  // Venezuela
+  'venezuela': [6.42, -66.59], 'caracas': [10.48, -66.90],
+  
+  // Moçambique
+  'mozambique': [-18.67, 35.53], 'cabo delgado': [-12.50, 39.50], 'maputo': [-25.97, 32.58]
+};
+
+// Função de extração de localização (NER heurístico)
+function extractLocation(text, fallbackCountry) {
+  if (!text) return { city: '', lat: 0, lon: 0, matched: false };
+  
+  const lower = text.toLowerCase();
+  let bestMatch = null;
+  let bestLength = 0;
+  
+  // Busca a cidade/região mais longa que aparece no texto
+  for (const [key, coords] of Object.entries(CONFLICT_LOCATIONS)) {
+    if (lower.includes(key) && key.length > bestLength) {
+      bestMatch = { name: key, coords };
+      bestLength = key.length;
+    }
+  }
+  
+  // Se encontrou, retorna
+  if (bestMatch) {
+    // Pega o nome formatado corretamente
+    const formattedName = bestMatch.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return {
+      city: formattedName,
+      lat: bestMatch.coords[0],
+      lon: bestMatch.coords[1],
+      matched: true
+    };
+  }
+  
+  // Fallback: centro do país
+  if (COUNTRY_COORDS[fallbackCountry]) {
+    return {
+      city: '',
+      lat: COUNTRY_COORDS[fallbackCountry][0],
+      lon: COUNTRY_COORDS[fallbackCountry][1],
+      matched: false
+    };
+  }
+  
+  return { city: '', lat: 0, lon: 0, matched: false };
+}
+
 // ==================== CONFIGURAÇÕES GLOBAIS ====================
 const TXT = {
   pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:'🌤 CONDIÇÃO',hum:'💧 UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',checkConn:'Verifique conexão',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:'📍 Eventos Próximos',geoAny:'🌍 Qualquer Localização',geoCity:'🏙️ Apenas Cidades',geoCountry:'🗺️ Apenas Países',freshness:'Atualizado há ',minutes:' min',justNow:'agora'},
@@ -279,24 +400,15 @@ const COUNTRY_COORDS = {
   'Italy': [41.8, 12.5], 'Spain': [40.4, -3.7], 'Canada': [56.1, -106.3],
   'Australia': [-25.2, 133.7], 'Mexico': [23.6, -102.5], 'Indonesia': [-0.7, 113.9],
   'South Korea': [35.9, 127.7], 'Turkey': [38.9, 35.2], 'Saudi Arabia': [23.8, 45.0],
-  'Switzerland': [46.8, 8.2], 'Poland': [51.9, 19.1], 'Sweden': [60.1, 18.6],
-  'Belgium': [50.5, 4.4], 'Thailand': [15.8, 100.9], 'Ireland': [53.1, -7.6],
-  'Austria': [47.5, 14.5], 'Nigeria': [9.0, 8.6], 'Israel': [31.0, 34.8],
-  'South Africa': [-30.5, 22.9], 'Denmark': [56.2, 9.5], 'Malaysia': [4.2, 101.9],
-  'Singapore': [1.3, 103.8], 'Philippines': [12.8, 121.7], 'Colombia': [4.5, -74.2],
-  'Pakistan': [30.3, 69.3], 'Chile': [-35.6, -71.5], 'Finland': [61.9, 25.7],
-  'Bangladesh': [23.6, 90.3], 'Vietnam': [14.0, 108.2], 'Czech Republic': [49.8, 15.4],
-  'Romania': [45.9, 24.9], 'Portugal': [39.3, -8.2], 'New Zealand': [-40.9, 174.8],
-  'Peru': [-9.1, -75.0], 'Greece': [39.0, 21.8], 'Ukraine': [48.3, 31.1],
-  'Algeria': [28.0, 1.6], 'Qatar': [25.3, 51.1], 'Kazakhstan': [48.0, 66.9],
-  'Hungary': [47.1, 19.5], 'Kuwait': [29.3, 47.4], 'Morocco': [31.7, -7.0],
-  'Iraq': [33.2, 43.6], 'Slovakia': [48.6, 19.6], 'Ecuador': [-1.8, -78.1],
-  'Ukraine': [48.3, 31.1], 'Sudan': [15.5, 32.5], 'Yemen': [15.0, 48.0],
-  'Syria': [35.0, 38.0], 'Myanmar': [19.7, 96.0], 'Haiti': [18.9, -72.7],
-  'Egypt': [26.8, 30.8], 'Afghanistan': [33.9, 67.7], 'Ethiopia': [9.1, 40.5],
-  'Somalia': [5.2, 46.2], 'South Sudan': [6.9, 31.3], 'Mali': [17.6, -1.4],
-  'Central African Republic': [6.6, 20.9], 'Mozambique': [-18.7, 35.5], 'Libya': [26.3, 17.2],
-  'Lebanon': [33.9, 35.5], 'Venezuela': [6.4, -66.6]
+  'Nigeria': [9.0, 8.6], 'Israel': [31.0, 34.8], 'South Africa': [-30.5, 22.9],
+  'Colombia': [4.5, -74.2], 'Pakistan': [30.3, 69.3], 'Chile': [-35.6, -71.5],
+  'Bangladesh': [23.6, 90.3], 'Vietnam': [14.0, 108.2], 'Ukraine': [48.3, 31.1],
+  'Sudan': [15.5, 32.5], 'Yemen': [15.0, 48.0], 'Syria': [35.0, 38.0],
+  'Myanmar': [19.7, 96.0], 'Haiti': [18.9, -72.7], 'Egypt': [26.8, 30.8],
+  'Afghanistan': [33.9, 67.7], 'Ethiopia': [9.1, 40.5], 'Somalia': [5.2, 46.2],
+  'South Sudan': [6.9, 31.3], 'Mali': [17.6, -1.4], 'Central African Republic': [6.6, 20.9],
+  'Mozambique': [-18.7, 35.5], 'Libya': [26.3, 17.2], 'Lebanon': [33.9, 35.5],
+  'Venezuela': [6.4, -66.6], 'Democratic Republic of the Congo': [-4.04, 21.76]
 };
 
 // Cache com TTL no localStorage
@@ -543,16 +655,8 @@ async function toggleTemp() {
   
   if(heatData.length > 0) {
     tempLayer = L.heatLayer(heatData, {
-      radius: 25,
-      blur: 20,
-      maxZoom: 5,
-      gradient: {
-        0.0: '#0000ff',
-        0.4: '#00ff00',
-        0.6: '#ffff00',
-        0.8: '#ff8800',
-        1.0: '#ff0000'
-      }
+      radius: 25, blur: 20, maxZoom: 5,
+      gradient: { 0.0: '#0000ff', 0.4: '#00ff00', 0.6: '#ffff00', 0.8: '#ff8800', 1.0: '#ff0000' }
     }).addTo(map);
     
     document.getElementById('conn-status').textContent = 'Temperatura ativa';
@@ -560,4 +664,285 @@ async function toggleTemp() {
 }
 
 // ==================== APIs ====================
-async function fetchEarthquakes()
+async function fetchEarthquakes(){
+  setApiStatus('usgs','loading');
+  try{
+    const r=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    setApiStatus('usgs','ok');
+    const events=[];
+    for(const eq of d.features){
+      const mag=eq.properties.mag;
+      const loc=await enrichLocation(eq.geometry.coordinates[1],eq.geometry.coordinates[0],currentLang==='pt'?'pt':'en');
+      events.push({
+        id:'eq_'+eq.id,type:'earthquake',
+        severity:mag>=6.5?'critical':mag>=5.5?'high':'medium',
+        lat:eq.geometry.coordinates[1],lon:eq.geometry.coordinates[0],
+        location:loc.display,city:loc.city,state:loc.state,country:loc.country,
+        title:'Terremoto M'+mag.toFixed(1),source:'USGS',url:eq.properties.url,
+        desc:'Magnitude '+mag.toFixed(1)+' • Profundidade: '+eq.geometry.coordinates[2].toFixed(0)+' km',
+        date: new Date(eq.properties.time)
+      });
+    }
+    return events;
+  }catch(e){setApiStatus('usgs','err');return[];}
+}
+
+async function fetchWildfires(){
+  setApiStatus('firms','loading');
+  try{
+    const r=await fetch('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/BRA/1');
+    if(!r.ok)throw new Error();
+    const txt=await r.text();
+    const rows=txt.trim().split('\n').slice(1).filter(r=>r.trim());
+    setApiStatus('firms','ok');
+    const events=[];
+    for(const row of rows.slice(0,100)){
+      const c=row.split(',');
+      const lat=parseFloat(c[0]),lon=parseFloat(c[1]),conf=parseFloat(c[8])||0;
+      if(isNaN(lat)||isNaN(lon))continue;
+      const loc=await enrichLocation(lat,lon,currentLang==='pt'?'pt':'en');
+      events.push({
+        id:'fire_'+lat.toFixed(3),type:'wildfire',
+        severity:conf>80?'critical':conf>60?'high':'medium',
+        lat,lon,location:loc.display,city:loc.city,state:loc.state,country:loc.country,
+        title:'Incêndio Florestal',source:'NASA FIRMS',
+        desc:'Confiança: '+conf.toFixed(0)+'% • VIIRS/SNPP',
+        date: new Date()
+      });
+    }
+    return events;
+  }catch(e){setApiStatus('firms','err');return[];}
+}
+
+// ==================== CONFLITOS COM NER HEURÍSTICO ====================
+async function fetchConflicts(){
+  setApiStatus('reliefweb','loading');
+  try{
+    const r=await fetch('https://api.reliefweb.int/v1/disasters?appname=mundoagora&limit=20&sort[]=date:desc&filter[field]=status&filter[value][]=ongoing');
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    setApiStatus('reliefweb','ok');
+    
+    const events=[];
+    for(const item of d.data||[]){
+      const f=item.fields;
+      const country=f.primary_country?.name||'Global';
+      const title=f.name||'Crisis';
+      
+      // NER heurístico: extrai cidade/região do título
+      const loc = extractLocation(title, country);
+      
+      if(loc.lat !== 0) {
+        events.push({
+          id:'rw_'+item.id,
+          type:'conflict',
+          severity:'critical',
+          lat:loc.lat,
+          lon:loc.lon,
+          location: loc.city ? `${loc.city}, ${country}` : country,
+          city: loc.city,
+          state: '',
+          country: country,
+          title: title.slice(0, 80),
+          source:'ReliefWeb (ONU)',
+          url:`https://reliefweb.int/disaster/${item.id}`,
+          desc:'Crise humanitária ativa • ' + (loc.matched ? `📍 ${loc.city}` : `📍 ${country}`),
+          date: new Date(f.date?.created || Date.now())
+        });
+      }
+    }
+    return events;
+  }catch(e){setApiStatus('reliefweb','err');return[];}
+}
+
+async function fetchWeather(){
+  setApiStatus('meteo','loading');
+  const cities=[{name:'São Paulo',lat:-23.55,lon:-46.63},{name:'New York',lat:40.71,lon:-74.01},{name:'London',lat:51.51,lon:-0.13},{name:'Tokyo',lat:35.67,lon:139.65},{name:'Sydney',lat:-33.87,lon:151.21}];
+  try{
+    const lats=cities.map(c=>c.lat).join(','),lons=cities.map(c=>c.lon).join(',');
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,weather_code&timezone=auto`);
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    setApiStatus('meteo','ok');
+    return(Array.isArray(d)?d:[d]).map((item,i)=>{
+      const c=item.current||{};const city=cities[i];
+      return{
+        id:'wx_'+city.name,type:'weather',
+        severity:c.temperature_2m>40?'high':'medium',
+        lat:city.lat,lon:city.lon,location:city.name,
+        title:city.name+': '+(c.temperature_2m??'--')+'°C',source:'Open-Meteo',
+        desc:WX[currentLang][c.weather_code]||'Variable',
+        date: new Date()
+      };
+    }).filter(Boolean);
+  }catch(e){setApiStatus('meteo','err');return[];}
+}
+
+// ==================== RENDER ====================
+function renderMarkers(){
+  markerGroup.clearLayers();
+  const typeF=document.getElementById('typeFilter').value,sevF=document.getElementById('severityFilter').value;
+  let shown=0,crit=0;
+  allEvents.forEach(ev=>{
+    if(typeF!=='all'&&ev.type!==typeF)return;
+    if(sevF!=='all'&&ev.severity!==sevF)return;
+    if(ev.severity==='critical')crit++;
+    const m=L.circleMarker([ev.lat,ev.lon],{radius:ev.severity==='critical'?12:ev.severity==='high'?8:5,fillColor:TYPE_COLORS[ev.type]||'#ff8c2a',color:'#000',weight:1.5,fillOpacity:0.88});
+    m.bindPopup(`<div style="font-weight:700">${ev.title}</div><div style="font-size:11px;color:var(--text-dim)">${ev.desc}</div><div style="font-size:9px;margin-top:4px">Source: ${ev.source}</div>${ev.url?`<a href="${ev.url}" target="_blank" style="font-size:10px;color:var(--green);display:block;margin-top:5px;">🔗 Ver fonte oficial</a>`:''}`);
+    m.on('click',e=>{L.DomEvent.stopPropagation(e);openPanel(ev.lat,ev.lon);});
+    markerGroup.addLayer(m);shown++;
+  });
+  document.getElementById('count-events').textContent=shown;
+  document.getElementById('count-critical').textContent=crit;
+  const t=TXT[currentLang];
+  document.getElementById('last-update').textContent=t.updated+' '+new Date().toLocaleTimeString('pt-BR')+' • '+shown+' '+t.events;
+}
+
+function filterData(){renderMarkers();}
+
+// ==================== LOAD OTIMIZADO ====================
+async function loadAllData(){
+  document.getElementById('conn-status').textContent='Loading data...';
+  const[quakes,fires,conflicts,weather]=await Promise.all([fetchEarthquakes(),fetchWildfires(),fetchConflicts(),fetchWeather()]);
+  const newData=[...quakes,...fires,...conflicts,...weather];
+  const currentHash=btoa(JSON.stringify(newData.map(e=>e.id+e.severity)));
+  if(currentHash===lastDataHash){
+    document.getElementById('conn-status').textContent='Synchronized ✓';
+    return;
+  }
+  lastDataHash=currentHash;
+  allEvents=newData;
+  const active=Object.values(apiOk).filter(Boolean).length;
+  document.getElementById('conn-status').textContent=active+' sources active';
+  renderMarkers();
+  if(isGlobeMode && globe) {
+    globe.pointsData(allEvents.map(e => ({
+      lat: e.lat, lng: e.lon, 
+      color: TYPE_COLORS[e.type] || '#aaa',
+      title: e.title, desc: e.desc, source: e.source, url: e.url
+    })));
+  }
+  document.getElementById('loading').style.display='none';
+}
+
+async function loadForex(){
+  try{const r=await fetch('https://open.er-api.com/v6/latest/USD');const d=await r.json();if(d.rates)forexRates=d.rates;const items=[];[['EUR','€'],['GBP','£'],['JPY','¥'],['BRL','R$'],['CNY','¥CN'],['INR','₹'],['RUB','₽']].forEach(([code,sym])=>{if(forexRates[code])items.push(`<span class="t-item"><span class="t-label">${sym}${code}/USD</span> <span class="t-val">${forexRates[code].toFixed(3)}</span></span>`);});
+  try{const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true');const d=await r.json();if(d.bitcoin){const chg=d.bitcoin.usd_24h_change||0;items.push(`<span class="t-item"><span class="t-label">₿ BTC</span> <span class="t-val">$${d.bitcoin.usd.toLocaleString()}</span> <span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'▲':'▼'}${Math.abs(chg).toFixed(1)}%</span></span>`);}}catch(e){}
+  if(items.length>0){const sep='<span style="color:var(--border)"> • </span>';document.getElementById('ticker-content').innerHTML=items.join(sep)+sep+items.join(sep);}}catch(e){}
+}
+
+// ==================== PAINEL INFO ====================
+async function openPanel(lat,lng){
+  if(isGlobeMode) toggleGlobe();
+  
+  clickLat=lat;clickLng=lng;
+  document.getElementById('info-panel').classList.add('open');
+  document.getElementById('top-controls').classList.add('shifted');
+  const t=TXT[currentLang];
+  document.getElementById('info-name').textContent=t.searching;
+  document.getElementById('info-sub').textContent='';
+  ['temp','wind','curr','time','cond','hum'].forEach(k=>document.getElementById('val-'+k).textContent='—');
+  document.getElementById('wiki-text').textContent=t.wait;
+  document.getElementById('nearby-list').innerHTML='<div style="font-size:11px;color:var(--text-dim);">'+t.calc+'</div>';
+  if(clickMarker)map.removeLayer(clickMarker);
+  clickMarker=L.marker([lat,lng]).addTo(map);
+  
+  try{
+    const loc=await enrichLocation(lat,lng,currentLang==='pt'?'pt':'en');
+    document.getElementById('info-name').textContent=loc.display;
+    document.getElementById('info-sub').textContent=loc.country||`${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+    const curr=CURRENCY[loc.country]||'N/A';
+    document.getElementById('val-curr').textContent=curr;
+    if(curr!=='N/A'&&curr!=='USD'&&forexRates[curr])document.getElementById('val-curr').textContent=curr+' ('+forexRates[curr].toFixed(2)+'/USD)';
+  }catch(e){}
+  
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code,relative_humidity_2m&timezone=auto`);
+    const d=await r.json();
+    const c=d.current||{};
+    document.getElementById('val-temp').textContent=(c.temperature_2m??'--')+'°C';
+    document.getElementById('val-wind').textContent=(c.wind_speed_10m??'--')+' km/h';
+    document.getElementById('val-cond').textContent=WX[currentLang][c.weather_code]||'Variable';
+    document.getElementById('val-hum').textContent=(c.relative_humidity_2m??'--')+'%';
+    if(d.timezone){const localTime=new Date().toLocaleTimeString(currentLang==='pt'?'pt-BR':'en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit'});document.getElementById('val-time').textContent=localTime;}
+  }catch(e){}
+  
+  try{
+    const term=(document.getElementById('info-name').textContent||'Earth').replace(/ /g,'_');
+    const lang=currentLang==='pt'?'pt':'en';
+    const r=await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${term}`);
+    if(r.ok){const w=await r.json();document.getElementById('wiki-text').textContent=w.extract?w.extract.slice(0,200)+'…':t.noSummary;}
+    else{document.getElementById('wiki-text').textContent=t.notFound;}
+  }catch(e){document.getElementById('wiki-text').textContent=t.wikiError;}
+  
+  const nearby=allEvents.filter(ev=>{const dlat=ev.lat-lat,dlon=ev.lon-lng;return Math.sqrt(dlat*dlat+dlon*dlon)<5;}).slice(0,5);
+  const nl=document.getElementById('nearby-list');
+  if(nearby.length===0){nl.innerHTML='<div style="font-size:11px;color:var(--text-dim);">'+t.noEvent+'</div>';}
+  else{nl.innerHTML=nearby.map(ev=>'<div class="nearby-event-item" onclick="map.setView(['+ev.lat+','+ev.lon+'],6)"><div class="nearby-event-dot" style="background:'+TYPE_COLORS[ev.type]+'"></div><div><div style="font-weight:700;color:#fff">'+ev.title+'</div><div style="color:var(--text-dim);font-size:10px;">'+ev.desc.slice(0,60)+'</div></div></div>').join('');}
+}
+
+function closePanel(){document.getElementById('info-panel').classList.remove('open');document.getElementById('top-controls').classList.remove('shifted');if(clickMarker){map.removeLayer(clickMarker);clickMarker=null;}}
+function openStreet(){if(clickLat&&clickLng)window.open('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint='+clickLat+','+clickLng,'_blank');}
+function openAbout(){document.getElementById('about-modal').classList.add('active');}
+function closeAbout(){document.getElementById('about-modal').classList.remove('active');}
+
+// ==================== CAMADAS ====================
+async function startISS(){
+  if(!document.getElementById('lyr-iss').checked)return;
+  async function update(){
+    if(!document.getElementById('lyr-iss').checked)return;
+    try{const r=await fetch('https://api.wheretheiss.at/v1/satellites/25544');const d=await r.json();if(!issMarker){issMarker=L.marker([d.latitude,d.longitude]).addTo(map);issMarker.bindPopup('🛰 ISS<br>Alt: '+(d.altitude?.toFixed(0)||'~420')+' km');}else{issMarker.setLatLng([d.latitude,d.longitude]);}}catch(e){}}
+  await update();
+  issInterval=setInterval(update,5000);
+}
+
+function toggleISS(){const on=document.getElementById('lyr-iss').checked;if(on){startISS();}else{if(issInterval)clearInterval(issInterval);if(issMarker){map.removeLayer(issMarker);issMarker=null;}}}
+
+async function toggleWind(){
+  const on=document.getElementById('lyr-wind').checked;
+  if(!on){if(windLayer)map.removeLayer(windLayer);return;}
+  const pts=[];for(let lat=-70;lat<=70;lat+=30)for(let lon=-150;lon<=150;lon+=30)pts.push({lat,lon});
+  try{const lats=pts.map(p=>p.lat).join(','),lons=pts.map(p=>p.lon).join(',');const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&timezone=UTC`);const d=await r.json();if(!windLayer)windLayer=L.layerGroup();else windLayer.clearLayers();if(!map.hasLayer(windLayer))windLayer.addTo(map);(Array.isArray(d)?d:[d]).forEach((item,i)=>{const pt=pts[i];if(!pt)return;const speed=item.current?.wind_speed_10m??0,dir=item.current?.wind_direction_10m??0;const col=speed>50?'#ff3b5c':speed>30?'#ff8c2a':'#38b6ff';const size=Math.max(12,Math.min(22,10+speed/5));const icon=L.divIcon({className:'',iconSize:[size,size],iconAnchor:[size/2,size/2],html:'<div style="transform:rotate('+((dir+180)%360)+'deg);font-size:'+size+'px;color:'+col+';opacity:0.85;">➤</div>'});const m=L.marker([pt.lat,pt.lon],{icon});windLayer.addLayer(m);});}catch(e){}
+}
+
+async function toggleAurora(){
+  const on=document.getElementById('lyr-aurora').checked;
+  if(!on){if(auroraLayer)map.removeLayer(auroraLayer);document.getElementById('aurora-legend').classList.remove('active');return;}
+  try{const r=await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');const d=await r.json();const kp=parseFloat(d[d.length-1][1]);document.getElementById('kp-val').textContent=kp.toFixed(1);document.getElementById('aurora-legend').classList.add('active');if(!auroraLayer)auroraLayer=L.layerGroup();else auroraLayer.clearLayers();if(!map.hasLayer(auroraLayer))auroraLayer.addTo(map);[67,-67].forEach(baseLat=>{const exp=kp*2.5;const southFactor=baseLat<0?-1:1;const ovalLat=baseLat-(exp*0.5*southFactor);for(let lon=-180;lon<=180;lon+=8){const latVar=Math.sin(lon*Math.PI/180)*4;const lat=ovalLat+latVar;const prob=Math.max(0,100-((9-kp)*12));if(prob<8)continue;const col=prob>70?'#ff00ff':prob>40?'#8a2be2':'#00ffcc';auroraLayer.addLayer(L.circleMarker([lat,lon],{radius:3+prob/25,fillColor:col,color:col,weight:0,fillOpacity:prob/160}));}});}catch(e){document.getElementById('lyr-aurora').checked=false;}
+}
+
+async function toggleFlights(){
+  const on=document.getElementById('lyr-flights').checked;
+  if(!on){if(wsOpenSky){wsOpenSky.close();wsOpenSky=null;}if(flightLayer)map.removeLayer(flightLayer);return;}
+  if(wsOpenSky)return;
+  try{const b=map.getBounds();wsOpenSky=new WebSocket('wss://opensky-network.org/api/states/all?lamin='+b.getSouthWest().lat.toFixed(2)+'&lomin='+b.getSouthWest().lng.toFixed(2)+'&lamax='+b.getNorthEast().lat.toFixed(2)+'&lomax='+b.getNorthEast().lng.toFixed(2));
+  wsOpenSky.onmessage=(e)=>{const d=JSON.parse(e.data);updateFlightLayer(d.states||[]);};
+  wsOpenSky.onclose=()=>{wsOpenSky=null;setTimeout(()=>{if(document.getElementById('lyr-flights').checked)toggleFlights();},5000);};
+  }catch(e){if(flightLayer)map.removeLayer(flightLayer);}
+}
+
+function updateFlightLayer(states){
+  if(!flightLayer)flightLayer=L.layerGroup();
+  else flightLayer.clearLayers();
+  if(!map.hasLayer(flightLayer))flightLayer.addTo(map);
+  states.slice(0,100).forEach(s=>{const lon=s[5],lat=s[6],cs=(s[1]||'').trim();if(!lat||!lon)return;const hdg=s[10]||0;const icon=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],html:'<div style="transform:rotate('+hdg+'deg);font-size:13px;color:#38b6ff;">✈</div>'});const m=L.marker([lat,lon],{icon});if(cs)m.bindTooltip(cs);flightLayer.addLayer(m);});
+}
+
+// ==================== INIT ====================
+map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([20,10],2);
+L.control.zoom({position:'bottomright'}).addTo(map);
+lightTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
+darkTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
+currentTile=lightTiles.addTo(map);
+markerGroup=L.layerGroup().addTo(map);
+map.on('click',e=>openPanel(e.latlng.lat,e.latlng.lng));
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  if(isTabVisible){startRefreshCycle();loadForex();startISS();}
+  setInterval(loadForex,120000);
+});
+</script>
+</body>
+</html>
