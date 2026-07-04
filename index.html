@@ -19,8 +19,46 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 #map{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:1;}
 #globe-container{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:2;display:none;background:var(--bg);}
 .leaflet-temp-layer,.wind-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;}
-.leaflet-temp-layer{opacity:0.85;mix-blend-mode:screen;}
+.leaflet-temp-layer{opacity:0.7;mix-blend-mode:normal;}
 .wind-canvas{opacity:0.6;}
+
+/* Legenda de Temperatura */
+.temp-legend {
+  position: fixed;
+  bottom: 50px;
+  right: 20px;
+  background: rgba(6,12,24,0.95);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  z-index: 800;
+  display: none;
+  backdrop-filter: blur(10px);
+  min-width: 160px;
+}
+.temp-legend.active { display: block; }
+.temp-gradient {
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  margin: 8px 0;
+  background: linear-gradient(90deg, #4a0080 0%, #0066ff 20%, #00ccff 40%, #00ff99 50%, #ffff00 70%, #ff8800 85%, #ff0000 100%);
+}
+.temp-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+.temp-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 /* ESTILO DOS ÍCONES NO MAPA 2D */
 .custom-div-icon { background: none; border: none; }
@@ -173,11 +211,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="s-item"> <span class="s-val" id="conn-status">Inicializando...</span></div>
     <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
   </div>
-  <div class="s-right"><div class="s-item">VDMTX • v5.2</div></div>
+  <div class="s-right"><div class="s-item">VDMTX • v5.3</div></div>
 </div>
 
 <div id="map"></div>
 <div id="globe-container"></div>
+
+<!-- Legenda de Temperatura -->
+<div class="temp-legend" id="temp-legend">
+  <div class="temp-title">🌡️ Temperatura</div>
+  <div class="temp-gradient"></div>
+  <div class="temp-labels">
+    <span>-40°C</span>
+    <span>0°C</span>
+    <span>25°C</span>
+    <span>50°C</span>
+  </div>
+</div>
 
 <div id="left-panel">
   <div class="panel-card">
@@ -186,21 +236,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div style="margin-top:12px;">
       <select class="filter-select" id="typeFilter" onchange="filterData()">
         <option value="all">🌐 Todos os Eventos</option>
-        <option value="earthquake">📉 Terremotos</option>
+        <option value="earthquake"> Terremotos</option>
         <option value="tsunami">🌊 Tsunamis</option>
         <option value="wildfire">🔥 Incêndios</option>
-        <option value="conflict">️ Conflitos</option>
+        <option value="conflict">⚔️ Conflitos</option>
         <option value="disaster">💥 Desastres</option>
-        <option value="volcano">🌋 Vulcões</option>
+        <option value="volcano"> Vulcões</option>
         <option value="health">🦠 Saúde/Surtos</option>
-        <option value="solar">☀️ Solar (NOAA)</option>
+        <option value="solar">️ Solar (NOAA)</option>
         <option value="weather">🌤 Clima</option>
       </select>
       <select class="filter-select" id="severityFilter" onchange="filterData()">
         <option value="all"> Qualquer Nível</option>
         <option value="critical">🔴 Crítico</option>
         <option value="high">🟠 Alto</option>
-        <option value="medium">🟡 Médio</option>
+        <option value="medium"> Médio</option>
       </select>
     </div>
     <div class="stat-row">
@@ -298,7 +348,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 
 <div id="top-controls">
   <button class="ctrl-btn active" id="btn-pt" onclick="setLang('pt')">🇧🇷 Português</button>
-  <button class="ctrl-btn" id="btn-en" onclick="setLang('en')">🇸 English</button>
+  <button class="ctrl-btn" id="btn-en" onclick="setLang('en')"> English</button>
   <button class="ctrl-btn" id="btn-light" onclick="setTheme('light')">☀️ Claro</button>
   <button class="ctrl-btn" id="btn-dark" onclick="setTheme('dark')"> Escuro</button>
   <button class="ctrl-btn" id="btn-globe" onclick="toggleGlobe()">🌐 Globo 3D</button>
@@ -319,7 +369,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       <div class="info-cell"><div class="info-cell-label" id="lbl-hum">💧 UMIDADE</div><div class="info-cell-val" id="val-hum">—</div></div>
     </div>
     <div class="wiki-box" id="wiki-text">Buscando...</div>
-    <button class="btn-streetview" id="btn-street" onclick="openStreet()">📸 Abrir no Street View</button>
+    <button class="btn-streetview" id="btn-street" onclick="openStreet()"> Abrir no Street View</button>
   </div>
   <div class="panel-card">
     <div class="panel-title" id="lbl-nearby">📍 Eventos Próximos</div>
@@ -328,7 +378,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 </div>
 
 <div id="aurora-legend">
-  <div style="font-weight:700;margin-bottom:4px;">🌌 Oval Auroral</div>
+  <div style="font-weight:700;margin-bottom:4px;"> Oval Auroral</div>
   <div>Kp: <strong id="kp-val" style="color:var(--green);">—</strong>/9</div>
   <div class="aurora-gradient"></div>
 </div>
@@ -402,7 +452,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-head">
       <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
       <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global avançado • v5.2</p>
+      <p>Monitoramento global avançado • v5.3</p>
     </div>
     <div class="modal-body">
       <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais com indicadores de precisão.</p>
@@ -501,7 +551,7 @@ function extractLocation(text, fallbackCountry) {
 // ==================== CONFIGURAÇÕES ====================
 const TXT = {
   pt:{temp:'🌡 TEMPERATURA',wind:' VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:' CONDIÇÃO',hum:'💧 UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',checkConn:'Verifique conexão',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:'📍 Eventos Próximos',geoAny:'🌍 Qualquer Localização',geoCity:'🏙️ Apenas Cidades',geoCountry:'🗺️ Apenas Países',freshness:'Atualizado há ',minutes:' min',justNow:'agora'},
-  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:'🌤 CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',checkConn:'Check connection',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:' API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',geoAny:'🌍 Any Location',geoCity:'️ Cities Only',geoCountry:'️ Countries Only',freshness:'Updated ',minutes:' min ago',justNow:'just now'}
+  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:'🌤 CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:' Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',checkConn:'Check connection',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:' API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',geoAny:'🌍 Any Location',geoCity:'️ Cities Only',geoCountry:'️ Countries Only',freshness:'Updated ',minutes:' min ago',justNow:'just now'}
 };
 const WX = {
   pt:{0:'Céu Limpo',1:'Limpo',2:'Parc. Nublado',3:'Nublado',45:'Nevoeiro',51:'Garoa',61:'Chuva',71:'Neve',95:'Tempestade'},
@@ -684,21 +734,79 @@ async function toggleGlobe(){
   globe.controls().autoRotate=true;globe.controls().autoRotateSpeed=0.2;isGlobeMode=true;
 }
 
-// ==================== TEMPERATURA (HEATMAP GLOBAL) ====================
+// ==================== TEMPERATURA (CORREÇÃO) ====================
 async function toggleTemp(){
   const on=document.getElementById('lyr-temp').checked;
-  if(tempLayer){map.removeLayer(tempLayer);tempLayer=null;}
+  const legend=document.getElementById('temp-legend');
+  
+  // Limpar camada anterior
+  if(tempLayer){
+    map.removeLayer(tempLayer);
+    tempLayer=null;
+  }
+  legend.classList.remove('active');
+  
   if(!on)return;
+  
   document.getElementById('conn-status').textContent='Carregando temperatura...';
-  const points=[];for(let lat=-80;lat<=80;lat+=10){for(let lng=-170;lng<=170;lng+=10){points.push({lat,lng});}}
+  
+  // Grade mais esparsa para não sobrecarregar (20° de latitude/longitude)
+  const points=[];
+  for(let lat=-80;lat<=80;lat+=20){
+    for(let lng=-160;lng<=160;lng+=20){
+      points.push({lat,lng});
+    }
+  }
+  
   const batchSize=20,heatData=[];
+  
   for(let i=0;i<points.length;i+=batchSize){
-    const batch=points.slice(i,i+batchSize);const lats=batch.map(p=>p.lat).join(','),lngs=batch.map(p=>p.lng).join(',');
-    try{const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m&timezone=UTC&forecast_days=1`);const data=await res.json();const items=Array.isArray(data)?data:[data];
-      items.forEach((item,idx)=>{const temp=item.current?.temperature_2m;if(temp!==undefined){const intensity=Math.max(0,Math.min(1,(temp+40)/90));heatData.push([batch[idx].lat,batch[idx].lng,intensity]);}});
+    const batch=points.slice(i,i+batchSize);
+    const lats=batch.map(p=>p.lat).join(','),lngs=batch.map(p=>p.lng).join(',');
+    
+    try{
+      const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m&timezone=UTC&forecast_days=1`);
+      const data=await res.json();
+      const items=Array.isArray(data)?data:[data];
+      
+      items.forEach((item,idx)=>{
+        const temp=item.current?.temperature_2m;
+        if(temp!==undefined){
+          // Normalizar: -40°C = 0.0, +50°C = 1.0
+          const intensity=Math.max(0,Math.min(1,(temp+40)/90));
+          heatData.push([batch[idx].lat,batch[idx].lng,intensity]);
+        }
+      });
     }catch(e){}
   }
-  if(heatData.length>0){tempLayer=L.heatLayer(heatData,{radius:40,blur:25,maxZoom:3,gradient:{0.0:'#0000ff',0.2:'#0088ff',0.4:'#00ff88',0.6:'#88ff00',0.8:'#ffff00',0.9:'#ff8800',1.0:'#ff0000'}}).addTo(map);document.getElementById('conn-status').textContent='Temperatura ativa';}
+  
+  if(heatData.length>0){
+    // Criar heatmap com opacidade reduzida e cores mais sutis
+    tempLayer=L.heatLayer(heatData,{
+      radius: 35,        // Menor radius para manter definição geográfica
+      blur: 30,          // Menos blur para não "vazar" sobre continentes
+      maxZoom: 4,        // Limitar zoom para não ficar excessivo
+      max: 1.0,
+      gradient: {
+        0.0: '#4a0080',  // Roxo escuro (-40°C)
+        0.2: '#0066ff',  // Azul (-20°C)
+        0.4: '#00ccff',  // Ciano (0°C)
+        0.5: '#00ff99',  // Verde (15°C)
+        0.7: '#ffff00',  // Amarelo (25°C)
+        0.85: '#ff8800', // Laranja (35°C)
+        1.0: '#ff0000'   // Vermelho (50°C)
+      }
+    });
+    
+    // Ajustar opacidade da camada para 70% para não ofuscar
+    tempLayer.setOptions({maxOpacity:0.7});
+    tempLayer.addTo(map);
+    
+    // Mostrar legenda
+    legend.classList.add('active');
+    
+    document.getElementById('conn-status').textContent='Temperatura ativa';
+  }
 }
 
 // ==================== VENTO GLOBAL (PARTÍCULAS ANIMADAS) ====================
@@ -1047,7 +1155,7 @@ function renderMarkers(){
       <div style="font-size:11px;color:var(--text-dim)">${ev.desc}</div>
       <div style="font-size:9px;margin-top:4px">Source: ${ev.source}</div>
       <div class="accuracy-badge ${accuracyClass}">
-        ${accuracy.level === 'high' ? '🟢' : accuracy.level === 'medium' ? '' : '🟠'} 
+        ${accuracy.level === 'high' ? '🟢' : accuracy.level === 'medium' ? '🟡' : '🟠'} 
         ${accuracy.label}
       </div>
       ${ev.url?`<a href="${ev.url}" target="_blank" style="font-size:10px;color:var(--green);display:block;margin-top:5px;">🔗 Ver fonte oficial</a>`:''}
