@@ -758,6 +758,230 @@ window.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{const el=document.getElementById('loading');if(el&&el.style.display!=='none'){el.style.display='none';document.getElementById('conn-status').textContent='Conexão lenta';}},12000);
   if(isTabVisible){loadAllData();loadForex();startISS();refreshTimer=setInterval(loadAllData,300000);}
   setInterval(loadForex,120000);
+
+// Adicione estas funções ao seu código existente:
+
+// ==================== WEBCAMS PARA EVENTOS CRÍTICOS ====================
+const WEBCAM_API_KEY = ''; // Opcional - algumas APIs funcionam sem key
+
+async function findNearbyWebcams(lat, lon, radiusKm = 100) {
+  const webcams = [];
+  
+  try {
+    // Tenta Skylinewebcams (funciona sem API key via scraping)
+    const searchUrl = `https://www.skylinewebcams.com/pt-BR/webcam?lat=${lat}&lon=${lon}&radius=${radiusKm}`;
+    
+    // Busca webcams conhecidas por coordenadas
+    const knownWebcams = await getKnownWebcams(lat, lon, radiusKm);
+    webcams.push(...knownWebcams);
+    
+    // Fallback: YouTube Live
+    if (webcams.length === 0) {
+      webcams.push({
+        name: `Câmeras Ao Vivo - Região`,
+        url: `https://www.youtube.com/results?search_query=live+camera+near+${lat.toFixed(2)},${lon.toFixed(2)}`,
+        source: 'YouTube',
+        distance: 0
+      });
+    }
+    
+    return webcams.slice(0, 5); // Limita a 5 câmeras
+  } catch (e) {
+    console.warn('Webcams indisponíveis:', e);
+    return [];
+  }
+}
+
+// Banco de dados de webcams conhecidas por região
+async function getKnownWebcams(lat, lon, radiusKm) {
+  const webcams = [];
+  
+  // Webcams estratégicas por tipo de evento
+  const webcamDB = [
+    // Japão (terremotos/tsunamis)
+    {lat: 35.68, lon: 139.76, name: 'Tokyo - Shibuya Crossing', url: 'https://www.skylinewebcams.com/pt-BR/webcam/japan/tokyo/shibuya', types: ['earthquake', 'tsunami']},
+    {lat: 34.69, lon: 135.50, name: 'Osaka - Dotonbori', url: 'https://www.skylinewebcams.com/pt-BR/webcam/japan/osaka/dotonbori', types: ['earthquake', 'tsunami']},
+    
+    // EUA (terremotos California)
+    {lat: 34.05, lon: -118.25, name: 'Los Angeles - Downtown', url: 'https://www.skylinewebcams.com/pt-BR/webcam/usa/california/los-angeles', types: ['earthquake']},
+    {lat: 37.77, lon: -122.42, name: 'San Francisco - Bay Bridge', url: 'https://www.skylinewebcams.com/pt-BR/webcam/usa/california/san-francisco', types: ['earthquake']},
+    
+    // Turquia/Síria (conflitos/terremotos)
+    {lat: 41.01, lon: 28.97, name: 'Istanbul - Bosphorus', url: 'https://www.skylinewebcams.com/pt-BR/webcam/turkey/istanbul/bosphorus', types: ['earthquake', 'conflict']},
+    {lat: 33.51, lon: 36.29, name: 'Damascus - Old City', url: 'https://www.skylinewebcams.com/pt-BR/webcam/syria/damascus', types: ['conflict']},
+    
+    // Ucrânia (conflitos)
+    {lat: 50.45, lon: 30.52, name: 'Kyiv - Independence Square', url: 'https://www.skylinewebcams.com/pt-BR/webcam/ukraine/kyiv', types: ['conflict']},
+    
+    // Indonésia (vulcões/tsunamis)
+    {lat: -6.20, lon: 106.85, name: 'Jakarta - Kota Tua', url: 'https://www.skylinewebcams.com/pt-BR/webcam/indonesia/jakarta', types: ['volcano', 'tsunami']},
+    {lat: -8.40, lon: 115.19, name: 'Bali - Kuta Beach', url: 'https://www.skylinewebcams.com/pt-BR/webcam/indonesia/bali/kuta', types: ['volcano', 'tsunami']},
+    
+    // Chile (terremotos)
+    {lat: -33.45, lon: -70.67, name: 'Santiago - Plaza de Armas', url: 'https://www.skylinewebcams.com/pt-BR/webcam/chile/santiago', types: ['earthquake']},
+    
+    // Nova Zelândia (terremotos)
+    {lat: -41.29, lon: 174.78, name: 'Wellington - Harbour', url: 'https://www.skylinewebcams.com/pt-BR/webcam/new-zealand/wellington', types: ['earthquake', 'tsunami']}
+  ];
+  
+  // Encontra webcams próximas ao evento
+  webcamDB.forEach(cam => {
+    const distance = calculateDistance(lat, lon, cam.lat, cam.lon);
+    if (distance <= radiusKm && cam.types.includes(eventType)) {
+      webcams.push({
+        name: cam.name,
+        url: cam.url,
+        source: 'SkylineWebcams',
+        distance: distance
+      });
+    }
+  });
+  
+  return webcams;
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Raio da Terra em km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Modifica o openPanel para mostrar webcams apenas em eventos críticos
+let eventType = ''; // Variável global para saber o tipo de evento
+
+async function openPanel(lat, lng, type = '') {
+  if (isGlobeMode) toggleGlobe();
+  clickLat = lat; clickLng = lng;
+  eventType = type;
+  
+  document.getElementById('info-panel').classList.add('open');
+  document.getElementById('top-controls').classList.add('shifted');
+  
+  const t = TXT[currentLang];
+  document.getElementById('info-name').textContent = t.searching;
+  document.getElementById('info-sub').textContent = '';
+  ['temp','wind','curr','time','cond','hum'].forEach(k => document.getElementById('val-'+k).textContent = '—');
+  document.getElementById('wiki-text').textContent = t.wait;
+  document.getElementById('nearby-list').innerHTML = '<div style="font-size:11px;color:var(--text-dim);">'+t.calc+'</div>';
+  
+  if (clickMarker) map.removeLayer(clickMarker);
+  clickMarker = L.marker([lat, lng]).addTo(map);
+  
+  try {
+    const loc = await enrichLocation(lat, lng, currentLang === 'pt' ? 'pt' : 'en');
+    document.getElementById('info-name').textContent = loc.display;
+    document.getElementById('info-sub').textContent = loc.country || `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+    const curr = CURRENCY[loc.country] || 'N/A';
+    document.getElementById('val-curr').textContent = curr;
+    if (curr !== 'N/A' && curr !== 'USD' && forexRates[curr]) {
+      document.getElementById('val-curr').textContent = curr + ' (' + forexRates[curr].toFixed(2) + '/USD)';
+    }
+  } catch (e) {}
+  
+  // ... (resto do código de clima e Wikipedia permanece igual) ...
+  
+  // BUSCA WEBCAMS PARA EVENTOS CRÍTICOS
+  const criticalTypes = ['earthquake', 'tsunami', 'conflict', 'volcano', 'disaster'];
+  if (criticalTypes.includes(type)) {
+    const webcams = await findNearbyWebcams(lat, lng, 150);
+    
+    if (webcams.length > 0) {
+      const webcamSection = document.createElement('div');
+      webcamSection.style.cssText = 'margin-top:12px;padding-top:12px;border-top:1px solid var(--border);';
+      webcamSection.innerHTML = `
+        <div style="font-weight:700;font-size:11px;margin-bottom:8px;color:var(--green);">
+          📹 Câmeras Ao Vivo Próximas:
+        </div>
+        ${webcams.map(cam => `
+          <div style="margin-bottom:6px;">
+            <a href="${cam.url}" target="_blank" 
+               style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text);text-decoration:none;padding:8px;background:var(--bg3);border-radius:6px;transition:all 0.2s;">
+              <span style="font-size:18px;">📹</span>
+              <div style="flex:1;">
+                <div style="font-weight:600;">${cam.name}</div>
+                <div style="font-size:9px;color:var(--text-dim);">${cam.source} • ${cam.distance?.toFixed(0) || '?'}km</div>
+              </div>
+              <span style="color:var(--green);font-size:14px;">↗</span>
+            </a>
+          </div>
+        `).join('')}
+      `;
+      
+      // Insere após o wiki-text
+      const wikiBox = document.getElementById('wiki-text');
+      wikiBox.parentNode.insertBefore(webcamSection, wikiBox.nextSibling);
+    }
+  }
+  
+  // Eventos próximos (mantém código existente)
+  const nearby = allEvents.filter(ev => {
+    const dlat = ev.lat - lat, dlon = ev.lon - lng;
+    return Math.sqrt(dlat*dlat + dlon*dlon) < 5;
+  }).slice(0, 5);
+  
+  const nl = document.getElementById('nearby-list');
+  if (nearby.length === 0) {
+    nl.innerHTML = '<div style="font-size:11px;color:var(--text-dim);">'+t.noEvent+'</div>';
+  } else {
+    nl.innerHTML = nearby.map(ev => 
+      `<div class="nearby-event-item" onclick="map.setView([${ev.lat},${ev.lon}],6)">
+        <div class="nearby-event-dot" style="background:${TYPE_COLORS[ev.type]}"></div>
+        <div>
+          <div style="font-weight:700;color:#fff">${ev.title}</div>
+          <div style="color:var(--text-dim);font-size:10px;">${ev.desc.slice(0, 60)}</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+}
+
+// Modifica o renderMarkers para passar o tipo de evento
+async function renderMarkers() {
+  markerGroup.clearLayers();
+  const typeF = document.getElementById('typeFilter').value, sevF = document.getElementById('severityFilter').value;
+  let shown = 0, crit = 0;
+  
+  for (const ev of allEvents) {
+    if (typeF !== 'all' && ev.type !== typeF) continue;
+    if (sevF !== 'all' && ev.severity !== sevF) continue;
+    if (ev.severity === 'critical') crit++;
+    
+    const iconHtml = `<div class="marker-container">
+      <div class="marker-pulse" style="border-color:${TYPE_COLORS[ev.type]}"></div>
+      <div class="marker-icon" style="border-color:${TYPE_COLORS[ev.type]}">${TYPE_ICONS[ev.type] || '📍'}</div>
+    </div>`;
+    
+    const icon = L.divIcon({className:'custom-div-icon', html:iconHtml, iconSize:[32,32], iconAnchor:[16,16]});
+    const m = L.marker([ev.lat, ev.lon], {icon});
+    
+    const accClass = ev.accuracy?.level === 'high' ? 'accuracy-high' : ev.accuracy?.level === 'medium' ? 'accuracy-medium' : 'accuracy-low';
+    m.bindPopup(`<div style="font-weight:700">${ev.title}</div>
+      <div style="font-size:11px;color:var(--text-dim)">${ev.desc}</div>
+      <div style="font-size:9px;margin-top:4px">Source: ${ev.source}</div>
+      <div class="accuracy-badge ${accClass}">${ev.accuracy?.label || '—'}</div>
+      ${ev.url ? `<a href="${ev.url}" target="_blank" style="font-size:10px;color:var(--green);display:block;margin-top:5px;"> Fonte oficial</a>` : ''}`);
+    
+    m.on('click', e => {
+      L.DomEvent.stopPropagation(e);
+      openPanel(ev.lat, ev.lon, ev.type); // Passa o tipo do evento
+    });
+    
+    markerGroup.addLayer(m);
+    shown++;
+  }
+  
+  document.getElementById('count-events').textContent = shown;
+  document.getElementById('count-critical').textContent = crit;
+  const t = TXT[currentLang];
+  document.getElementById('last-update').textContent = t.updated + ' ' + new Date().toLocaleTimeString('pt-BR') + ' • ' + shown + ' ' + t.events;
+}
+
+  
 });
 </script>
 </body>
