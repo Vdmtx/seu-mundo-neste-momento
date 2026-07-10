@@ -135,9 +135,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="s-item"><div class="live-dot"></div><span class="live-label">AO VIVO</span></div>
     <div class="s-item">🕒 <span class="s-val" id="utc-clock">--:--:-- UTC</span></div>
     <div class="s-item">📡 <span class="s-val" id="conn-status">Inicializando...</span></div>
-    <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
+    <div class="s-item"> Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
   </div>
-  <div class="s-right"><div class="s-item">VDMTX • v5.5</div></div>
+  <div class="s-right"><div class="s-item">VDMTX • v5.6</div></div>
 </div>
 
 <div id="map"></div>
@@ -161,13 +161,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
         <option value="conflict">⚔️ Conflitos</option>
         <option value="disaster">💥 Desastres</option>
         <option value="volcano">🌋 Vulcões</option>
-        <option value="health">🦠 Saúde/Surtos</option>
+        <option value="health"> Saúde/Surtos</option>
         <option value="solar">☀️ Solar (NOAA)</option>
         <option value="weather"> Clima</option>
       </select>
       <select class="filter-select" id="severityFilter" onchange="filterData()">
         <option value="all">⚡ Qualquer Nível</option>
-        <option value="critical"> Crítico</option>
+        <option value="critical">🔴 Crítico</option>
         <option value="high">🟠 Alto</option>
         <option value="medium">🟡 Médio</option>
       </select>
@@ -186,7 +186,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
   </div>
 
   <div class="solar-panel" id="solar-panel">
-    <div class="panel-title" style="color:#00ccff;margin-bottom:8px;">☀️ ATIVIDADE SOLAR</div>
+    <div class="panel-title" style="color:#00ccff;margin-bottom:8px;">️ ATIVIDADE SOLAR</div>
     <div class="xray-indicator" id="xray-level">Classe A - Normal</div>
     <div class="blackout-alert" id="blackout-status" style="background:rgba(0,255,0,0.2);color:#00e5a0;">✓ Sem Blackout</div>
     <div class="solar-chart"><canvas id="xray-canvas"></canvas></div>
@@ -213,7 +213,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
   <div class="panel-card">
     <div class="panel-title" id="lbl-layers">🗺 Camadas Avançadas</div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-temp">🌡 Temperatura Global</label>
+      <label class="layer-label" for="lyr-temp"> Temperatura Global</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-temp" onchange="toggleTemp()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
@@ -229,7 +229,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       <label class="toggle-switch"><input type="checkbox" id="lyr-solar" onchange="toggleSolar()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-flights">️ Voos (OpenSky)</label>
+      <label class="layer-label" for="lyr-flights">✈️ Voos (OpenSky)</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-flights" onchange="toggleFlights()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
@@ -240,11 +240,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 </div>
 
 <div id="top-controls">
-  <button class="ctrl-btn active" id="btn-pt" onclick="setLang('pt')">🇷 Português</button>
+  <button class="ctrl-btn active" id="btn-pt" onclick="setLang('pt')">🇧🇷 Português</button>
   <button class="ctrl-btn" id="btn-en" onclick="setLang('en')">🇺🇸 English</button>
   <button class="ctrl-btn" id="btn-light" onclick="setTheme('light')">☀️ Claro</button>
   <button class="ctrl-btn" id="btn-dark" onclick="setTheme('dark')">🌙 Escuro</button>
-  <button class="ctrl-btn" id="btn-globe" onclick="toggleGlobe()"> Globo 3D</button>
+  <button class="ctrl-btn" id="btn-globe" onclick="toggleGlobe()">🌐 Globo 3D</button>
   <button class="ctrl-btn" onclick="openAbout()">ℹ️ Sobre</button>
 </div>
 
@@ -265,7 +265,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <button class="btn-streetview" id="btn-street" onclick="openStreet()">📸 Abrir no Street View</button>
   </div>
   <div class="panel-card">
-    <div class="panel-title" id="lbl-nearby">📍 Eventos Próximos</div>
+    <div class="panel-title" id="lbl-nearby"> Eventos Próximos</div>
     <div id="nearby-list"><div style="font-size:11px;color:var(--text-dim);" id="txt-no-event">Nenhum evento próximo.</div></div>
   </div>
 </div>
@@ -284,7 +284,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-body" style="text-align:left;font-size:12px;line-height:1.6;">
       <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#00e5a0;"></div><strong style="color:#00e5a0;">🟢 Alta Precisão (95%+)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Terremotos: ±5km • Atividade Solar: Satélite GOES • ISS: Posição em tempo real</div></div>
       <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ffd43b;"></div><strong style="color:#ffd43b;">🟡 Média Precisão (80-90%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Incêndios: ±1km • Clima: ±3°C • Vulcões: Atividade reportada</div></div>
-      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ff8c2a;"></div><strong style="color:#ff8c2a;"> Baixa Precisão (50-75%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Conflitos: Coordenadas aproximadas • Surtos: Dados por país • Delay: 1-7 dias</div></div>
+      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ff8c2a;"></div><strong style="color:#ff8c2a;">🟠 Baixa Precisão (50-75%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Conflitos: Coordenadas aproximadas • Surtos: Dados por país • Delay: 1-7 dias</div></div>
       <div style="background:rgba(255,212,59,0.1);border:1px solid rgba(255,212,59,0.3);border-radius:6px;padding:10px;margin-top:10px;"><strong style="color:#ffd43b;font-size:11px;">⚠️ Importante:</strong><span style="color:var(--text-dim);font-size:11px;">Nenhum dado é "tempo real absoluto". Use como awareness situacional, não para decisões críticas.</span></div>
     </div>
     <div class="modal-foot"><button onclick="closeAccuracyModal()">Entendido ✓</button></div>
@@ -296,10 +296,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-head">
       <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
       <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global • v5.5</p>
+      <p>Monitoramento global • v5.6</p>
     </div>
     <div class="modal-body">
-      <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais com indicadores de precisão e webcams ao vivo.</p>
+      <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais com webcams ao vivo estratégicas.</p>
       <div class="source-grid">
         <div class="source-item"><strong>USGS</strong><br>Terremotos</div>
         <div class="source-item"><strong>NASA FIRMS</strong><br>Incêndios</div>
@@ -329,33 +329,96 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 // ==================== CONFIGURAÇÕES GLOBAIS ====================
 const CONFLICT_LOCATIONS = {'ukraine':[48.5,31.0],'gaza':[31.5,34.5],'israel':[31.5,34.5],'lebanon':[33.8,35.5],'sudan':[15.5,32.5],'yemen':[15.0,48.0],'syria':[35.0,38.0],'myanmar':[19.7,96.0],'haiti':[18.9,-72.3],'congo':[-4.0,21.7],'ethiopia':[9.1,40.5],'somalia':[5.2,46.2],'afghanistan':[33.9,67.7],'pakistan':[30.3,69.3],'libya':[26.3,17.2],'mali':[17.6,-1.4],'colombia':[4.5,-74.2],'mexico':[23.6,-102.5],'venezuela':[6.4,-66.6],'mozambique':[-18.7,35.5]};
 const COUNTRY_COORDS = {'Brazil':[-14.2,-51.9],'USA':[37.0,-95.7],'Russia':[61.5,105.3],'China':[35.8,104.1],'India':[20.5,78.9],'Japan':[36.2,138.2],'Germany':[51.1,10.4],'France':[46.2,2.2],'UK':[55.3,-3.4],'Italy':[41.8,12.5],'Spain':[40.4,-3.7],'Canada':[56.1,-106.3],'Australia':[-25.2,133.7],'Mexico':[23.6,-102.5],'Nigeria':[9.0,8.6],'Egypt':[26.8,30.8]};
-const TYPE_ICONS = {earthquake:'📉',tsunami:'🌊',conflict:'⚔️',health:'',wildfire:'🔥',volcano:'🌋',disaster:'💥',weather:'☁️',solar:'☀️'};
+const TYPE_ICONS = {earthquake:'',tsunami:'🌊',conflict:'⚔️',health:'🦠',wildfire:'🔥',volcano:'',disaster:'💥',weather:'️',solar:'☀️'};
 const TYPE_COLORS = {earthquake:'#ff8c2a',tsunami:'#00ccff',conflict:'#ff3b5c',health:'#22c55e',wildfire:'#ff4444',volcano:'#ff6b35',disaster:'#a855f7',weather:'#38b6ff',solar:'#fbbf24'};
 const TYPE_ACCURACY = {earthquake:{level:'high',label:'Alta (±5km)'},tsunami:{level:'high',label:'Alta'},wildfire:{level:'medium',label:'Média (±1km)'},conflict:{level:'low',label:'Baixa (regional)'},disaster:{level:'medium',label:'Média'},volcano:{level:'medium',label:'Média'},health:{level:'low',label:'Baixa (país)'},solar:{level:'high',label:'Alta'},weather:{level:'medium',label:'Média'}};
 const STORAGE_KEY='mundoagora_geo_v1',CACHE_TTL=24*60*60*1000,MAX_CACHE=500;
 const TXT = {
-  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:'🌤 CONDIÇÃO',hum:'💧 UMIDADE',street:' Abrir no Street View',searching:' Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:' Camadas',nearby:'📍 Eventos Próximos',freshness:'Atualizado há ',minutes:' min',justNow:'agora'},
-  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:' CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:'📡 API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',freshness:'Updated ',minutes:' min ago',justNow:'just now'}
+  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:'🌤 CONDIÇÃO',hum:' UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:'📍 Eventos Próximos',freshness:'Atualizado há ',minutes:' min',justNow:'agora'},
+  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:'🌤 CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:'📡 API Status',layers:' Layers',nearby:'📍 Nearby Events',freshness:'Updated ',minutes:' min ago',justNow:'just now'}
 };
 const WX = {pt:{0:'Céu Limpo',1:'Limpo',2:'Parc. Nublado',3:'Nublado',45:'Nevoeiro',51:'Garoa',61:'Chuva',71:'Neve',95:'Tempestade'},en:{0:'Clear',1:'Clear',2:'Partly Cloudy',3:'Cloudy',45:'Fog',51:'Drizzle',61:'Rain',71:'Snow',95:'Thunderstorm'}};
 const CURRENCY = {'Brazil':'BRL','USA':'USD','UK':'GBP','Germany':'EUR','France':'EUR','Japan':'JPY','China':'CNY','India':'INR','Russia':'RUB','Australia':'AUD','Canada':'CAD','Mexico':'MXN','Nigeria':'NGN','Haiti':'HTG','Sudan':'SDG','Yemen':'YER','Ukraine':'UAH','Israel':'ILS','Syria':'SYP','Myanmar':'MMK','Egypt':'EGP','South Africa':'ZAR','Turkey':'TRY','South Korea':'KRW'};
 
-// Banco de Webcams Estratégicas
+// Banco de Webcams Estratégicas (40+ câmeras - estilo World Monitor)
 const WEBCAM_DB = [
-  {lat:35.68,lon:139.76,name:'Tóquio - Shibuya',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/tokyo/shibuya',types:['earthquake','tsunami']},
+  // JAPÃO (Terremotos/Tsunamis)
+  {lat:35.68,lon:139.76,name:'Tóquio - Shibuya Crossing',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/tokyo/shibuya',types:['earthquake','tsunami']},
   {lat:34.69,lon:135.50,name:'Osaka - Dotonbori',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/osaka',types:['earthquake','tsunami']},
+  {lat:36.20,lon:138.25,name:'Monte Fuji',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/mount-fuji',types:['volcano','earthquake']},
+  
+  // EUA (Terremotos California)
   {lat:34.05,lon:-118.25,name:'Los Angeles - Downtown',url:'https://www.skylinewebcams.com/pt-BR/webcam/usa/california/los-angeles',types:['earthquake']},
   {lat:37.77,lon:-122.42,name:'San Francisco - Bay Bridge',url:'https://www.skylinewebcams.com/pt-BR/webcam/usa/california/san-francisco',types:['earthquake']},
+  {lat:38.90,lon:-77.03,name:'Washington DC - Capitol',url:'https://www.youtube.com/results?search_query=washington+dc+live+cam',types:['conflict']},
+  
+  // TURQUIA/SÍRIA (Conflitos/Terremotos)
   {lat:41.01,lon:28.97,name:'Istambul - Bósforo',url:'https://www.skylinewebcams.com/pt-BR/webcam/turkey/istanbul/bosphorus',types:['earthquake','conflict']},
   {lat:33.51,lon:36.29,name:'Damasco - Cidade Antiga',url:'https://www.skylinewebcams.com/pt-BR/webcam/syria/damascus',types:['conflict']},
-  {lat:50.45,lon:30.52,name:'Kiev - Praça Independência',url:'https://www.skylinewebcams.com/pt-BR/webcam/ukraine/kyiv',types:['conflict']},
+  {lat:36.20,lon:37.16,name:'Aleppo - Citadel',url:'https://www.youtube.com/results?search_query=aleppo+syria+live',types:['conflict']},
+  {lat:33.89,lon:35.50,name:'Beirute - Corniche',url:'https://www.youtube.com/results?search_query=beirut+lebanon+live+cam',types:['conflict']},
+  
+  // UCRÂNIA (Conflitos)
+  {lat:50.45,lon:30.52,name:'Kiev - Maidan Square',url:'https://www.youtube.com/results?search_query=kyiv+ukraine+live+cam',types:['conflict']},
+  
+  // INDONÉSIA (Vulcões/Tsunamis)
   {lat:-6.20,lon:106.85,name:'Jacarta - Kota Tua',url:'https://www.skylinewebcams.com/pt-BR/webcam/indonesia/jakarta',types:['volcano','tsunami']},
   {lat:-8.40,lon:115.19,name:'Bali - Kuta Beach',url:'https://www.skylinewebcams.com/pt-BR/webcam/indonesia/bali/kuta',types:['volcano','tsunami']},
+  
+  // CHILE (Terremotos)
   {lat:-33.45,lon:-70.67,name:'Santiago - Plaza de Armas',url:'https://www.skylinewebcams.com/pt-BR/webcam/chile/santiago',types:['earthquake']},
+  
+  // NOVA ZELÂNDIA (Terremotos)
   {lat:-41.29,lon:174.78,name:'Wellington - Harbour',url:'https://www.skylinewebcams.com/pt-BR/webcam/new-zealand/wellington',types:['earthquake','tsunami']},
-  {lat:14.59,lon:120.98,name:'Manila - Rizal Park',url:'https://www.skylinewebcams.com/pt-BR/webcam/philippines/manila',types:['volcano','typhoon']},
-  {lat:19.43,lon:-99.13,name:'Cidade do México - Zócalo',url:'https://www.skylinewebcams.com/pt-BR/webcam/mexico/mexico-city',types:['earthquake','volcano']},
-  {lat:36.20,lon:138.25,name:'Monte Fuji',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/mount-fuji',types:['volcano','earthquake']}
+  
+  // FILIPINAS (Vulcões/Tufões)
+  {lat:14.59,lon:120.98,name:'Manila - Taal Volcano',url:'https://www.youtube.com/results?search_query=taal+volcano+live',types:['volcano','disaster']},
+  
+  // MÉXICO (Terremotos/Vulcões)
+  {lat:19.42,lon:-99.13,name:'Cidade do México - Popocatépetl',url:'https://www.youtube.com/results?search_query=popocatepetl+live+webcam',types:['earthquake','volcano']},
+  
+  // ORIENTE MÉDIO (Conflitos)
+  {lat:31.77,lon:35.23,name:'Jerusalém - Muro das Lamentações',url:'https://www.youtube.com/results?search_query=jerusalem+live+cam',types:['conflict']},
+  {lat:33.32,lon:44.42,name:'Bagdá - Tigris River',url:'https://www.youtube.com/results?search_query=baghdad+iraq+live',types:['conflict']},
+  {lat:31.50,lon:34.47,name:'Gaza - Beach',url:'https://www.youtube.com/results?search_query=gaza+palestine+live',types:['conflict']},
+  
+  // EUROPA (Conflitos/Fronteiras)
+  {lat:59.93,lon:30.33,name:'São Petersburgo - Palace Square',url:'https://www.youtube.com/results?search_query=saint+petersburg+russia+live',types:['conflict']},
+  {lat:52.52,lon:13.40,name:'Berlim - Brandenburg Gate',url:'https://www.youtube.com/results?search_query=berlin+live+cam',types:['conflict']},
+  {lat:51.50,lon:-0.12,name:'Londres - Trafalgar Square',url:'https://www.youtube.com/results?search_query=london+live+cam',types:['conflict']},
+  {lat:48.85,lon:2.35,name:'Paris - Torre Eiffel',url:'https://www.youtube.com/results?search_query=paris+eiffel+tower+live',types:['conflict']},
+  
+  // ÁSIA CENTRAL (Conflitos)
+  {lat:34.05,lon:69.21,name:'Kabul - Arg Palace',url:'https://www.youtube.com/results?search_query=kabul+afghanistan+live',types:['conflict']},
+  {lat:33.68,lon:73.06,name:'Islamabad - Faisal Mosque',url:'https://www.youtube.com/results?search_query=islamabad+pakistan+live',types:['conflict']},
+  {lat:28.61,lon:77.21,name:'Nova Delhi - India Gate',url:'https://www.youtube.com/results?search_query=new+delhi+india+live+cam',types:['conflict']},
+  
+  // PONTOS ESTRATÉGICOS (Chokepoints)
+  {lat:29.87,lon:32.58,name:'Canal de Suez - Port Said',url:'https://www.youtube.com/results?search_query=suez+canal+live',types:['conflict','disaster']},
+  {lat:12.58,lon:43.00,name:'Estreito de Bab el-Mandeb',url:'https://www.youtube.com/results?search_query=bab+el+mandeb+live',types:['conflict']},
+  {lat:1.26,lon:103.82,name:'Estreito de Malaca - Singapore',url:'https://www.youtube.com/results?search_query=singapore+strait+live',types:['disaster']},
+  
+  // ITÁLIA (Desastres/Vulcões)
+  {lat:45.42,lon:12.32,name:'Veneza - Aqua Alta',url:'https://www.youtube.com/results?search_query=venice+acqua+alta+live',types:['disaster']},
+  {lat:37.75,lon:14.99,name:'Monte Etna',url:'https://www.youtube.com/results?search_query=etna+volcano+live',types:['volcano']},
+  
+  // HAVAÍ (Vulcões)
+  {lat:19.40,lon:-155.28,name:'Kilauea Volcano',url:'https://www.youtube.com/results?search_query=kilauea+volcano+live',types:['volcano']},
+  
+  // ISLÂNDIA (Vulcões)
+  {lat:63.98,lon:-19.73,name:'Eyjafjallajökull',url:'https://www.youtube.com/results?search_query=eyjafjallajokull+live',types:['volcano']},
+  
+  // AUSTRÁLIA (Incêndios)
+  {lat:-33.87,lon:151.21,name:'Sydney - Harbour Bridge',url:'https://www.skylinewebcams.com/pt-BR/webcam/australia/sydney',types:['wildfire']},
+  
+  // ÁFRICA DO SUL (Conflitos)
+  {lat:-26.20,lon:28.04,name:'Johanesburgo - Soweto',url:'https://www.youtube.com/results?search_query=johannesburg+live+cam',types:['conflict']},
+  
+  // EGITO (Conflitos)
+  {lat:30.04,lon:31.24,name:'Cairo - Pirâmides',url:'https://www.youtube.com/results?search_query=cairo+pyramids+live',types:['conflict']},
+  
+  // COREIA DO SUL (Conflitos)
+  {lat:37.56,lon:126.97,name:'Seoul - Gangnam',url:'https://www.youtube.com/results?search_query=seoul+south+korea+live',types:['conflict']}
 ];
 
 // ==================== ESTADO GLOBAL ====================
@@ -380,7 +443,7 @@ async function findNearbyWebcams(lat,lon,radiusKm=150,eventType=''){
   WEBCAM_DB.forEach(cam=>{
     const dist=calculateDistance(lat,lon,cam.lat,cam.lon);
     if(dist<=radiusKm&&cam.types.includes(eventType)){
-      webcams.push({name:cam.name,url:cam.url,source:'SkylineWebcams',distance:dist});
+      webcams.push({name:cam.name,url:cam.url,source:'Live Cam',distance:dist});
     }
   });
   if(webcams.length===0){
