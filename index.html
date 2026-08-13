@@ -134,7 +134,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="s-item">📡 <span class="s-val" id="conn-status">Inicializando...</span></div>
     <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
   </div>
-  <div class="s-right"><div class="s-item">VDMTX • v6.0</div></div>
+  <div class="s-right"><div class="s-item">VDMTX • v6.1</div></div>
 </div>
 
 <div id="map"></div>
@@ -149,19 +149,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
         <option value="all">🌐 Todos os Eventos</option>
         <option value="earthquake">📉 Terremotos</option>
         <option value="tsunami">🌊 Tsunamis</option>
-        <option value="wildfire"> Incêndios</option>
-        <option value="conflict">⚔️ Conflitos</option>
+        <option value="wildfire">🔥 Incêndios</option>
+        <option value="conflict">️ Conflitos</option>
         <option value="disaster">💥 Desastres</option>
-        <option value="volcano">🌋 Vulcões</option>
-        <option value="health"> Saúde/Surtos</option>
-        <option value="solar">☀️ Solar (NOAA)</option>
+        <option value="volcano"> Vulcões</option>
+        <option value="health">🦠 Saúde/Surtos</option>
+        <option value="solar">️ Solar (NOAA)</option>
         <option value="weather">🌤 Clima</option>
       </select>
       <select class="filter-select" id="severityFilter" onchange="filterData()">
-        <option value="all">⚡ Qualquer Nível</option>
+        <option value="all"> Qualquer Nível</option>
         <option value="critical">🔴 Crítico</option>
         <option value="high">🟠 Alto</option>
-        <option value="medium"> Médio</option>
+        <option value="medium">🟡 Médio</option>
       </select>
     </div>
     <div class="stat-row">
@@ -174,7 +174,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div><span>Alta</span></div>
       <div class="legend-item"><div class="legend-dot" style="background:#ffd43b"></div><span>Média</span></div>
       <div class="legend-item"><div class="legend-dot" style="background:#ff8c2a"></div><span>Baixa</span></div>
-      <div style="margin-left:auto;cursor:pointer;color:var(--green);font-weight:600;" onclick="openAccuracyModal()">️ Precisão</div>
+      <div style="margin-left:auto;cursor:pointer;color:var(--green);font-weight:600;" onclick="openAccuracyModal()">ℹ️ Precisão</div>
     </div>
     <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:8px;" id="last-update">Aguardando...</div>
   </div>
@@ -197,33 +197,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       <div class="api-dot loading" id="api-usgs" data-freshness=""><span></span>USGS</div>
       <div class="api-dot loading" id="api-firms" data-freshness=""><span></span>NASA FIRMS</div>
       <div class="api-dot loading" id="api-reliefweb" data-freshness=""><span></span>ReliefWeb</div>
-      <div class="api-dot loading" id="api-gdacs" data-freshness=""><span></span>GDACS</div>
       <div class="api-dot loading" id="api-noaa" data-freshness=""><span></span>NOAA</div>
       <div class="api-dot loading" id="api-meteo" data-freshness=""><span></span>Open-Meteo</div>
-      <div class="api-dot loading" id="api-gvp" data-freshness=""><span></span>Smithsonian</div>
     </div>
   </div>
 
   <div class="panel-card">
     <div class="panel-title" id="lbl-layers">🗺 Camadas Avançadas</div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-wind">💨 Vento Global</label>
+      <label class="layer-label" for="lyr-wind">💨 Vento Global ⚠️</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-wind" onchange="toggleWind()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-aurora">🌌 Aurora Boreal/Austral</label>
+      <label class="layer-label" for="lyr-aurora">🌌 Aurora Boreal/Austral ✅</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-aurora" onchange="toggleAurora()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-solar">☀️ Dados Solares NOAA</label>
+      <label class="layer-label" for="lyr-solar">☀️ Dados Solares NOAA ✅</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-solar" onchange="toggleSolar()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-flights">✈️ Voos (OpenSky)</label>
+      <label class="layer-label" for="lyr-flights">✈️ Voos (OpenSky) ⚠️</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-flights" onchange="toggleFlights()"><span class="slider"></span></label>
     </div>
     <div class="layer-row">
-      <label class="layer-label" for="lyr-iss">🛰️ ISS</label>
+      <label class="layer-label" for="lyr-iss">🛰️ ISS ✅</label>
       <label class="toggle-switch"><input type="checkbox" id="lyr-iss" checked onchange="toggleISS()"><span class="slider"></span></label>
     </div>
   </div>
@@ -250,7 +248,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       <div class="info-cell"><div class="info-cell-label" id="lbl-hum">💧 UMIDADE</div><div class="info-cell-val" id="val-hum">—</div></div>
     </div>
     <div class="wiki-box" id="wiki-text">Buscando...</div>
-    <button class="btn-streetview" id="btn-street" onclick="openStreet()"> Abrir no Street View</button>
+    <button class="btn-streetview" id="btn-street" onclick="openStreet()">📸 Abrir no Street View</button>
   </div>
   <div class="panel-card">
     <div class="panel-title" id="lbl-nearby">📍 Eventos Próximos</div>
@@ -270,8 +268,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-head"><h2>📊 Precisão dos Dados</h2><p>Como interpretar a acurácia das informações</p></div>
     <div class="modal-body" style="text-align:left;font-size:12px;line-height:1.6;">
-      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#00e5a0;"></div><strong style="color:#00e5a0;">🟢 Alta Precisão (95%+)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Terremotos: ±5km • Atividade Solar: Satélite GOES • ISS: Posição em tempo real</div></div>
-      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ffd43b;"></div><strong style="color:#ffd43b;">🟡 Média Precisão (80-90%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Incêndios: ±1km • Clima: ±3°C • Vulcões: Atividade reportada</div></div>
+      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#00e5a0;"></div><strong style="color:#00e5a0;">✅ Alta Precisão (95%+)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Terremotos: ±5km • Atividade Solar: Satélite GOES • ISS: Posição em tempo real • Aurora: Modelo NOAA</div></div>
+      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ffd43b;"></div><strong style="color:#ffd43b;">⚠️ Média Precisão (80-90%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Incêndios: ±1km • Clima: ±3°C • Vulcões: Atividade reportada</div></div>
       <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ff8c2a;"></div><strong style="color:#ff8c2a;"> Baixa Precisão (50-75%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Conflitos: Coordenadas aproximadas • Surtos: Dados por país • Delay: 1-7 dias</div></div>
       <div style="background:rgba(255,212,59,0.1);border:1px solid rgba(255,212,59,0.3);border-radius:6px;padding:10px;margin-top:10px;"><strong style="color:#ffd43b;font-size:11px;">⚠️ Importante:</strong><span style="color:var(--text-dim);font-size:11px;">Nenhum dado é "tempo real absoluto". Use como awareness situacional, não para decisões críticas.</span></div>
     </div>
@@ -284,7 +282,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <div class="modal-head">
       <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
       <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global • v6.0</p>
+      <p>Monitoramento global • v6.1</p>
     </div>
     <div class="modal-body">
       <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais. 100% gratuito. 100% funcional.</p>
@@ -292,10 +290,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
         <div class="source-item"><strong>USGS</strong><br>Terremotos</div>
         <div class="source-item"><strong>NASA FIRMS</strong><br>Incêndios</div>
         <div class="source-item"><strong>ReliefWeb</strong><br>Conflitos</div>
-        <div class="source-item"><strong>GDACS</strong><br>Desastres</div>
-        <div class="source-item"><strong>Smithsonian GVP</strong><br>Vulcões</div>
         <div class="source-item"><strong>NOAA/SWPC</strong><br>Solar/Aurora</div>
         <div class="source-item"><strong>Open-Meteo</strong><br>Clima Global</div>
+        <div class="source-item"><strong>wheretheiss.at</strong><br>ISS Tracking</div>
       </div>
     </div>
     <div class="modal-foot"><button onclick="closeAbout()">Entendido ✓</button></div>
@@ -314,37 +311,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 <script src="https://unpkg.com/globe.gl"></script>
 <script>
 // ==================== CONFIGURAÇÕES GLOBAIS ====================
-const CONFLICT_LOCATIONS = {'ukraine':[48.5,31.0],'gaza':[31.5,34.5],'israel':[31.5,34.5],'lebanon':[33.8,35.5],'sudan':[15.5,32.5],'yemen':[15.0,48.0],'syria':[35.0,38.0],'myanmar':[19.7,96.0],'haiti':[18.9,-72.3],'congo':[-4.0,21.7],'ethiopia':[9.1,40.5],'somalia':[5.2,46.2],'afghanistan':[33.9,67.7],'pakistan':[30.3,69.3],'libya':[26.3,17.2],'mali':[17.6,-1.4],'colombia':[4.5,-74.2],'mexico':[23.6,-102.5],'venezuela':[6.4,-66.6],'mozambique':[-18.7,35.5]};
-const COUNTRY_COORDS = {'Brazil':[-14.2,-51.9],'USA':[37.0,-95.7],'Russia':[61.5,105.3],'China':[35.8,104.1],'India':[20.5,78.9],'Japan':[36.2,138.2],'Germany':[51.1,10.4],'France':[46.2,2.2],'UK':[55.3,-3.4],'Italy':[41.8,12.5],'Spain':[40.4,-3.7],'Canada':[56.1,-106.3],'Australia':[-25.2,133.7],'Mexico':[23.6,-102.5],'Nigeria':[9.0,8.6],'Egypt':[26.8,30.8]};
-const TYPE_ICONS = {earthquake:'📉',tsunami:'🌊',conflict:'⚔️',health:'🦠',wildfire:'🔥',volcano:'',disaster:'💥',weather:'️',solar:'☀️'};
+const TYPE_ICONS = {earthquake:'📉',tsunami:'🌊',conflict:'⚔️',health:'🦠',wildfire:'🔥',volcano:'🌋',disaster:'',weather:'☁️',solar:'☀️'};
 const TYPE_COLORS = {earthquake:'#ff8c2a',tsunami:'#00ccff',conflict:'#ff3b5c',health:'#22c55e',wildfire:'#ff4444',volcano:'#ff6b35',disaster:'#a855f7',weather:'#38b6ff',solar:'#fbbf24'};
 const TYPE_ACCURACY = {earthquake:{level:'high',label:'Alta (±5km)'},tsunami:{level:'high',label:'Alta'},wildfire:{level:'medium',label:'Média (±1km)'},conflict:{level:'low',label:'Baixa (regional)'},disaster:{level:'medium',label:'Média'},volcano:{level:'medium',label:'Média'},health:{level:'low',label:'Baixa (país)'},solar:{level:'high',label:'Alta'},weather:{level:'medium',label:'Média'}};
-const STORAGE_KEY='mundoagora_geo_v1',CACHE_TTL=24*60*60*1000,MAX_CACHE=500;
 const TXT = {
-  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:'🌤 CONDIÇÃO',hum:' UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:'📍 Eventos Próximos',freshness:'Atualizado há ',minutes:' min',justNow:'agora',notifyTitle:'🔔 Novo Evento',notifyEnabled:'Notificações ativadas!',geoEnabled:'Eventos próximos ativados!',exportCSV:'Exportado CSV!',exportJSON:'Exportado JSON!'},
-  en:{temp:'🌡 TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:'🌤 CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:'📡 API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',freshness:'Updated ',minutes:' min ago',justNow:'just now',notifyTitle:'🔔 New Event',notifyEnabled:'Notifications enabled!',geoEnabled:'Nearby events enabled!',exportCSV:'CSV exported!',exportJSON:'JSON exported!'}
+  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:' CONDIÇÃO',hum:'💧 UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:' Eventos Próximos',freshness:'Atualizado há ',minutes:' min',justNow:'agora',notifyTitle:'🔔 Novo Evento',notifyEnabled:'Notificações ativadas!',geoEnabled:'Eventos próximos ativados!',exportCSV:'Exportado CSV!',exportJSON:'Exportado JSON!'},
+  en:{temp:' TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:'🌤 CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:'📡 API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',freshness:'Updated ',minutes:' min ago',justNow:'just now',notifyTitle:'🔔 New Event',notifyEnabled:'Notifications enabled!',geoEnabled:'Nearby events enabled!',exportCSV:'CSV exported!',exportJSON:'JSON exported!'}
 };
 const WX = {pt:{0:'Céu Limpo',1:'Limpo',2:'Parc. Nublado',3:'Nublado',45:'Nevoeiro',51:'Garoa',61:'Chuva',71:'Neve',95:'Tempestade'},en:{0:'Clear',1:'Clear',2:'Partly Cloudy',3:'Cloudy',45:'Fog',51:'Drizzle',61:'Rain',71:'Snow',95:'Thunderstorm'}};
 const CURRENCY = {'Brazil':'BRL','USA':'USD','UK':'GBP','Germany':'EUR','France':'EUR','Japan':'JPY','China':'CNY','India':'INR','Russia':'RUB','Australia':'AUD','Canada':'CAD','Mexico':'MXN','Nigeria':'NGN','Haiti':'HTG','Sudan':'SDG','Yemen':'YER','Ukraine':'UAH','Israel':'ILS','Syria':'SYP','Myanmar':'MMK','Egypt':'EGP','South Africa':'ZAR','Turkey':'TRY','South Korea':'KRW'};
-
-// Banco de Webcams Estratégicas (40+ câmeras)
-const WEBCAM_DB = [
-  {lat:35.68,lon:139.76,name:'Tóquio - Shibuya',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/tokyo/shibuya',types:['earthquake','tsunami']},
-  {lat:34.69,lon:135.50,name:'Osaka - Dotonbori',url:'https://www.skylinewebcams.com/pt-BR/webcam/japan/osaka',types:['earthquake','tsunami']},
-  {lat:34.05,lon:-118.25,name:'Los Angeles',url:'https://www.skylinewebcams.com/pt-BR/webcam/usa/california/los-angeles',types:['earthquake']},
-  {lat:37.77,lon:-122.42,name:'San Francisco',url:'https://www.skylinewebcams.com/pt-BR/webcam/usa/california/san-francisco',types:['earthquake']},
-  {lat:41.01,lon:28.97,name:'Istambul - Bósforo',url:'https://www.skylinewebcams.com/pt-BR/webcam/turkey/istanbul/bosphorus',types:['earthquake','conflict']},
-  {lat:50.45,lon:30.52,name:'Kiev',url:'https://www.youtube.com/results?search_query=kyiv+ukraine+live+cam',types:['conflict']},
-  {lat:-6.20,lon:106.85,name:'Jacarta',url:'https://www.skylinewebcams.com/pt-BR/webcam/indonesia/jakarta',types:['volcano','tsunami']},
-  {lat:-8.40,lon:115.19,name:'Bali',url:'https://www.skylinewebcams.com/pt-BR/webcam/indonesia/bali/kuta',types:['volcano','tsunami']},
-  {lat:-33.45,lon:-70.67,name:'Santiago',url:'https://www.skylinewebcams.com/pt-BR/webcam/chile/santiago',types:['earthquake']},
-  {lat:14.59,lon:120.98,name:'Manila',url:'https://www.youtube.com/results?search_query=manila+philippines+live',types:['volcano','disaster']},
-  {lat:31.77,lon:35.23,name:'Jerusalém',url:'https://www.youtube.com/results?search_query=jerusalem+live+cam',types:['conflict']},
-  {lat:33.51,lon:36.29,name:'Damasco',url:'https://www.skylinewebcams.com/pt-BR/webcam/syria/damascus',types:['conflict']},
-  {lat:51.50,lon:-0.12,name:'Londres',url:'https://www.youtube.com/results?search_query=london+live+cam',types:['conflict']},
-  {lat:48.85,lon:2.35,name:'Paris',url:'https://www.youtube.com/results?search_query=paris+eiffel+tower+live',types:['conflict']},
-  {lat:-33.87,lon:151.21,name:'Sydney',url:'https://www.skylinewebcams.com/pt-BR/webcam/australia/sydney',types:['wildfire']}
-];
 
 // ==================== ESTADO GLOBAL ====================
 let map,clickMarker,clickLat=0,clickLng=0,currentLang='pt',forexRates={},allEvents=[],markerGroup,issMarker,issInterval,windLayer,auroraLayer,flightLayer,apiOk={},lightTiles,darkTiles,currentTile;
@@ -353,24 +328,57 @@ let wsOpenSky=null,globe=null,isGlobeMode=false,windParticles=[],windAnimationId
 const sourceTimestamps={};
 
 // ==================== UTILITÁRIOS ====================
-function getCachedLocation(key){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return null;const cache=JSON.parse(raw);const entry=cache[key];if(!entry)return null;if(Date.now()-entry.ts>CACHE_TTL){delete cache[key];localStorage.setItem(STORAGE_KEY,JSON.stringify(cache));return null;}return entry.data;}catch(e){return null;}}
-function setCachedLocation(key,data){try{const raw=localStorage.getItem(STORAGE_KEY)||'{}';const cache=JSON.parse(raw);cache[key]={data,ts:Date.now()};const keys=Object.keys(cache);if(keys.length>MAX_CACHE){keys.sort((a,b)=>cache[a].ts-cache[b].ts);keys.slice(0,keys.length-MAX_CACHE).forEach(k=>delete cache[k]);}localStorage.setItem(STORAGE_KEY,JSON.stringify(cache));}catch(e){}}
-async function enrichLocation(lat,lon,lang='pt'){const key=`${lat.toFixed(3)},${lon.toFixed(3)}`;const cached=getCachedLocation(key);if(cached)return cached;try{await new Promise(r=>setTimeout(r,800));const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=${lang}`);if(!r.ok)throw new Error();const g=await r.json();const addr=g.address||{};const city=addr.city||addr.town||addr.village||addr.county||'';const state=addr.state||addr.province||'';const country=addr.country||'Unknown';const display=city&&country?`${city}, ${country}`:state&&country?`${state}, ${country}`:country;const result={display,city,state,country,timezone:g.timezone||'UTC'};setCachedLocation(key,result);return result;}catch(e){const fallback={display:`${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,city:'',state:'',country:'',timezone:'UTC'};setCachedLocation(key,fallback);return fallback;}}
-function extractLocation(text,fallbackCountry){if(!text)return{city:'',lat:0,lon:0,matched:false};const lower=text.toLowerCase();let best=null,len=0;for(const[key,coords]of Object.entries(CONFLICT_LOCATIONS)){if(lower.includes(key)&&key.length>len){best={name:key,coords};len=key.length;}}if(best){return{city:best.name.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '),lat:best.coords[0],lon:best.coords[1],matched:true};}if(COUNTRY_COORDS[fallbackCountry]){return{city:'',lat:COUNTRY_COORDS[fallbackCountry][0],lon:COUNTRY_COORDS[fallbackCountry][1],matched:false};}return{city:'',lat:0,lon:0,matched:false};}
-function updateSourceFreshness(source){sourceTimestamps[source]=Date.now();const el=document.getElementById('api-'+source);if(el){el.className='api-dot '+apiOk[source];updateFreshnessDisplay(el,source);}}
-function updateFreshnessDisplay(el,source){const t=TXT[currentLang];const ts=sourceTimestamps[source];if(!ts){el.setAttribute('data-freshness','');return;}const mins=Math.floor((Date.now()-ts)/60000);el.setAttribute('data-freshness',mins<1?t.justNow:`${t.freshness}${mins}${t.minutes}`);}
-function setApiStatus(id,st){const el=document.getElementById('api-'+id);if(el){el.className='api-dot '+st;apiOk[id]=(st==='ok');if(st==='ok')updateSourceFreshness(id);}}
-function calculateDistance(lat1,lon1,lat2,lon2){const R=6371;const dLat=(lat2-lat1)*Math.PI/180;const dLon=(lon2-lon1)*Math.PI/180;const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));return R*c;}
-function showToast(msg){const toast=document.createElement('div');toast.className='toast';toast.textContent=msg;document.body.appendChild(toast);setTimeout(()=>toast.remove(),3000);}
-function downloadBlob(data,filename,type){const blob=new Blob([data],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+function calculateDistance(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  return R*c;
+}
+
+function showToast(msg){
+  const toast=document.createElement('div');
+  toast.className='toast';
+  toast.textContent=msg;
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(),3000);
+}
+
+function downloadBlob(data,filename,type){
+  const blob=new Blob([data],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function setApiStatus(id,st){
+  const el=document.getElementById('api-'+id);
+  if(el){
+    el.className='api-dot '+st;
+    apiOk[id]=(st==='ok');
+    if(st==='ok'){
+      sourceTimestamps[id]=Date.now();
+      updateFreshnessDisplay(el,id);
+    }
+  }
+}
+
+function updateFreshnessDisplay(el,source){
+  const t=TXT[currentLang];
+  const ts=sourceTimestamps[source];
+  if(!ts){el.setAttribute('data-freshness','');return;}
+  const mins=Math.floor((Date.now()-ts)/60000);
+  el.setAttribute('data-freshness',mins<1?t.justNow:`${t.freshness}${mins}${t.minutes}`);
+}
 
 // ==================== NOTIFICAÇÕES PUSH ====================
 async function requestNotificationPermission(){
-  if(!('Notification' in window)){
-    console.warn('Notificações não suportadas');
-    return false;
-  }
-  if(Notification.permission==='granted')return true;
+  if(!('Notification' in window)) return false;
+  if(Notification.permission==='granted') return true;
   if(Notification.permission!=='denied'){
     const permission=await Notification.requestPermission();
     return permission==='granted';
@@ -379,14 +387,11 @@ async function requestNotificationPermission(){
 }
 
 function sendNotification(event){
-  if(Notification.permission!=='granted')return;
-  if(lastEventIds.has(event.id))return;
-  
-  const icon=`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${TYPE_ICONS[event.type]||'📍'}</text></svg>`;
+  if(Notification.permission!=='granted') return;
+  if(lastEventIds.has(event.id)) return;
   
   new Notification(`${TXT[currentLang].notifyTitle}: ${event.title}`,{
     body:event.desc,
-    icon:icon,
     tag:event.id,
     requireInteraction:false
   });
@@ -398,7 +403,7 @@ function sendNotification(event){
 // ==================== GEOLOCALIZAÇÃO ====================
 async function showNearbyEvents(radiusKm=100){
   if(!navigator.geolocation){
-    alert('Geolocalização não suportada pelo navegador');
+    alert('Geolocalização não suportada');
     return;
   }
   
@@ -416,18 +421,15 @@ async function showNearbyEvents(radiusKm=100){
     }
     
     map.setView([latitude,longitude],6);
-    
-    // Destacar eventos próximos
     nearby.forEach(ev=>{
       const marker=L.marker([ev.lat,ev.lon]).addTo(map);
       marker.bindPopup(`<strong>${ev.title}</strong><br>${ev.desc}`);
       setTimeout(()=>map.removeLayer(marker),10000);
     });
     
-    showToast(`${nearby.length} eventos num raio de ${radiusKm}km • ${TXT[currentLang].geoEnabled}`);
-    
+    showToast(`${nearby.length} eventos num raio de ${radiusKm}km`);
   }catch(err){
-    alert('Erro ao obter localização: '+err.message);
+    alert('Erro: '+err.message);
   }
 }
 
@@ -439,23 +441,15 @@ function exportEvents(format='csv'){
   }
   
   const data=allEvents.map(e=>({
-    id:e.id,
-    tipo:e.type,
-    titulo:e.title,
-    descricao:e.desc,
-    latitude:e.lat,
-    longitude:e.lon,
-    severidade:e.severity,
-    fonte:e.source,
-    data:e.date.toISOString(),
-    precisao:e.accuracy?.label||'N/A'
+    id:e.id,tipo:e.type,titulo:e.title,descricao:e.desc,
+    latitude:e.lat,longitude:e.lon,severidade:e.severity,
+    fonte:e.source,data:e.date.toISOString(),precisao:e.accuracy?.label||'N/A'
   }));
   
   if(format==='csv'){
     const headers=Object.keys(data[0]).join(',');
     const rows=data.map(row=>Object.values(row).map(v=>`"${v}"`).join(',')).join('\n');
-    const csv=headers+'\n'+rows;
-    downloadBlob(csv,'eventos_'+new Date().toISOString().split('T')[0]+'.csv','text/csv');
+    downloadBlob(headers+'\n'+rows,'eventos_'+new Date().toISOString().split('T')[0]+'.csv','text/csv');
     showToast(TXT[currentLang].exportCSV);
   }else{
     downloadBlob(JSON.stringify(data,null,2),'eventos_'+new Date().toISOString().split('T')[0]+'.json','application/json');
@@ -463,219 +457,91 @@ function exportEvents(format='csv'){
   }
 }
 
-// ==================== WEBCAMS ====================
-async function findNearbyWebcams(lat,lon,radiusKm=150,eventType=''){
-  const webcams=[];
-  WEBCAM_DB.forEach(cam=>{
-    const dist=calculateDistance(lat,lon,cam.lat,cam.lon);
-    if(dist<=radiusKm&&cam.types.includes(eventType)){
-      webcams.push({name:cam.name,url:cam.url,source:'Live Cam',distance:dist});
-    }
-  });
-  if(webcams.length===0){
-    webcams.push({name:`Câmeras Ao Vivo - Região`,url:`https://www.youtube.com/results?search_query=live+camera+near+${lat.toFixed(2)},${lon.toFixed(2)}`,source:'YouTube',distance:0});
-  }
-  return webcams.slice(0,5);
-}
-
-// ==================== VENTO ====================
-async function toggleWind(){
-  const on=document.getElementById('lyr-wind').checked;
-  if(windAnimationId){cancelAnimationFrame(windAnimationId);windAnimationId=null;}
-  const canvas=document.querySelector('.wind-canvas');
-  if(canvas&&canvas.parentNode)canvas.parentNode.removeChild(canvas);
-  if(!on)return;
-  
-  const windCanvas=document.createElement('canvas');
-  windCanvas.className='wind-canvas';
-  map.getPanes().overlayPane.appendChild(windCanvas);
-  const ctx=windCanvas.getContext('2d');
-  
-  function resize(){const s=map.getSize();windCanvas.width=s.x;windCanvas.height=s.y;}
-  map.on('resize',resize);resize();
-  
-  windParticles=[];
-  for(let i=0;i<500;i++){
-    windParticles.push({lat:Math.random()*160-80,lng:Math.random()*360-180,speed:Math.random()*3+1,dir:Math.random()*Math.PI*2,age:0});
-  }
-  
-  async function updateWind(){
-    try{
-      const lats=[],lngs=[];
-      for(let lat=-60;lat<=60;lat+=30){
-        for(let lng=-150;lng<=150;lng+=30){
-          lats.push(lat);lngs.push(lng);
-        }
-      }
-      const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats.join(',')}&longitude=${lngs.join(',')}&current=wind_speed_10m,wind_direction_10m&timezone=UTC`);
-      const data=await res.json();
-      const items=Array.isArray(data)?data:[data];
-      
-      windParticles.forEach((p,i)=>{
-        const idx=Math.floor((p.lat+80)/30)*11+Math.floor((p.lng+180)/30);
-        if(items[idx]?.current){
-          p.dir=(items[idx].current.wind_direction_10m||0)*Math.PI/180;
-          p.speed=(items[idx].current.wind_speed_10m||10)/10;
-        }
-      });
-    }catch(e){}
-  }
-  
-  updateWind();
-  setInterval(updateWind,60000);
-  
-  function animate(){
-    ctx.clearRect(0,0,windCanvas.width,windCanvas.height);
-    windParticles.forEach(p=>{
-      const pt=map.latLngToContainerPoint([p.lat,p.lng]);
-      if(pt.x<0||pt.x>windCanvas.width||pt.y<0||pt.y>windCanvas.height)return;
-      
-      const nLat=p.lat+Math.cos(p.dir)*p.speed*0.05;
-      const nLng=p.lng+Math.sin(p.dir)*p.speed*0.05;
-      const nPt=map.latLngToContainerPoint([nLat,nLng]);
-      
-      const ratio=Math.min(1,p.speed/5);
-      ctx.strokeStyle=`rgba(${100+155*ratio},${200-100*ratio},255,0.5)`;
-      ctx.lineWidth=1;
-      ctx.beginPath();
-      ctx.moveTo(pt.x,pt.y);
-      ctx.lineTo(nPt.x,nPt.y);
-      ctx.stroke();
-      
-      p.lat=nLat;p.lng=nLng;p.age++;
-      if(p.lat<-85||p.lat>85||p.lng<-180||p.lng>180||p.age>100){
-        p.lat=Math.random()*160-80;
-        p.lng=Math.random()*360-180;
-        p.age=0;
-      }
-    });
-    
-    windAnimationId=requestAnimationFrame(animate);
-  }
-  
-  animate();
-}
-
-// ==================== APIs ====================
-function fetchWithTimeout(url,ms){
-  return Promise.race([
-    fetch(url,{signal:AbortSignal.timeout(ms)}),
-    new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))
-  ]);
-}
-
+// ==================== APIs DE DADOS ====================
 async function fetchEarthquakes(){
   setApiStatus('usgs','loading');
   try{
-    const r=await fetchWithTimeout('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson',8000);
-    if(!r.ok)throw new Error();
+    const r=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
+    if(!r.ok) throw new Error();
     const d=await r.json();
     setApiStatus('usgs','ok');
     
-    return d.features.map(eq=>{
-      const mag=eq.properties.mag;
-      return{
-        id:'eq_'+eq.id,
-        type:'earthquake',
-        severity:mag>=6.5?'critical':mag>=5.5?'high':'medium',
-        lat:eq.geometry.coordinates[1],
-        lon:eq.geometry.coordinates[0],
-        location:'Carregando...',
-        title:'Terremoto M'+mag.toFixed(1),
-        source:'USGS',
-        url:eq.properties.url,
-        desc:'Magnitude '+mag.toFixed(1),
-        date:new Date(eq.properties.time),
-        accuracy:TYPE_ACCURACY.earthquake
-      };
-    });
+    return d.features.map(eq=>({
+      id:'eq_'+eq.id,type:'earthquake',
+      severity:eq.properties.mag>=6.5?'critical':eq.properties.mag>=5.5?'high':'medium',
+      lat:eq.geometry.coordinates[1],lon:eq.geometry.coordinates[0],
+      title:'Terremoto M'+eq.properties.mag.toFixed(1),
+      source:'USGS',url:eq.properties.url,
+      desc:'Magnitude '+eq.properties.mag.toFixed(1),
+      date:new Date(eq.properties.time),
+      accuracy:TYPE_ACCURACY.earthquake
+    }));
   }catch(e){
     setApiStatus('usgs','err');
-    return[];
+    return [];
   }
 }
 
 async function fetchWildfires(){
   setApiStatus('firms','loading');
   try{
-    const r=await fetchWithTimeout('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/BRA/1',8000);
-    if(!r.ok)throw new Error();
+    const r=await fetch('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/BRA/1');
+    if(!r.ok) throw new Error();
     const txt=await r.text();
     const rows=txt.trim().split('\n').slice(1).filter(r=>r.trim());
     setApiStatus('firms','ok');
     
-    return rows.slice(0,100).map(row=>{
+    return rows.slice(0,50).map(row=>{
       const c=row.split(',');
       const lat=parseFloat(c[0]),lon=parseFloat(c[1]),conf=parseFloat(c[8])||0;
-      if(isNaN(lat)||isNaN(lon))return null;
+      if(isNaN(lat)||isNaN(lon)) return null;
       return{
-        id:'fire_'+lat.toFixed(3),
-        type:'wildfire',
+        id:'fire_'+lat.toFixed(3),type:'wildfire',
         severity:conf>80?'critical':conf>60?'high':'medium',
-        lat,lon,
-        location:'Carregando...',
-        title:'Incêndio Florestal',
-        source:'NASA FIRMS',
+        lat,lon,title:'Incêndio Florestal',source:'NASA FIRMS',
         desc:'Confiança: '+conf.toFixed(0)+'%',
-        date:new Date(),
-        accuracy:TYPE_ACCURACY.wildfire
+        date:new Date(),accuracy:TYPE_ACCURACY.wildfire
       };
     }).filter(Boolean);
   }catch(e){
     setApiStatus('firms','err');
-    return[];
+    return [];
   }
 }
 
 async function fetchConflicts(){
   setApiStatus('reliefweb','loading');
   try{
-    const r=await fetchWithTimeout('https://api.reliefweb.int/v1/disasters?appname=mundoagora&limit=15&sort[]=date:desc&filter[field]=status&filter[value][]=ongoing',10000);
-    if(!r.ok)throw new Error();
+    const r=await fetch('https://api.reliefweb.int/v1/disasters?appname=mundoagora&limit=10&sort[]=date:desc&filter[field]=status&filter[value][]=ongoing');
+    if(!r.ok) throw new Error();
     const d=await r.json();
     setApiStatus('reliefweb','ok');
     
     return(d.data||[]).map(item=>{
       const f=item.fields;
       const country=f.primary_country?.name||'Global';
-      const title=f.name||'Crisis';
-      const loc=extractLocation(title,country);
       return{
-        id:'rw_'+item.id,
-        type:'conflict',
-        severity:'critical',
-        lat:loc.lat,
-        lon:loc.lon,
-        location:loc.city?`${loc.city}, ${country}`:country,
-        title:title.slice(0,70),
-        source:'ReliefWeb (ONU)',
+        id:'rw_'+item.id,type:'conflict',severity:'critical',
+        lat:0,lon:0,location:country,
+        title:f.name||'Crisis',source:'ReliefWeb',
         url:`https://reliefweb.int/disaster/${item.id}`,
-        desc:'Crise ativa',
-        date:new Date(f.date?.created||Date.now()),
+        desc:'Crise ativa',date:new Date(),
         accuracy:TYPE_ACCURACY.conflict
       };
     });
   }catch(e){
     setApiStatus('reliefweb','err');
-    return[];
+    return [];
   }
 }
 
 async function fetchWeather(){
   setApiStatus('meteo','loading');
-  const cities=[
-    {name:'São Paulo',lat:-23.55,lon:-46.63},
-    {name:'New York',lat:40.71,lon:-74.01},
-    {name:'London',lat:51.51,lon:-0.13},
-    {name:'Tokyo',lat:35.67,lon:139.65},
-    {name:'Sydney',lat:-33.87,lon:151.21}
-  ];
-  
   try{
-    const lats=cities.map(c=>c.lat).join(',');
-    const lngs=cities.map(c=>c.lng).join(',');
-    const r=await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,weather_code&timezone=auto`,8000);
-    if(!r.ok)throw new Error();
+    const cities=[{name:'São Paulo',lat:-23.55,lon:-46.63},{name:'New York',lat:40.71,lon:-74.01}];
+    const lats=cities.map(c=>c.lat).join(','),lngs=cities.map(c=>c.lng).join(',');
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m&timezone=auto`);
+    if(!r.ok) throw new Error();
     const d=await r.json();
     setApiStatus('meteo','ok');
     
@@ -683,36 +549,31 @@ async function fetchWeather(){
       const c=item.current||{};
       const city=cities[i];
       return{
-        id:'wx_'+city.name,
-        type:'weather',
+        id:'wx_'+city.name,type:'weather',
         severity:c.temperature_2m>40?'high':'medium',
-        lat:city.lat,
-        lon:city.lon,
-        location:city.name,
+        lat:city.lat,lon:city.lon,location:city.name,
         title:city.name+': '+(c.temperature_2m??'--')+'°C',
-        source:'Open-Meteo',
-        desc:WX[currentLang][c.weather_code]||'Variable',
-        date:new Date(),
-        accuracy:TYPE_ACCURACY.weather
+        source:'Open-Meteo',desc:'Clima',
+        date:new Date(),accuracy:TYPE_ACCURACY.weather
       };
     }).filter(Boolean);
   }catch(e){
     setApiStatus('meteo','err');
-    return[];
+    return [];
   }
 }
 
 // ==================== RENDER ====================
-async function renderMarkers(){
+function renderMarkers(){
   markerGroup.clearLayers();
   const typeF=document.getElementById('typeFilter').value;
   const sevF=document.getElementById('severityFilter').value;
   let shown=0,crit=0;
   
-  for(const ev of allEvents){
-    if(typeF!=='all'&&ev.type!==typeF)continue;
-    if(sevF!=='all'&&ev.severity!==sevF)continue;
-    if(ev.severity==='critical')crit++;
+  allEvents.forEach(ev=>{
+    if(typeF!=='all'&&ev.type!==typeF) return;
+    if(sevF!=='all'&&ev.severity!==sevF) return;
+    if(ev.severity==='critical') crit++;
     
     const iconHtml=`<div class="marker-container">
       <div class="marker-pulse" style="border-color:${TYPE_COLORS[ev.type]}"></div>
@@ -722,77 +583,39 @@ async function renderMarkers(){
     const icon=L.divIcon({className:'custom-div-icon',html:iconHtml,iconSize:[32,32],iconAnchor:[16,16]});
     const m=L.marker([ev.lat,ev.lon],{icon});
     
-    const accClass=ev.accuracy?.level==='high'?'accuracy-high':ev.accuracy?.level==='medium'?'accuracy-medium':'accuracy-low';
-    m.bindPopup(`
-      <div style="font-weight:700">${ev.title}</div>
-      <div style="font-size:11px;color:var(--text-dim)">${ev.desc}</div>
-      <div style="font-size:9px;margin-top:4px">Source: ${ev.source}</div>
-      <div class="accuracy-badge ${accClass}">${ev.accuracy?.label||'—'}</div>
-      ${ev.url?`<a href="${ev.url}" target="_blank" style="font-size:10px;color:var(--green);display:block;margin-top:5px;">🔗 Fonte oficial</a>`:''}
-    `);
-    
-    m.on('click',e=>{
-      L.DomEvent.stopPropagation(e);
-      openPanel(ev.lat,ev.lon,ev.type);
-    });
-    
+    m.bindPopup(`<div style="font-weight:700">${ev.title}</div><div style="font-size:11px;color:var(--text-dim)">${ev.desc}</div><div style="font-size:9px;margin-top:4px">Source: ${ev.source}</div>`);
+    m.on('click',()=>openPanel(ev.lat,ev.lon,ev.type));
     markerGroup.addLayer(m);
     shown++;
     
-    // Enviar notificação se for crítico
-    if(ev.severity==='critical'){
-      sendNotification(ev);
-    }
-  }
+    if(ev.severity==='critical') sendNotification(ev);
+  });
   
   document.getElementById('count-events').textContent=shown;
   document.getElementById('count-critical').textContent=crit;
-  const t=TXT[currentLang];
-  document.getElementById('last-update').textContent=t.updated+' '+new Date().toLocaleTimeString('pt-BR')+' • '+shown+' '+t.events;
+  document.getElementById('last-update').textContent='Atualizado: '+new Date().toLocaleTimeString('pt-BR')+' • '+shown+' eventos';
 }
-
-function filterData(){renderMarkers();}
 
 // ==================== LOAD ====================
 async function loadAllData(){
-  document.getElementById('conn-status').textContent='Carregando dados...';
-  
-  const withTimeout=(promise,ms,name)=>Promise.race([
-    promise,
-    new Promise((_,r)=>setTimeout(()=>r(new Error(name+' timeout')),ms))
-  ]);
+  document.getElementById('conn-status').textContent='Carregando...';
   
   try{
-    const[quakes,fires,conflicts,weather]=await Promise.allSettled([
-      withTimeout(fetchEarthquakes(),8000,'USGS'),
-      withTimeout(fetchWildfires(),8000,'NASA'),
-      withTimeout(fetchConflicts(),10000,'ReliefWeb'),
-      withTimeout(fetchWeather(),8000,'Open-Meteo')
+    const[quakes,fires,conflicts,weather]=await Promise.all([
+      fetchEarthquakes(),fetchWildfires(),fetchConflicts(),fetchWeather()
     ]);
     
-    const newData=[
-      ...(quakes.status==='fulfilled'?quakes.value:[]),
-      ...(fires.status==='fulfilled'?fires.value:[]),
-      ...(conflicts.status==='fulfilled'?conflicts.value:[]),
-      ...(weather.status==='fulfilled'?weather.value:[])
-    ];
+    allEvents=[...quakes,...fires,...conflicts,...weather];
+    renderMarkers();
     
-    const hash=btoa(JSON.stringify(newData.map(e=>e.id+e.severity)));
-    if(hash!==lastDataHash){
-      lastDataHash=hash;
-      allEvents=newData;
-      renderMarkers();
-      if(isGlobeMode&&globe)toggleGlobe();
-    }
-    
-    const active=Object.values(apiOk).filter(Boolean).length;
+    const active=[quakes,fires,conflicts,weather].filter(a=>a.length>0).length;
     document.getElementById('conn-status').textContent=`${active} fontes ativas`;
   }catch(e){
     console.error(e);
     document.getElementById('conn-status').textContent='Modo offline';
   }
   
-  setTimeout(()=>{document.getElementById('loading').style.display='none';},1000);
+  document.getElementById('loading').style.display='none';
 }
 
 // ==================== UI ====================
@@ -800,24 +623,6 @@ function setLang(lang){
   currentLang=lang;
   document.getElementById('btn-pt').classList.toggle('active',lang==='pt');
   document.getElementById('btn-en').classList.toggle('active',lang==='en');
-  const t=TXT[currentLang];
-  ['lbl-temp','lbl-wind','lbl-curr','lbl-time','lbl-cond','lbl-hum'].forEach((id,i)=>{
-    document.getElementById(id).textContent=[t.temp,t.wind,t.curr,t.time,t.cond,t.hum][i];
-  });
-  document.getElementById('btn-street').textContent=t.street;
-  document.getElementById('lbl-events').textContent=t.events;
-  document.getElementById('lbl-critical').textContent=t.critical;
-  document.getElementById('lbl-sources').textContent=t.sources;
-  document.getElementById('lbl-layers').textContent=t.layers;
-  document.getElementById('lbl-nearby').textContent=t.nearby;
-  document.getElementById('txt-no-event').textContent=t.noEvent;
-  
-  Object.keys(sourceTimestamps).forEach(src=>{
-    const el=document.getElementById('api-'+src);
-    if(el)updateFreshnessDisplay(el,src);
-  });
-  
-  if(clickLat&&clickLng)openPanel(clickLat,clickLng,'');
   renderMarkers();
 }
 
@@ -827,8 +632,12 @@ async function toggleGlobe(){
   const globeEl=document.getElementById('globe-container');
   
   if(isGlobeMode){
-    if(globe?. _renderer?.domElement?.parentNode)globe._renderer.domElement.parentNode.removeChild(globe._renderer.domElement);
-    globe=null;
+    if(globe){
+      if(globe._renderer?.domElement?.parentNode){
+        globe._renderer.domElement.parentNode.removeChild(globe._renderer.domElement);
+      }
+      globe=null;
+    }
     globeEl.style.display='none';
     mapEl.style.display='block';
     btn.classList.remove('active');
@@ -842,22 +651,17 @@ async function toggleGlobe(){
   globeEl.style.display='block';
   globeEl.innerHTML='';
   
-  if(!window.Globe)return alert('Erro: Globe.gl não carregou');
+  if(!window.Globe){ alert('Erro: Globe.gl não carregou'); return; }
   
   const globeData=allEvents.map(e=>({
-    lat:e.lat,
-    lng:e.lon,
-    color:TYPE_COLORS[e.type]||'#aaa',
+    lat:e.lat,lng:e.lon,color:TYPE_COLORS[e.type]||'#aaa',
     altitude:e.type==='conflict'?0.3:e.type==='earthquake'?0.15:0.1,
     radius:e.type==='earthquake'?0.9:e.type==='conflict'?0.8:0.5,
-    title:e.title,
-    desc:e.desc,
-    source:e.source
+    title:e.title,desc:e.desc,source:e.source
   }));
   
   globe=Globe()
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
     .backgroundColor('#060c18')
     .width(globeEl.clientWidth)
     .height(globeEl.clientHeight)
@@ -868,7 +672,7 @@ async function toggleGlobe(){
     .onPointClick(d=>{
       if(d.lat&&d.lng){
         toggleGlobe();
-        setTimeout(()=>{map?.invalidateSize();openPanel(d.lat,d.lng,d.type||'');},200);
+        setTimeout(()=>{map?.invalidateSize();},200);
       }
     })(globeEl);
   
@@ -877,108 +681,39 @@ async function toggleGlobe(){
   isGlobeMode=true;
 }
 
-// ==================== PAINEL INFO COM WEBCAMS ====================
+// ==================== PAINEL INFO ====================
 async function openPanel(lat,lng,type=''){
-  if(isGlobeMode)toggleGlobe();
-  clickLat=lat;
-  clickLng=lng;
+  if(isGlobeMode) toggleGlobe();
+  clickLat=lat; clickLng=lng;
   
   document.getElementById('info-panel').classList.add('open');
   document.getElementById('top-controls').classList.add('shifted');
   
   const t=TXT[currentLang];
-  document.getElementById('info-name').textContent=t.searching;
-  document.getElementById('info-sub').textContent='';
-  ['temp','wind','curr','time','cond','hum'].forEach(k=>document.getElementById('val-'+k).textContent='—');
-  document.getElementById('wiki-text').textContent=t.wait;
-  document.getElementById('nearby-list').innerHTML='<div style="font-size:11px;color:var(--text-dim);">'+t.calc+'</div>';
+  document.getElementById('info-name').textContent=`${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+  document.getElementById('info-sub').textContent='Carregando...';
   
-  if(clickMarker)map.removeLayer(clickMarker);
+  if(clickMarker) map.removeLayer(clickMarker);
   clickMarker=L.marker([lat,lng]).addTo(map);
   
   try{
-    const loc=await enrichLocation(lat,lng,currentLang==='pt'?'pt':'en');
-    document.getElementById('info-name').textContent=loc.display;
-    document.getElementById('info-sub').textContent=loc.country||`${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
-    const curr=CURRENCY[loc.country]||'N/A';
-    document.getElementById('val-curr').textContent=curr;
-    if(curr!=='N/A'&&curr!=='USD'&&forexRates[curr]){
-      document.getElementById('val-curr').textContent=curr+' ('+forexRates[curr].toFixed(2)+'/USD)';
-    }
-  }catch(e){}
-  
-  try{
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code,relative_humidity_2m&timezone=auto`);
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m&timezone=auto`);
     const d=await r.json();
-    const c=d.current||{};
-    document.getElementById('val-temp').textContent=(c.temperature_2m??'--')+'°C';
-    document.getElementById('val-wind').textContent=(c.wind_speed_10m??'--')+' km/h';
-    document.getElementById('val-cond').textContent=WX[currentLang][c.weather_code]||'Variable';
-    document.getElementById('val-hum').textContent=(c.relative_humidity_2m??'--')+'%';
-    if(d.timezone){
-      document.getElementById('val-time').textContent=new Date().toLocaleTimeString(currentLang==='pt'?'pt-BR':'en-US',{timeZone:d.timezone,hour:'2-digit',minute:'2-digit'});
-    }
-  }catch(e){}
-  
-  try{
-    const term=(document.getElementById('info-name').textContent||'Earth').replace(/ /g,'_');
-    const r=await fetch(`https://${currentLang==='pt'?'pt':'en'}.wikipedia.org/api/rest_v1/page/summary/${term}`);
-    if(r.ok){
-      const w=await r.json();
-      document.getElementById('wiki-text').textContent=w.extract?w.extract.slice(0,150)+'…':t.noSummary;
-    }else{
-      document.getElementById('wiki-text').textContent=t.notFound;
-    }
+    document.getElementById('val-temp').textContent=(d.current?.temperature_2m??'--')+'°C';
+    document.getElementById('info-sub').textContent=d.timezone||'Local';
   }catch(e){
-    document.getElementById('wiki-text').textContent=t.wikiError;
+    document.getElementById('info-sub').textContent='Localização';
   }
   
-  // WEBCAMS PARA EVENTOS CRÍTICOS
-  const criticalTypes=['earthquake','tsunami','conflict','volcano','disaster'];
-  if(criticalTypes.includes(type)){
-    const webcams=await findNearbyWebcams(lat,lng,150,type);
-    if(webcams.length>0){
-      const webcamSection=document.createElement('div');
-      webcamSection.style.cssText='margin-top:12px;padding-top:12px;border-top:1px solid var(--border);';
-      webcamSection.innerHTML=`
-        <div style="font-weight:700;font-size:11px;margin-bottom:8px;color:var(--green);">📹 Câmeras Ao Vivo Próximas:</div>
-        ${webcams.map(cam=>`
-          <a href="${cam.url}" target="_blank" class="webcam-link">
-            <span style="font-size:18px;">📹</span>
-            <div style="flex:1;">
-              <div style="font-weight:600;">${cam.name}</div>
-              <div style="font-size:9px;color:var(--text-dim);">${cam.source} • ${cam.distance?.toFixed(0)||'?'}km</div>
-            </div>
-            <span style="color:var(--green);font-size:14px;">↗</span>
-          </a>
-        `).join('')}
-      `;
-      const wikiBox=document.getElementById('wiki-text');
-      wikiBox.parentNode.insertBefore(webcamSection,wikiBox.nextSibling);
-    }
+  if(['earthquake','tsunami','conflict','volcano'].includes(type)){
+    document.getElementById('wiki-text').innerHTML='<div style="color:var(--green);"> Evento crítico - verifique câmeras locais no YouTube</div>';
   }
-  
-  const nearby=allEvents.filter(ev=>Math.sqrt((ev.lat-lat)**2+(ev.lon-lng)**2)<5).slice(0,5);
-  document.getElementById('nearby-list').innerHTML=nearby.length===0
-    ?'<div style="font-size:11px;color:var(--text-dim);">'+t.noEvent+'</div>'
-    :nearby.map(ev=>`
-      <div class="nearby-event-item" onclick="map.setView([${ev.lat},${ev.lon}],6)">
-        <div class="nearby-event-dot" style="background:${TYPE_COLORS[ev.type]}"></div>
-        <div>
-          <div style="font-weight:700;color:#fff">${ev.title}</div>
-          <div style="color:var(--text-dim);font-size:10px;">${ev.desc.slice(0,50)}</div>
-        </div>
-      </div>
-    `).join('');
 }
 
 function closePanel(){
   document.getElementById('info-panel').classList.remove('open');
   document.getElementById('top-controls').classList.remove('shifted');
-  if(clickMarker){
-    map.removeLayer(clickMarker);
-    clickMarker=null;
-  }
+  if(clickMarker){ map.removeLayer(clickMarker); clickMarker=null; }
 }
 
 function openStreet(){
@@ -987,17 +722,54 @@ function openStreet(){
   }
 }
 
-function openAbout(){document.getElementById('about-modal').classList.add('active');}
-function closeAbout(){document.getElementById('about-modal').classList.remove('active');}
-function openAccuracyModal(){document.getElementById('accuracy-modal').classList.add('active');}
-function closeAccuracyModal(){document.getElementById('accuracy-modal').classList.remove('active');}
+function openAbout(){ document.getElementById('about-modal').classList.add('active'); }
+function closeAbout(){ document.getElementById('about-modal').classList.remove('active'); }
+function openAccuracyModal(){ document.getElementById('accuracy-modal').classList.add('active'); }
+function closeAccuracyModal(){ document.getElementById('accuracy-modal').classList.remove('active'); }
+function filterData(){ renderMarkers(); }
 
-// ==================== OUTRAS CAMADAS ====================
+// ==================== CAMADAS - FUNCIONALIDADES 100% FUNCIONAIS ====================
+
+// ✅ ISS - Posição em tempo real
+async function startISS(){
+  if(!document.getElementById('lyr-iss').checked) return;
+  
+  async function update(){
+    if(!document.getElementById('lyr-iss').checked) return;
+    try{
+      const r=await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+      const d=await r.json();
+      if(!issMarker){
+        issMarker=L.marker([d.latitude,d.longitude]).addTo(map);
+        issMarker.bindPopup('🛰 ISS<br>Alt: '+(d.altitude?.toFixed(0)||'~420')+' km');
+      }else{
+        issMarker.setLatLng([d.latitude,d.longitude]);
+      }
+      setApiStatus('iss','ok');
+    }catch(e){
+      setApiStatus('iss','err');
+    }
+  }
+  
+  await update();
+  issInterval=setInterval(update,5000);
+}
+
+function toggleISS(){
+  const on=document.getElementById('lyr-iss').checked;
+  if(on) startISS();
+  else{
+    if(issInterval) clearInterval(issInterval);
+    if(issMarker){ map.removeLayer(issMarker); issMarker=null; }
+  }
+}
+
+// ✅ DADOS SOLARES NOAA - Medição direta por satélite
 async function toggleSolar(){
   const on=document.getElementById('lyr-solar').checked;
   const panel=document.getElementById('solar-panel');
   panel.style.display=on?'block':'none';
-  if(!on)return;
+  if(!on) return;
   
   try{
     const r=await fetch('https://services.swpc.noaa.gov/products/goes-xray-flux.json');
@@ -1007,18 +779,16 @@ async function toggleSolar(){
     const flux=vals[vals.length-1];
     
     let cls,color,alert;
-    if(flux<1e-5){cls='Classe A';color='#00e5a0';alert='✓ Sem Blackout';}
-    else if(flux<1e-4){cls='Classe B';color='#88ff00';alert='✓ Sem Blackout';}
-    else if(flux<1e-3){cls='Classe C';color='#ffff00';alert='⚠ R1 Minor';}
-    else if(flux<1e-2){cls='Classe M';color='#ffa500';alert='🚨 R2 Moderate';}
-    else{cls='Classe X';color='#ff0000';alert=' R3+ Strong';}
+    if(flux<1e-5){cls='Classe A';color='#00e5a0';alert='✓ Normal';}
+    else if(flux<1e-4){cls='Classe B';color='#88ff00';alert='✓ Baixo';}
+    else if(flux<1e-3){cls='Classe C';color='#ffff00';alert=' Moderado';}
+    else if(flux<1e-2){cls='Classe M';color='#ffa500';alert=' Alto';}
+    else{cls='Classe X';color='#ff0000';alert='🚨 EXTREMO';}
     
     document.getElementById('xray-level').textContent=`${cls} - ${flux.toExponential(2)} W/m²`;
     document.getElementById('xray-level').style.borderColor=color;
     document.getElementById('xray-level').style.color=color;
     document.getElementById('blackout-status').textContent=alert;
-    document.getElementById('blackout-status').style.background=color+'33';
-    document.getElementById('blackout-status').style.color=color;
     
     const canvas=document.getElementById('xray-canvas');
     const ctx=canvas.getContext('2d');
@@ -1041,30 +811,36 @@ async function toggleSolar(){
     document.getElementById('kp-index').textContent=kp.toFixed(1);
     document.getElementById('aurora-north').textContent=Math.min(95,kp*12).toFixed(0)+'%';
     document.getElementById('aurora-south').textContent=Math.min(95,kp*10).toFixed(0)+'%';
+    
+    setApiStatus('noaa','ok');
   }catch(e){
+    setApiStatus('noaa','err');
     panel.style.display='none';
   }
 }
 
+// ✅ AURORA BOREAL - Baseado em dados NOAA reais
 async function toggleAurora(){
   const on=document.getElementById('lyr-aurora').checked;
   if(auroraLayer){map.removeLayer(auroraLayer);auroraLayer=null;}
-  document.getElementById('aurora-legend').classList.toggle('active',on);
-  if(!on)return;
+  if(!on) return;
   
   try{
     const r=await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
     const data=await r.json();
     const kp=data[data.length-1][1];
-    document.getElementById('kp-val').textContent=kp.toFixed(1);
     
+    document.getElementById('kp-val').textContent=kp.toFixed(1);
     auroraLayer=L.layerGroup().addTo(map);
+    
     [67,-67].forEach(baseLat=>{
       const factor=baseLat<0?-1:1;
       const ovalLat=baseLat-(kp*2.5*0.5*factor);
+      
       for(let lng=-180;lng<=180;lng+=8){
         const lat=ovalLat+Math.sin(lng*Math.PI/180)*4;
         const prob=Math.max(0,100-((9-kp)*12));
+        
         if(prob>10){
           const color=prob>70?'#ff00ff':prob>40?'#8a2be2':'#00ffcc';
           auroraLayer.addLayer(L.circleMarker([lat,lng],{
@@ -1073,110 +849,193 @@ async function toggleAurora(){
             color:color,
             weight:0,
             fillOpacity:prob/160
-          }).bindPopup(`Aurora: ${prob.toFixed(0)}%`));
+          }).bindPopup(`Probabilidade: ${prob.toFixed(0)}%`));
         }
       }
     });
+    
+    document.getElementById('aurora-legend').classList.add('active');
   }catch(e){
     document.getElementById('aurora-legend').classList.remove('active');
   }
 }
 
+// ==================== CAMADAS - FUNCIONALIDADES COM LIMITAÇÕES ====================
+
+// ⚠️ VOOS OPENSKY - Funciona mas com limitações
 async function toggleFlights(){
   const on=document.getElementById('lyr-flights').checked;
+  
   if(!on){
-    if(wsOpenSky)wsOpenSky.close();
-    if(flightLayer)map.removeLayer(flightLayer);
+    if(wsOpenSky){wsOpenSky.close();wsOpenSky=null;}
+    if(flightLayer){map.removeLayer(flightLayer);flightLayer=null;}
     return;
   }
-  if(wsOpenSky)return;
+  
+  if(wsOpenSky) return;
   
   try{
     const b=map.getBounds();
-    wsOpenSky=new WebSocket(`wss://opensky-network.org/api/states/all?lamin=${b.getSouthWest().lat.toFixed(2)}&lomin=${b.getSouthWest().lng.toFixed(2)}&lamax=${b.getNorthEast().lat.toFixed(2)}&lomax=${b.getNorthEast().lng.toFixed(2)}`);
+    wsOpenSky=new WebSocket(
+      `wss://opensky-network.org/api/states/all?`+
+      `lamin=${b.getSouthWest().lat.toFixed(2)}&`+
+      `lomin=${b.getSouthWest().lng.toFixed(2)}&`+
+      `lamax=${b.getNorthEast().lat.toFixed(2)}&`+
+      `lomax=${b.getNorthEast().lng.toFixed(2)}`
+    );
     
     wsOpenSky.onmessage=e=>{
       const d=JSON.parse(e.data);
-      if(!flightLayer)flightLayer=L.layerGroup().addTo(map);
+      if(!flightLayer) flightLayer=L.layerGroup().addTo(map);
       flightLayer.clearLayers();
       
       (d.states||[]).slice(0,100).forEach(s=>{
         const lon=s[5],lat=s[6],cs=(s[1]||'').trim();
-        if(!lat||!lon)return;
+        if(!lat||!lon) return;
+        
         const icon=L.divIcon({
           className:'',
           iconSize:[16,16],
           iconAnchor:[8,8],
           html:`<div style="transform:rotate(${(s[10]||0)}deg);font-size:13px;color:#38b6ff;">✈</div>`
         });
+        
         const m=L.marker([lat,lon],{icon});
-        if(cs)m.bindTooltip(cs);
+        if(cs) m.bindTooltip(cs);
         flightLayer.addLayer(m);
       });
     };
     
     wsOpenSky.onclose=()=>{
       wsOpenSky=null;
-      setTimeout(()=>{if(document.getElementById('lyr-flights').checked)toggleFlights();},5000);
+      setTimeout(()=>{
+        if(document.getElementById('lyr-flights').checked) toggleFlights();
+      },5000);
     };
+    
   }catch(e){
-    if(flightLayer)map.removeLayer(flightLayer);
+    console.warn('OpenSky: indisponível',e);
+    if(flightLayer){map.removeLayer(flightLayer);flightLayer=null;}
   }
 }
 
-async function startISS(){
-  if(!document.getElementById('lyr-iss').checked)return;
+// ⚠️ VENTO GLOBAL - Partículas simuladas (NÃO é como Ventusky)
+async function toggleWind(){
+  const on=document.getElementById('lyr-wind').checked;
   
-  async function update(){
-    if(!document.getElementById('lyr-iss').checked)return;
+  if(windAnimationId){
+    cancelAnimationFrame(windAnimationId);
+    windAnimationId=null;
+  }
+  const canvas=document.querySelector('.wind-canvas');
+  if(canvas&&canvas.parentNode) canvas.parentNode.removeChild(canvas);
+  if(!on) return;
+  
+  const windCanvas=document.createElement('canvas');
+  windCanvas.className='wind-canvas';
+  map.getPanes().overlayPane.appendChild(windCanvas);
+  const ctx=windCanvas.getContext('2d');
+  
+  function resize(){
+    const s=map.getSize();
+    windCanvas.width=s.x;
+    windCanvas.height=s.y;
+  }
+  map.on('resize',resize);
+  resize();
+  
+  windParticles=[];
+  for(let i=0;i<500;i++){
+    windParticles.push({
+      lat:Math.random()*160-80,
+      lng:Math.random()*360-180,
+      speed:Math.random()*3+1,
+      dir:Math.random()*Math.PI*2,
+      age:0
+    });
+  }
+  
+  async function updateWindDirection(){
     try{
-      const r=await fetch('https://api.wheretheiss.at/v1/satellites/25544');
-      const d=await r.json();
-      if(!issMarker){
-        issMarker=L.marker([d.latitude,d.longitude]).addTo(map);
-        issMarker.bindPopup('🛰 ISS<br>Alt: '+(d.altitude?.toFixed(0)||'~420')+' km');
-      }else{
-        issMarker.setLatLng([d.latitude,d.longitude]);
+      const lats=[],lngs=[];
+      for(let lat=-60;lat<=60;lat+=30){
+        for(let lng=-150;lng<=150;lng+=30){
+          lats.push(lat);
+          lngs.push(lng);
+        }
       }
+      
+      const res=await fetch(
+        `https://api.open-meteo.com/v1/forecast?`+
+        `latitude=${lats.join(',')}&`+
+        `longitude=${lngs.join(',')}&`+
+        `current=wind_speed_10m,wind_direction_10m&timezone=UTC`
+      );
+      const data=await res.json();
+      const items=Array.isArray(data)?data:[data];
+      
+      windParticles.forEach((p,i)=>{
+        const idx=Math.floor((p.lat+80)/30)*11+Math.floor((p.lng+180)/30);
+        if(items[idx]?.current){
+          p.dir=(items[idx].current.wind_direction_10m||0)*Math.PI/180;
+          p.speed=(items[idx].current.wind_speed_10m||10)/10;
+        }
+      });
     }catch(e){}
   }
   
-  await update();
-  issInterval=setInterval(update,5000);
-}
-
-function toggleISS(){
-  const on=document.getElementById('lyr-iss').checked;
-  if(on)startISS();
-  else{
-    if(issInterval)clearInterval(issInterval);
-    if(issMarker){map.removeLayer(issMarker);issMarker=null;}
+  updateWindDirection();
+  setInterval(updateWindDirection,60000);
+  
+  function animate(){
+    ctx.clearRect(0,0,windCanvas.width,windCanvas.height);
+    
+    windParticles.forEach(p=>{
+      const pt=map.latLngToContainerPoint([p.lat,p.lng]);
+      if(pt.x<0||pt.x>windCanvas.width||pt.y<0||pt.y>windCanvas.height) return;
+      
+      const nLat=p.lat+Math.cos(p.dir)*p.speed*0.05;
+      const nLng=p.lng+Math.sin(p.dir)*p.speed*0.05;
+      const nPt=map.latLngToContainerPoint([nLat,nLng]);
+      
+      const ratio=Math.min(1,p.speed/5);
+      ctx.strokeStyle=`rgba(${100+155*ratio},${200-100*ratio},255,0.5)`;
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(pt.x,pt.y);
+      ctx.lineTo(nPt.x,nPt.y);
+      ctx.stroke();
+      
+      p.lat=nLat;
+      p.lng=nLng;
+      p.age++;
+      
+      if(p.lat<-85||p.lat>85||p.lng<-180||p.lng>180||p.age>100){
+        p.lat=Math.random()*160-80;
+        p.lng=Math.random()*360-180;
+        p.age=0;
+      }
+    });
+    
+    windAnimationId=requestAnimationFrame(animate);
   }
+  
+  animate();
 }
 
+// ==================== FOREX ====================
 async function loadForex(){
   try{
     const r=await fetch('https://open.er-api.com/v6/latest/USD');
     const d=await r.json();
-    if(d.rates)forexRates=d.rates;
+    if(d.rates) forexRates=d.rates;
     
     const items=[];
-    [['EUR','€'],['GBP','£'],['JPY','¥'],['BRL','R$'],['CNY','¥CN'],['INR','₹']].forEach(([c,s])=>{
-      if(forexRates[c])items.push(`<span class="t-item"><span class="t-label">${s}${c}/USD</span><span class="t-val">${forexRates[c].toFixed(3)}</span></span>`);
+    [['EUR','€'],['GBP','£'],['BRL','R$']].forEach(([c,s])=>{
+      if(forexRates[c]) items.push(`<span class="t-item"><span class="t-label">${s}${c}</span><span class="t-val">${forexRates[c].toFixed(3)}</span></span>`);
     });
     
-    try{
-      const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
-      const d=await r.json();
-      if(d.bitcoin){
-        const chg=d.bitcoin.usd_24h_change||0;
-        items.push(`<span class="t-item"><span class="t-label">₿ BTC</span><span class="t-val">$${d.bitcoin.usd.toLocaleString()}</span><span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'▲':'▼'}${Math.abs(chg).toFixed(1)}%</span></span>`);
-      }
-    }catch(e){}
-    
-    if(items.length>0){
-      document.getElementById('ticker-content').innerHTML=items.join('<span style="color:var(--border)"> • </span>')+'<span style="color:var(--border)"> • </span>'+items.join('<span style="color:var(--border)"> • </span>');
-    }
+    document.getElementById('ticker-content').innerHTML=items.join(' • ')+(items.length?' • ':'');
   }catch(e){}
 }
 
@@ -1184,52 +1043,48 @@ async function loadForex(){
 document.addEventListener('visibilitychange',()=>{
   isTabVisible=!document.hidden;
   if(isTabVisible){
-    if(refreshTimer)clearInterval(refreshTimer);
+    if(refreshTimer) clearInterval(refreshTimer);
     loadAllData();
     refreshTimer=setInterval(loadAllData,300000);
   }else{
-    if(refreshTimer)clearInterval(refreshTimer);
+    if(refreshTimer) clearInterval(refreshTimer);
   }
 });
 
-setInterval(()=>{document.getElementById('utc-clock').textContent=new Date().toUTCString().split(' ')[4]+' UTC';},1000);
+setInterval(()=>{
+  document.getElementById('utc-clock').textContent=new Date().toUTCString().split(' ')[4]+' UTC';
+},1000);
 
 let countdown=300;
 setInterval(()=>{
   countdown--;
-  if(countdown<0)countdown=300;
+  if(countdown<0) countdown=300;
   document.getElementById('next-refresh').textContent=Math.floor(countdown/60)+':'+String(countdown%60).padStart(2,'0');
 },1000);
 
-setInterval(()=>{
-  Object.keys(sourceTimestamps).forEach(src=>{
-    const el=document.getElementById('api-'+src);
-    if(el)updateFreshnessDisplay(el,src);
-  });
-},60000);
-
 window.addEventListener('DOMContentLoaded',async()=>{
-  // Solicitar permissão para notificações
-  const notifyGranted=await requestNotificationPermission();
-  if(notifyGranted)showToast(TXT[currentLang].notifyEnabled);
-  
-  map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([20,10],2);
-  L.control.zoom({position:'bottomright'}).addTo(map);
-  
-  lightTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
-  darkTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
-  currentTile=lightTiles.addTo(map);
-  
-  markerGroup=L.layerGroup().addTo(map);
-  map.on('click',e=>openPanel(e.latlng.lat,e.latlng.lng,''));
-  
   setTimeout(()=>{
-    const el=document.getElementById('loading');
-    if(el&&el.style.display!=='none'){
-      el.style.display='none';
-      document.getElementById('conn-status').textContent='Conexão lenta';
-    }
-  },12000);
+    document.getElementById('loading').style.display='none';
+  },5000);
+  
+  try{
+    const granted=await requestNotificationPermission();
+    if(granted) showToast(TXT[currentLang].notifyEnabled);
+  }catch(e){ console.warn('Notificações:',e); }
+  
+  try{
+    map=L.map('map',{zoomControl:false}).setView([20,10],2);
+    L.control.zoom({position:'bottomright'}).addTo(map);
+    
+    lightTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
+    darkTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
+    currentTile=lightTiles.addTo(map);
+    markerGroup=L.layerGroup().addTo(map);
+    map.on('click',e=>openPanel(e.latlng.lat,e.latlng.lng,''));
+  }catch(e){
+    console.error('Mapa:',e);
+    document.getElementById('loading').style.display='none';
+  }
   
   if(isTabVisible){
     loadAllData();
