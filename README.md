@@ -14,7 +14,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas 
 
 ## Atualização
 
-O navegador busca terremotos e eventos naturais a cada 5 minutos, ISS a cada 10 segundos, clima espacial a cada 5 minutos e temperatura global a cada 30 minutos quando a camada está ativada. O GitHub Actions gera um snapshot de contingência a cada 15 minutos depois que o fluxo estiver na branch padrão.
+O navegador busca terremotos e eventos naturais a cada 5 minutos, ISS a cada 10 segundos, clima espacial a cada 5 minutos e temperatura global a cada 30 minutos quando a camada está ativada. O GitHub Actions gera um snapshot de contingência e republica o GitHub Pages a cada 15 minutos, sem criar commits automáticos no histórico.
 
 ## Limites reais
 
