@@ -88,13 +88,13 @@
           <div class="stage-actions">
             <button id="locate-button" type="button" data-i18n="stage.locate">⌖ PERTO DE MIM</button>
             <button id="regions-button" type="button" data-i18n="stage.regions">REGIÕES</button>
-            <button id="view-button" type="button" data-i18n="stage.map2d">MAPA 2D</button>
+            <button id="view-button" type="button" data-i18n="stage.globe3d">GLOBO 3D</button>
             <button id="refresh-button" type="button" data-i18n="stage.refresh">↻ ATUALIZAR</button>
           </div>
         </div>
         <div class="visual-shell">
-          <div id="globe"></div>
-          <div id="map" hidden></div>
+          <div id="globe" hidden></div>
+          <div id="map"></div>
           <div id="visual-loading" class="visual-loading"><span></span><strong data-i18n="stage.loading">INICIALIZANDO CARTOGRAFIA</strong></div>
           <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
           <div id="coordinate-readout" class="coordinate-readout">LAT — · LON —</div>
@@ -218,6 +218,6 @@
 
   <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js" integrity="sha384-fS13P48RBFel+cPUp5960AhzvtEr64LerQ00neZuM+Hi/VDxxemdQnN7IcWPYvPb" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

@@ -14,7 +14,7 @@ const state = {
   events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], admin1: [],
   selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: false, showAurora: false,
   showAir: false, showIss: true, showRegions: false, showDaylight: true, showSatellite: false,
-  view: 'globe', updatedAt: null, snapshot: null, notificationsReady: false
+  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false
 };
 const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['other', '06', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
@@ -134,7 +134,7 @@ async function loadAdmin1() {
   try {
     const data = await json('data/admin1.json', 30000);
     state.admin1 = (data.regions || []).map(([name, countryIndex, lat, lon], index) => ({ id: `region-${index}`, kind: 'region', name, country: data.countries[countryIndex], lat, lon, title: name, location: t('region.click', { country: data.countries[countryIndex] }), metric: t('region.metric'), color: '#60e6da' })); source('natural-earth', 'NATURAL EARTH', true, state.admin1.length, 'Administrative centers');
-    $('#region-status').textContent = t('layer.regionsCount', { count: state.admin1.length }); renderGlobeData(); return state.admin1;
+    $('#region-status').textContent = t('layer.regionsCount', { count: state.admin1.length }); return state.admin1;
   } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); $('#region-status').textContent = t('layer.regionsUnavailable'); return []; }
 }
 
@@ -171,7 +171,7 @@ async function shareSelectedEvent() {
   } catch (error) { if (error.name !== 'AbortError') status.textContent = t('eventDetail.shareFailed'); }
 }
 
-let globe, map, baseMapLayer, satelliteLayer, regionLayer, issTrailLayer, temperatureLayer;
+let globe, map, baseMapLayer, satelliteLayer, regionLayer, issTrailLayer, temperatureLayer, regionRenderFrame;
 let mapMarkers = [], environmentMarkers = [];
 
 function currentTheme() { return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'; }
@@ -193,7 +193,16 @@ function initVisuals() {
     temperatureLayer = createTemperatureFieldLayer();
     map.on('mousemove', event => updateTemperatureReadout(event.latlng));
     map.on('mouseout', () => { const readout = $('#temperature-readout'); if (readout) readout.hidden = true; });
+    map.on('moveend zoomend', () => { if (state.showRegions) scheduleMapRegions(); });
+    $('#globe').hidden = true; $('#map').hidden = false; $('#view-button').textContent = t('stage.globe3d'); $('#visual-loading').hidden = true;
+    setTimeout(() => map.invalidateSize(), 50);
   } catch { map = null; }
+  if (!map) $('#visual-loading').innerHTML = `<strong>${esc(t('stage.unavailable'))}</strong>`;
+  renderGlobeData();
+}
+
+function initGlobe() {
+  if (globe) return true;
   try {
     globe = Globe()($('#globe')).backgroundColor('rgba(0,0,0,0)').globeImageUrl('assets/earth-night.jpg').bumpImageUrl('assets/earth-topology.png').showAtmosphere(true).atmosphereColor('#53d9de').atmosphereAltitude(.15).showGraticules(true)
       .pointLat('lat').pointLng('lon').pointRadius(point => point.kind === 'region' ? .07 : point.kind === 'temperature' ? .18 : point.kind === 'aurora' ? .12 : point.kind === 'air' ? .16 : point.kind === 'iss' ? .55 : state.selected === point.id ? .55 : .34)
@@ -203,13 +212,10 @@ function initVisuals() {
       .pathPoints('points').pathPointLat('lat').pathPointLng('lon').pathColor('color').pathStroke('stroke')
       .ringLat('lat').ringLng('lon').ringColor(point => point.color).ringMaxRadius(point => point.radius).ringPropagationSpeed(2).ringRepeatPeriod(1400);
     globe.controls().autoRotate = true; globe.controls().autoRotateSpeed = .16; globe.controls().enableDamping = true;
-    window.addEventListener('resize', resizeGlobe); if (map) map.on('moveend zoomend', () => { if (state.showRegions) renderMapRegions(); }); resizeGlobe(); $('#visual-loading').hidden = true;
+    window.addEventListener('resize', resizeGlobe); resizeGlobe(); renderGlobeData(); return true;
   } catch (error) {
-    globe = null;
-    if (map) { state.view = 'map'; $('#globe').hidden = true; $('#map').hidden = false; $('#view-button').textContent = t('stage.globe3d'); $('#visual-loading').hidden = true; setTimeout(() => map.invalidateSize(), 50); }
-    else $('#visual-loading').innerHTML = `<strong>${esc(t('stage.unavailable'))}</strong><small>${esc(error.message)}</small>`;
+    globe = null; return false;
   }
-  renderGlobeData();
 }
 
 function resizeGlobe() { const box = $('#globe').getBoundingClientRect(); if (globe) globe.width(box.width).height(box.height); }
@@ -339,14 +345,21 @@ function renderMapRegions() {
   if (!state.showRegions || !state.admin1.length) return;
   const bounds = map.getBounds().pad(.12), zoom = map.getZoom(), stride = zoom <= 2 ? 12 : zoom === 3 ? 6 : zoom === 4 ? 2 : 1;
   const visible = state.admin1.filter((region, index) => index % stride === 0 && bounds.contains([region.lat, region.lon])).slice(0, 300);
-  regionLayer = L.layerGroup(visible.map(region => L.circleMarker([region.lat, region.lon], { renderer: L.canvas(), radius: region === state.selectedRegion ? 5 : 2.3, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da', weight: region === state.selectedRegion ? 1.3 : .45, fillColor: '#174958', fillOpacity: .7 }).bindTooltip(`${esc(regionName(region))} · ${esc(regionCountry(region))}`).on('click', () => selectRegion(region)))).addTo(map);
+  // O mapa já usa preferCanvas; sem um renderer por marcador, todos os pontos
+  // compartilham o mesmo canvas em vez de criar até 300 superfícies gráficas.
+  regionLayer = L.layerGroup(visible.map(region => L.circleMarker([region.lat, region.lon], { radius: region === state.selectedRegion ? 5 : 2.3, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da', weight: region === state.selectedRegion ? 1.3 : .45, fillColor: '#174958', fillOpacity: .7 }).bindTooltip(`${esc(regionName(region))} · ${esc(regionCountry(region))}`).on('click', () => selectRegion(region)))).addTo(map);
+}
+
+function scheduleMapRegions() {
+  cancelAnimationFrame(regionRenderFrame);
+  regionRenderFrame = requestAnimationFrame(renderMapRegions);
 }
 
 function renderGlobeData() {
   const events = filteredEvents();
   const points = events.map(event => ({ ...event, title: displayEventTitle(event), eventId: event.id, kind: 'event', color: state.selected === event.id ? '#c7ff4a' : severityColors[event.severity] }));
   if (state.showIss && state.iss) points.push({ ...state.iss, id: 'iss', kind: 'iss', color: '#60e6da', title: t('iss.title'), location: t('iss.altitude', { altitude: Math.round(state.iss.altitude) }), metric: 'ISS' });
-  const environmental = environmentPoints(); points.push(...environmental); if (state.showRegions) points.push(...sample(state.admin1, 1200).map(region => ({ ...region, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
+  const environmental = environmentPoints(); points.push(...environmental); if (state.showRegions && globe) points.push(...sample(state.admin1, 600).map(region => ({ ...region, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
   if (globe) {
     globe.pointsData(points);
     const paths = []; if (state.showDaylight) paths.push(terminatorPath()); if (state.showIss && state.issTrail.length > 1) paths.push({ points: state.issTrail, color: '#60e6da', stroke: .55 }); globe.pathsData(paths);
@@ -448,7 +461,7 @@ function bind() {
   $('#regions-toggle').onchange = event => toggleRegions(event.target.checked); $('#regions-button').onclick = () => toggleRegions(!state.showRegions);
   $('#daylight-toggle').onchange = event => { state.showDaylight = event.target.checked; renderGlobeData(); };
   $('#satellite-toggle').onchange = event => toggleSatellite(event.target.checked);
-  $('#view-button').onclick = () => { if (state.view === 'map' && !globe) { alert(t('alert.webgl')); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d'); if (state.view === 'map') setTimeout(() => { map.invalidateSize(); updateTemperaturePresentation(); }, 50); else { resizeGlobe(); updateTemperaturePresentation(); } };
+  $('#view-button').onclick = () => { if (state.view === 'map' && !initGlobe()) { alert(t('alert.webgl')); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d'); if (state.view === 'map') setTimeout(() => { map.invalidateSize(); updateTemperaturePresentation(); }, 50); else { resizeGlobe(); updateTemperaturePresentation(); } };
   $('#refresh-button').onclick = async () => { await loadSnapshot(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); if (state.showTemperature) loadTemperature(); };
   $('#locate-button').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(position => { focusCoordinate(position.coords.latitude, position.coords.longitude, 1.5); loadWeather(position.coords.latitude, position.coords.longitude); loadNews($('#region-input').placeholder, position.coords.latitude, position.coords.longitude); }, () => alert(t('alert.locationDenied'))) : alert(t('alert.locationUnavailable'));
   $('#intel-form').onsubmit = event => { event.preventDefault(); loadNews($('#region-input').value); };
