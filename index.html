@@ -5,9 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Monitor público de acontecimentos, clima, atividade sísmica, auroras e condições globais em tempo quase real.">
   <title>Seu Mundo Neste Momento</title>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments)}
+    gtag('consent', 'default', {analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',wait_for_update:500});
+    try { if (localStorage.getItem('analytics-consent') === 'granted') gtag('consent', 'update', {analytics_storage:'granted'}); } catch {}
+    gtag('js', new Date());
+    gtag('config', 'G-3BHTT4DGNX', {send_page_view:true});
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-3BHTT4DGNX"></script>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <div class="app-shell">
@@ -130,6 +139,30 @@
   </div>
 
   <dialog id="about-dialog"><button id="about-close" aria-label="Fechar">×</button><p class="eyebrow">SOBRE ESTE MONITOR</p><h2>Tempo quase real, não ficção.</h2><p>“Ao vivo” significa a leitura mais recente publicada por cada fonte. Terremotos, desastres, tsunamis, clima espacial, auroras, qualidade do ar, temperatura, notícias e posição orbital têm ritmos diferentes. O painel mostra horário, origem e estado de cada fonte; quando algo falha, informa a falha em vez de inventar dados.</p><p>O GitHub Pages é estático. As leituras são feitas diretamente de APIs públicas e usam o último arquivo consolidado pelo GitHub Actions como contingência. A imagem de satélite é diária, as notícias dependem da cobertura jornalística e nenhuma câmera é tratada como confirmação independente.</p><p>Conflitos e incidentes nucleares, radiológicos ou biológicos só devem aparecer quando publicados por fontes civis ou autoridades reconhecidas. O monitor não calcula trajetória de armamentos, não prevê impacto de míssil e não atribui autoria sem confirmação oficial.</p></dialog>
+
+  <aside id="analytics-consent" class="analytics-consent" aria-label="Preferência de medição" hidden>
+    <span>Este site usa medição anônima do Google Analytics para contar visitas e usuários ativos.</span>
+    <button id="analytics-accept" type="button">PERMITIR</button>
+    <button id="analytics-reject" type="button">RECUSAR</button>
+  </aside>
+  <script>
+    (() => {
+      const box = document.getElementById('analytics-consent');
+      let choice = null;
+      try { choice = localStorage.getItem('analytics-consent'); } catch {}
+      if (!choice) box.hidden = false;
+      document.getElementById('analytics-accept').onclick = () => {
+        try { localStorage.setItem('analytics-consent', 'granted'); } catch {}
+        gtag('consent', 'update', {analytics_storage:'granted'});
+        box.hidden = true;
+      };
+      document.getElementById('analytics-reject').onclick = () => {
+        try { localStorage.setItem('analytics-consent', 'denied'); } catch {}
+        gtag('consent', 'update', {analytics_storage:'denied'});
+        box.hidden = true;
+      };
+    })();
+  </script>
 
   <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
