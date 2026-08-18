@@ -6,6 +6,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 
 - Globo 3D com mapa 2D automático para aparelhos sem WebGL.
 - Temas claro e escuro com preferência salva no navegador; o mapa 2D troca de cartografia e contraste conforme o tema.
+- Campo térmico contínuo no mapa 2D, calculado a partir do modelo NOAA GFS via Open-Meteo, com interpolação bilinear, escala em Celsius, horário da rodada e leitura por coordenada.
 - Terremotos, anéis sísmicos, eventos naturais, desastres GDACS e alertas ativos de tsunami.
 - Posição e trilha recente da ISS.
 - Índice Kp, Bz, vento solar e previsão NOAA OVATION de auroras.

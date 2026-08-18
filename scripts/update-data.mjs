@@ -12,6 +12,7 @@ const URLS = {
   tsunamiPaaq: 'https://www.tsunami.gov/events/xml/PAAQAtom.xml',
   tsunamiPheb: 'https://www.tsunami.gov/events/xml/PHEBAtom.xml',
   air: 'https://air-quality-api.open-meteo.com/v1/air-quality',
+  temperature: 'https://api.open-meteo.com/v1/gfs',
   newsPt: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20inc%C3%AAndio%20OR%20inunda%C3%A7%C3%A3o%20OR%20ciclone%20OR%20vulc%C3%A3o%20OR%20tsunami%20OR%20evacua%C3%A7%C3%A3o%20OR%20conflito%29%20when%3A1d&hl=pt-BR&gl=BR&ceid=BR%3Apt-419',
   newsEn: 'https://news.google.com/rss/search?q=%28earthquake%20OR%20wildfire%20OR%20flood%20OR%20cyclone%20OR%20volcano%20OR%20tsunami%20OR%20evacuation%20OR%20conflict%29%20when%3A1d&hl=en-US&gl=US&ceid=US%3Aen',
   newsEs: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20incendio%20OR%20inundaci%C3%B3n%20OR%20cicl%C3%B3n%20OR%20volc%C3%A1n%20OR%20tsunami%20OR%20evacuaci%C3%B3n%20OR%20conflicto%29%20when%3A1d&hl=es-419&gl=MX&ceid=MX%3Aes-419'
@@ -112,12 +113,63 @@ async function loadAirQuality() {
   return points;
 }
 
+async function mapLimit(items, limit, worker) {
+  const output = new Array(items.length);
+  let cursor = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      try { output[index] = { status: 'fulfilled', value: await worker(items[index], index) }; }
+      catch (reason) { output[index] = { status: 'rejected', reason }; }
+    }
+  }));
+  return output;
+}
+
+async function loadTemperatureGrid() {
+  const step = 5, latMin = -85, latMax = 85, lonMin = -180, lonMax = 175;
+  const coordinates = [];
+  for (let lat = latMin; lat <= latMax; lat += step) for (let lon = lonMin; lon <= lonMax; lon += step) coordinates.push({ lat, lon });
+  const batches = [];
+  for (let index = 0; index < coordinates.length; index += 80) batches.push({ index, points: coordinates.slice(index, index + 80) });
+  const values = new Array(coordinates.length).fill(null);
+  const times = [];
+  const results = await mapLimit(batches, 4, async batch => {
+    const url = new URL(URLS.temperature);
+    url.searchParams.set('latitude', batch.points.map(point => point.lat).join(','));
+    url.searchParams.set('longitude', batch.points.map(point => point.lon).join(','));
+    url.searchParams.set('current', 'temperature_2m');
+    url.searchParams.set('models', 'gfs_seamless');
+    url.searchParams.set('cell_selection', 'nearest');
+    url.searchParams.set('elevation', 'nan');
+    url.searchParams.set('temperature_unit', 'celsius');
+    url.searchParams.set('timezone', 'GMT');
+    const raw = await get(url);
+    const rows = Array.isArray(raw) ? raw : [raw];
+    rows.forEach((row, offset) => {
+      const temperature = number(row.current?.temperature_2m);
+      if (temperature !== null) values[batch.index + offset] = Math.round(temperature * 10) / 10;
+      if (row.current?.time) times.push(utcTimestamp(row.current.time));
+    });
+    return rows.length;
+  });
+  const valid = values.filter(value => value !== null);
+  if (valid.length < coordinates.length * .8) throw new Error(`GFS incompleto: ${valid.length}/${coordinates.length} células`);
+  return {
+    source: 'NOAA GFS via Open-Meteo', model: 'gfs_seamless', variable: 'temperature_2m', unit: '°C',
+    generatedAt: new Date().toISOString(), observedAt: times.sort().at(-1) || new Date().toISOString(),
+    step, latMin, latMax, lonMin, lonMax, rows: Math.round((latMax - latMin) / step) + 1,
+    columns: Math.round((lonMax - lonMin) / step) + 1, values,
+    min: Math.min(...valid), max: Math.max(...valid), batches: { fulfilled: results.filter(result => result.status === 'fulfilled').length, total: batches.length }
+  };
+}
+
 const results = await Promise.allSettled([
   get(URLS.usgs), get(URLS.eonet), get(URLS.iss), get(URLS.kp), get(URLS.mag), get(URLS.plasma),
   get(URLS.aurora), get(URLS.gdacs), get(URLS.tsunamiPaaq, true), get(URLS.tsunamiPheb, true), loadAirQuality(),
-  get(URLS.newsPt, true), get(URLS.newsEn, true), get(URLS.newsEs, true)
+  get(URLS.newsPt, true), get(URLS.newsEn, true), get(URLS.newsEs, true), loadTemperatureGrid()
 ]);
-const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air, newsPt, newsEn, newsEs] = results;
+const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air, newsPt, newsEn, newsEs, temperatureGrid] = results;
 const events = [];
 
 if (quakes.status === 'fulfilled') events.push(...(quakes.value.features || []).map(feature => {
@@ -185,10 +237,11 @@ const snapshot = {
   space: { kp: number(kpRow?.Kp ?? kpRow?.kp), bz: number(magRow?.bz_gsm ?? magRow?.bz), wind: number(plasmaRow?.proton_speed ?? plasmaRow?.speed), time: kpRow?.time_tag || magRow?.time_tag || plasmaRow?.time_tag || new Date().toISOString() },
   aurora: auroraPoints,
   airQuality: settled(air) || [],
+  temperatureGrid: settled(temperatureGrid),
   news,
-  sources: Object.fromEntries(['usgs', 'eonet', 'iss', 'kp', 'mag', 'plasma', 'ovation', 'gdacs', 'tsunamiPaaq', 'tsunamiPheb', 'airQuality', 'newsPt', 'newsEn', 'newsEs'].map((name, index) => [name, results[index].status]))
+  sources: Object.fromEntries(['usgs', 'eonet', 'iss', 'kp', 'mag', 'plasma', 'ovation', 'gdacs', 'tsunamiPaaq', 'tsunamiPheb', 'airQuality', 'newsPt', 'newsEn', 'newsEs', 'temperatureGrid'].map((name, index) => [name, results[index].status]))
 };
 
 await mkdir('data', { recursive: true });
 await writeFile('data/snapshot.json', JSON.stringify(snapshot));
-console.log(`snapshot: ${snapshot.events.length} events, ${snapshot.aurora.length} aurora cells, ${snapshot.airQuality.length} air-quality points, ${snapshot.news.length} news items`);
+console.log(`snapshot: ${snapshot.events.length} events, ${snapshot.aurora.length} aurora cells, ${snapshot.airQuality.length} air-quality points, ${snapshot.temperatureGrid?.values?.filter(value => value !== null).length || 0} temperature cells, ${snapshot.news.length} news items`);
