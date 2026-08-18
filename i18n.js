@@ -3,6 +3,7 @@
     'pt-BR': {
       'meta.description': 'Monitor público de acontecimentos, clima, atividade sísmica, auroras e condições globais em tempo quase real.',
       'system.online': 'SISTEMA ONLINE', 'system.partial': 'DADOS PARCIAIS', 'system.offline': 'SEM FONTES', 'system.responding': 'FONTES RESPONDENDO', 'system.syncing': 'SINCRONIZANDO', 'system.sync': 'SINCRONIA {time}',
+      'theme.light': 'MODO CLARO', 'theme.dark': 'MODO ESCURO',
       'nav.about': 'SOBRE', 'manifest.eyebrow': 'MONITOR GLOBAL / AO VIVO', 'manifest.line1': 'O PLANETA', 'manifest.line2': 'NÃO PAUSA.', 'manifest.description': 'Ocorrências públicas reunidas em uma leitura única, com origem, horário e localização verificáveis.',
       'risk.title': 'FILTRO DE RISCO', 'risk.highOnly': 'Somente alta prioridade', 'layers.title': 'CAMADAS OPERACIONAIS', 'layers.temperature': 'Temperatura global', 'layers.aurora': 'Auroras norte e sul', 'layers.air': 'Qualidade do ar', 'layers.regions': 'Regiões e notícias', 'layers.daylight': 'Linha dia / noite', 'layers.satellite': 'Satélite NASA diário', 'layers.iss': 'Posição da ISS',
       'sources.title': 'INTEGRIDADE DAS FONTES', 'sources.loading': 'Consultando fontes públicas…', 'sources.fail': 'FALHA', 'sources.ok': '{count} · OK', 'sources.snapshot15': 'Snapshot renovado a cada 15 min', 'sources.activeOnly': 'Somente alertas ativos', 'sources.grid15': 'Grade global de 15°', 'sources.newsCache': 'Cache público renovado a cada 15 min', 'sources.published': 'publicado', 'sources.checked': 'consultado', 'sources.stale': 'ATRASADO',
@@ -33,6 +34,7 @@
     en: {
       'meta.description': 'Public monitor of events, weather, seismic activity, auroras and global conditions in near real time.',
       'system.online': 'SYSTEM ONLINE', 'system.partial': 'PARTIAL DATA', 'system.offline': 'NO SOURCES', 'system.responding': 'SOURCES RESPONDING', 'system.syncing': 'SYNCING', 'system.sync': 'SYNC {time}',
+      'theme.light': 'LIGHT MODE', 'theme.dark': 'DARK MODE',
       'nav.about': 'ABOUT', 'manifest.eyebrow': 'GLOBAL MONITOR / LIVE', 'manifest.line1': 'THE PLANET', 'manifest.line2': 'DOES NOT PAUSE.', 'manifest.description': 'Public events brought into one view, with verifiable source, time and location.',
       'risk.title': 'RISK FILTER', 'risk.highOnly': 'High priority only', 'layers.title': 'OPERATIONAL LAYERS', 'layers.temperature': 'Global temperature', 'layers.aurora': 'Northern and southern auroras', 'layers.air': 'Air quality', 'layers.regions': 'Regions and news', 'layers.daylight': 'Day / night line', 'layers.satellite': 'Daily NASA satellite', 'layers.iss': 'ISS position',
       'sources.title': 'SOURCE INTEGRITY', 'sources.loading': 'Checking public sources…', 'sources.fail': 'FAILED', 'sources.ok': '{count} · OK', 'sources.snapshot15': 'Snapshot refreshed every 15 min', 'sources.activeOnly': 'Active alerts only', 'sources.grid15': '15° global grid', 'sources.newsCache': 'Public cache refreshed every 15 min', 'sources.published': 'published', 'sources.checked': 'checked', 'sources.stale': 'DELAYED',
@@ -63,6 +65,7 @@
     es: {
       'meta.description': 'Monitor público de acontecimientos, clima, actividad sísmica, auroras y condiciones globales en tiempo casi real.',
       'system.online': 'SISTEMA EN LÍNEA', 'system.partial': 'DATOS PARCIALES', 'system.offline': 'SIN FUENTES', 'system.responding': 'FUENTES RESPONDIENDO', 'system.syncing': 'SINCRONIZANDO', 'system.sync': 'SINCRONIZACIÓN {time}',
+      'theme.light': 'MODO CLARO', 'theme.dark': 'MODO OSCURO',
       'nav.about': 'ACERCA DE', 'manifest.eyebrow': 'MONITOR GLOBAL / EN VIVO', 'manifest.line1': 'EL PLANETA', 'manifest.line2': 'NO SE DETIENE.', 'manifest.description': 'Acontecimientos públicos reunidos en una sola vista, con fuente, hora y ubicación verificables.',
       'risk.title': 'FILTRO DE RIESGO', 'risk.highOnly': 'Solo alta prioridad', 'layers.title': 'CAPAS OPERATIVAS', 'layers.temperature': 'Temperatura global', 'layers.aurora': 'Auroras del norte y del sur', 'layers.air': 'Calidad del aire', 'layers.regions': 'Regiones y noticias', 'layers.daylight': 'Línea día / noche', 'layers.satellite': 'Satélite NASA diario', 'layers.iss': 'Posición de la ISS',
       'sources.title': 'INTEGRIDAD DE LAS FUENTES', 'sources.loading': 'Consultando fuentes públicas…', 'sources.fail': 'FALLA', 'sources.ok': '{count} · OK', 'sources.snapshot15': 'Instantánea renovada cada 15 min', 'sources.activeOnly': 'Solo alertas activas', 'sources.grid15': 'Cuadrícula global de 15°', 'sources.newsCache': 'Caché pública renovada cada 15 min', 'sources.published': 'publicado', 'sources.checked': 'consultado', 'sources.stale': 'RETRASADO',

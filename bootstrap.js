@@ -1,4 +1,9 @@
 /* Inicialização segura de medição e consentimento. */
+let initialTheme = 'dark';
+try { if (localStorage.getItem('site-theme') === 'light') initialTheme = 'light'; } catch { /* armazenamento pode estar desativado */ }
+document.documentElement.dataset.theme = initialTheme;
+document.documentElement.style.colorScheme = initialTheme;
+
 window.dataLayer = window.dataLayer || [];
 window.gtag = function gtag() { window.dataLayer.push(arguments); };
 let analyticsLoaded = false;

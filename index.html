@@ -6,7 +6,7 @@
   <meta name="description" content="Monitor público de acontecimentos, clima, atividade sísmica, auroras e condições globais em tempo quase real.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#05090d">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
   <link rel="canonical" href="https://vdmtx.github.io/seu-mundo-neste-momento/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Seu Mundo Neste Momento">
@@ -24,11 +24,11 @@
   <title>Seu Mundo Neste Momento</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <script src="bootstrap.js?v=2"></script>
+  <script src="bootstrap.js?v=3"></script>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <link rel="stylesheet" href="styles.css?v=9">
-  <link rel="stylesheet" href="enhancements.css?v=1">
+  <link rel="stylesheet" href="enhancements.css?v=2">
 </head>
 <body>
   <div class="app-shell">
@@ -44,6 +44,7 @@
       </div>
       <div class="top-actions">
         <label class="language-control" aria-label="Idioma / Language"><span>IDIOMA</span><select id="language-select"><option value="pt-BR">PT</option><option value="en">EN</option><option value="es">ES</option></select></label>
+        <button id="theme-button" class="theme-button" type="button" data-i18n="theme.light">MODO CLARO</button>
         <button id="about-button" type="button" data-i18n="nav.about">SOBRE</button>
       </div>
       <time id="utc-clock" class="clock"></time>
@@ -215,6 +216,6 @@
 
   <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js" integrity="sha384-fS13P48RBFel+cPUp5960AhzvtEr64LerQ00neZuM+Hi/VDxxemdQnN7IcWPYvPb" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

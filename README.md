@@ -5,6 +5,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 ## O que está funcional
 
 - Globo 3D com mapa 2D automático para aparelhos sem WebGL.
+- Temas claro e escuro com preferência salva no navegador; o mapa 2D troca de cartografia e contraste conforme o tema.
 - Terremotos, anéis sísmicos, eventos naturais, desastres GDACS e alertas ativos de tsunami.
 - Posição e trilha recente da ISS.
 - Índice Kp, Bz, vento solar e previsão NOAA OVATION de auroras.

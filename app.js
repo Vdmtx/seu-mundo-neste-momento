@@ -175,10 +175,21 @@ async function shareSelectedEvent() {
 let globe, map, baseMapLayer, satelliteLayer, regionLayer, issTrailLayer;
 let mapMarkers = [], environmentMarkers = [];
 
+function currentTheme() { return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'; }
+function mapTileUrl() { return `https://{s}.basemaps.cartocdn.com/${currentTheme() === 'light' ? 'light_all' : 'dark_all'}/{z}/{x}/{y}{r}.png`; }
+function applyMapTheme() { if (!map) return; if (baseMapLayer) baseMapLayer.remove(); baseMapLayer = L.tileLayer(mapTileUrl(), { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18 }).addTo(map); baseMapLayer.bringToBack(); }
+function setTheme(theme, persist = true) {
+  const next = theme === 'light' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; document.documentElement.style.colorScheme = next;
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = next === 'light' ? '#eaf1f0' : '#05090d';
+  const button = $('#theme-button'); if (button) { button.textContent = t(next === 'light' ? 'theme.dark' : 'theme.light'); button.setAttribute('aria-pressed', String(next === 'light')); }
+  if (persist) try { localStorage.setItem('site-theme', next); } catch { /* armazenamento pode estar desativado */ }
+  applyMapTheme(); if (map) setTimeout(() => map.invalidateSize(), 30);
+}
+
 function initVisuals() {
   try {
     map = L.map('map', { worldCopyJump: true, preferCanvas: true }).setView([18, 0], 2);
-    baseMapLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18 }).addTo(map);
+    applyMapTheme();
   } catch { map = null; }
   try {
     globe = Globe()($('#globe')).backgroundColor('rgba(0,0,0,0)').globeImageUrl('assets/earth-night.jpg').bumpImageUrl('assets/earth-topology.png').showAtmosphere(true).atmosphereColor('#53d9de').atmosphereAltitude(.15).showGraticules(true)
@@ -318,6 +329,7 @@ async function enableNotifications() {
 
 function renderAll() { document.body.classList.toggle('nuclear-alert', state.events.some(event => event.category === 'nuclear')); document.body.classList.toggle('hazmat-alert', !state.events.some(event => event.category === 'nuclear') && state.events.some(event => event.category === 'hazmat')); renderCategories(); renderFeed(); renderSpotlight(state.events.find(event => event.id === state.selected)); renderGlobeData(); $('#footer-sync').textContent = state.updatedAt ? t('system.sync', { time: fmtTime(state.updatedAt, true) }) : t('footer.sync'); }
 function refreshLanguageUI() {
+  setTheme(currentTheme(), false);
   $('#regions-button').textContent = state.showRegions ? t('stage.hideRegions') : t('stage.regions');
   $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d');
   if (!state.showTemperature) $('#temperature-status').textContent = t('status.temperatureOff');
@@ -330,6 +342,7 @@ function refreshLanguageUI() {
   $('#notification-button').textContent = state.notificationsReady ? t('notifications.active') : t('intel.notifications');
 }
 function bind() {
+  $('#theme-button').onclick = () => setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
   $('#priority-toggle').onchange = event => { state.priority = event.target.checked; state.selected = null; renderAll(); };
   $('#iss-toggle').onchange = event => { state.showIss = event.target.checked; renderGlobeData(); };
   $('#temperature-toggle').onchange = event => setEnvironment('temperature', event.target.checked);
@@ -350,5 +363,5 @@ function bind() {
 }
 function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
 async function refreshSnapshot() { await loadSnapshot(); await loadWorld(); if (state.showAir || state.showAurora) renderGlobeData(); }
-async function start() { bind(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
+async function start() { bind(); setTheme(currentTheme(), false); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
 start();
