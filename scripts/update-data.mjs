@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const URLS = {
   usgs: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
@@ -127,21 +127,28 @@ async function mapLimit(items, limit, worker) {
 }
 
 async function loadTemperatureGrid() {
-  const step = 5, latMin = -85, latMax = 85, lonMin = -180, lonMax = 175;
+  try {
+    const previous = JSON.parse(await readFile('data/temperature.json', 'utf8'));
+    const age = Date.now() - new Date(previous?.generatedAt || 0).getTime();
+    if (previous?.values?.length && age >= 0 && age < 5.5 * 3600000) return { ...previous, cached: true };
+  } catch { /* O primeiro snapshot ainda não possui uma grade reutilizável. */ }
+
+  // A grade de 12° mantém a coleta gratuita abaixo do limite por minuto. A
+  // visualização interpola essas células; não apresenta os pontos como medições.
+  const step = 12, latMin = -84, latMax = 84, lonMin = -180, lonMax = 168;
   const coordinates = [];
   for (let lat = latMin; lat <= latMax; lat += step) for (let lon = lonMin; lon <= lonMax; lon += step) coordinates.push({ lat, lon });
   const batches = [];
   for (let index = 0; index < coordinates.length; index += 80) batches.push({ index, points: coordinates.slice(index, index + 80) });
   const values = new Array(coordinates.length).fill(null);
   const times = [];
-  const results = await mapLimit(batches, 4, async batch => {
+  const results = await mapLimit(batches, 1, async batch => {
     const url = new URL(URLS.temperature);
     url.searchParams.set('latitude', batch.points.map(point => point.lat).join(','));
     url.searchParams.set('longitude', batch.points.map(point => point.lon).join(','));
     url.searchParams.set('current', 'temperature_2m');
     url.searchParams.set('models', 'gfs_seamless');
     url.searchParams.set('cell_selection', 'nearest');
-    url.searchParams.set('elevation', 'nan');
     url.searchParams.set('temperature_unit', 'celsius');
     url.searchParams.set('timezone', 'GMT');
     const raw = await get(url);
@@ -154,14 +161,20 @@ async function loadTemperatureGrid() {
     return rows.length;
   });
   const valid = values.filter(value => value !== null);
-  if (valid.length < coordinates.length * .8) throw new Error(`GFS incompleto: ${valid.length}/${coordinates.length} células`);
-  return {
+  if (valid.length < coordinates.length * .8) {
+    const firstFailure = results.find(result => result.status === 'rejected')?.reason;
+    const detail = firstFailure instanceof Error ? firstFailure.message : String(firstFailure || 'sem detalhe');
+    throw new Error(`GFS incompleto: ${valid.length}/${coordinates.length} células; primeira falha: ${detail}`);
+  }
+  const grid = {
     source: 'NOAA GFS via Open-Meteo', model: 'gfs_seamless', variable: 'temperature_2m', unit: '°C',
     generatedAt: new Date().toISOString(), observedAt: times.sort().at(-1) || new Date().toISOString(),
     step, latMin, latMax, lonMin, lonMax, rows: Math.round((latMax - latMin) / step) + 1,
     columns: Math.round((lonMax - lonMin) / step) + 1, values,
     min: Math.min(...valid), max: Math.max(...valid), batches: { fulfilled: results.filter(result => result.status === 'fulfilled').length, total: batches.length }
   };
+  await writeFile('data/temperature.json', `${JSON.stringify(grid)}\n`);
+  return grid;
 }
 
 const results = await Promise.allSettled([
@@ -170,6 +183,10 @@ const results = await Promise.allSettled([
   get(URLS.newsPt, true), get(URLS.newsEn, true), get(URLS.newsEs, true), loadTemperatureGrid()
 ]);
 const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air, newsPt, newsEn, newsEs, temperatureGrid] = results;
+const sourceNames = ['USGS', 'NASA EONET', 'ISS', 'NOAA Kp', 'NOAA magnetômetro', 'NOAA plasma', 'NOAA aurora', 'GDACS', 'Tsunami PAAQ', 'Tsunami PHEB', 'Open-Meteo ar', 'Notícias PT', 'Notícias EN', 'Notícias ES', 'Open-Meteo GFS'];
+results.forEach((result, index) => {
+  if (result.status === 'rejected') console.warn(`[fonte indisponível] ${sourceNames[index]}: ${result.reason?.message || result.reason}`);
+});
 const events = [];
 
 if (quakes.status === 'fulfilled') events.push(...(quakes.value.features || []).map(feature => {

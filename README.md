@@ -27,7 +27,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - NOAA Tsunami Warning Centers: somente Warning, Watch, Advisory ou Threat ativos; snapshot a cada 15 minutos.
 - NOAA SWPC: Kp, Bz, vento solar e OVATION; navegador a cada 5 minutos e snapshot de contingência.
 - Where The ISS At: posição da ISS a cada 10 segundos.
-- Open-Meteo: clima pontual, temperatura sob demanda e grade de qualidade do ar atualizada no snapshot a cada 15 minutos.
+- Open-Meteo: clima pontual, temperatura sob demanda, grade térmica global de 12° renovada em até 6 horas e grade de qualidade do ar atualizada no snapshot a cada 15 minutos.
 - Google News RSS: cache de manchetes públicas em português, inglês e espanhol, reconstruído pelo GitHub Actions a cada 15 minutos. A busca do site filtra esse conjunto e não promete cobertura completa de todos os estados.
 - NASA GIBS: imagem VIIRS do dia anterior, sob demanda.
 - Natural Earth Admin-1: pontos administrativos estáticos, compactados para desempenho. Dados em domínio público.
