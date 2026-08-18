@@ -1,6 +1,7 @@
 /* Inicialização segura de medição e consentimento. */
 window.dataLayer = window.dataLayer || [];
 window.gtag = function gtag() { window.dataLayer.push(arguments); };
+let analyticsLoaded = false;
 
 gtag('consent', 'default', {
   analytics_storage: 'denied',
@@ -10,14 +11,19 @@ gtag('consent', 'default', {
   wait_for_update: 500
 });
 
-try {
-  if (localStorage.getItem('analytics-consent') === 'granted') {
-    gtag('consent', 'update', { analytics_storage: 'granted' });
-  }
-} catch { /* armazenamento pode estar desativado */ }
+function loadAnalytics() {
+  if (analyticsLoaded) return;
+  analyticsLoaded = true;
+  gtag('consent', 'update', { analytics_storage: 'granted' });
+  gtag('js', new Date());
+  gtag('config', 'G-3BHTT4DGNX', { send_page_view: true });
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://www.googletagmanager.com/gtag/js?id=G-3BHTT4DGNX';
+  document.head.append(script);
+}
 
-gtag('js', new Date());
-gtag('config', 'G-3BHTT4DGNX', { send_page_view: true });
+try { if (localStorage.getItem('analytics-consent') === 'granted') loadAnalytics(); } catch { /* armazenamento pode estar desativado */ }
 
 window.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('analytics-consent');
@@ -28,7 +34,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('analytics-accept').onclick = () => {
     try { localStorage.setItem('analytics-consent', 'granted'); } catch { /* armazenamento pode estar desativado */ }
-    gtag('consent', 'update', { analytics_storage: 'granted' });
+    loadAnalytics();
     box.hidden = true;
   };
 
