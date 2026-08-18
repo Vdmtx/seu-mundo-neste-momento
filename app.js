@@ -18,9 +18,10 @@ const state = {
   showAir: false, showIss: true, showRegions: false, showDaylight: true, showSatellite: false,
   view: 'globe', updatedAt: null, snapshot: null, notificationsReady: false
 };
-const categories = [['all', '00', 'Todos'], ['earthquakes', '01', 'Terremotos'], ['wildfires', '02', 'Incêndios'], ['storms', '03', 'Tempestades'], ['volcanoes', '04', 'Vulcões'], ['floods', '05', 'Inundações'], ['other', '06', 'Outros'], ['hazmat', '!', 'Biológico / químico'], ['nuclear', '!!', 'Nuclear / radiológico']];
+const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['other', '06', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
 const $ = selector => document.querySelector(selector);
+const t = (key, variables = {}) => window.i18n?.t(key, variables) ?? key;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function safeUrl(value) { try { const url = new URL(String(value)); return ['http:', 'https:'].includes(url.protocol) ? url.href : '#'; } catch { return '#'; } }
@@ -30,11 +31,11 @@ function source(id, label, ok, count = 0, message = '') { state.sources.set(id, 
 function riskForQuake(magnitude) { return magnitude >= 6.5 ? 'critical' : magnitude >= 5.5 ? 'high' : magnitude >= 4.5 ? 'medium' : 'low'; }
 function naturalCategory(raw = '') { const text = raw.toLowerCase(); if (text.includes('wildfire')) return 'wildfires'; if (text.includes('storm') || text.includes('cyclone') || text.includes('severe')) return 'storms'; if (text.includes('volcano')) return 'volcanoes'; if (text.includes('flood')) return 'floods'; return 'other'; }
 function naturalRisk(category, date) { const hours = (Date.now() - new Date(date).getTime()) / 36e5; if (category === 'volcanoes' || category === 'storms') return hours < 48 ? 'high' : 'medium'; if (category === 'wildfires' || category === 'floods') return hours < 72 ? 'medium' : 'low'; return 'low'; }
-function fmtTime(value, withDate = false) { const date = new Date(value); if (Number.isNaN(+date)) return '—'; return new Intl.DateTimeFormat('pt-BR', withDate ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } : { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(date) + ' UTC'; }
-function timeAgo(value) { const seconds = Math.max(0, (Date.now() - new Date(value).getTime()) / 1000); if (seconds < 60) return `${Math.floor(seconds)} s atrás`; if (seconds < 3600) return `${Math.floor(seconds / 60)} min atrás`; return `${Math.floor(seconds / 3600)} h atrás`; }
+function fmtTime(value, withDate = false) { const date = new Date(value); if (Number.isNaN(+date)) return '—'; return new Intl.DateTimeFormat(window.i18n.locale(), withDate ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } : { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(date) + ' UTC'; }
+function timeAgo(value) { const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000)); const relative = new Intl.RelativeTimeFormat(window.i18n.locale(), { numeric: 'always', style: 'narrow' }); if (seconds < 60) return relative.format(-seconds, 'second'); if (seconds < 3600) return relative.format(-Math.floor(seconds / 60), 'minute'); return relative.format(-Math.floor(seconds / 3600), 'hour'); }
 function tableLast(raw) { if (!Array.isArray(raw) || !raw.length) return null; if (raw[0] && typeof raw[0] === 'object' && !Array.isArray(raw[0])) return raw.reduce((latest, row) => !latest || new Date(row.time_tag || 0) > new Date(latest.time_tag || 0) ? row : latest, null); if (raw.length < 2 || !Array.isArray(raw[0])) return null; const headers = raw[0]; for (let index = raw.length - 1; index > 0; index--) if (Array.isArray(raw[index])) return Object.fromEntries(headers.map((key, column) => [key, raw[index][column]])); return null; }
 function num(value) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; }
-function kpScale(kp) { if (kp == null || kp < 5) return ['G0', 'Sem tempestade']; if (kp < 6) return ['G1', 'Menor']; if (kp < 7) return ['G2', 'Moderada']; if (kp < 8) return ['G3', 'Forte']; if (kp < 9) return ['G4', 'Severa']; return ['G5', 'Extrema']; }
+function kpScale(kp) { if (kp == null || kp < 5) return ['G0', t('kp.none')]; if (kp < 6) return ['G1', t('kp.minor')]; if (kp < 7) return ['G2', t('kp.moderate')]; if (kp < 8) return ['G3', t('kp.strong')]; if (kp < 9) return ['G4', t('kp.severe')]; return ['G5', t('kp.extreme')]; }
 
 async function loadSnapshot() {
   try {
@@ -55,8 +56,8 @@ async function loadWorld() {
   if (tasks[0].status === 'fulfilled') {
     const rows = tasks[0].value.features || [];
     events.push(...rows.map(feature => ({
-      id: `usgs-${feature.id}`, category: 'earthquakes', severity: riskForQuake(num(feature.properties.mag) || 0), title: `Terremoto ${num(feature.properties.mag)?.toFixed(1) ?? '—'}`,
-      location: feature.properties.place || 'Local não informado', summary: `Evento sísmico publicado pelo USGS. Profundidade aproximada de ${num(feature.geometry.coordinates[2])?.toFixed(1) ?? '—'} km.`,
+      id: `usgs-${feature.id}`, category: 'earthquakes', severity: riskForQuake(num(feature.properties.mag) || 0), title: t('event.quake', { magnitude: num(feature.properties.mag)?.toFixed(1) ?? '—' }),
+      location: feature.properties.place || t('event.unknownLocation'), summary: t('event.quakeSummary', { depth: num(feature.geometry.coordinates[2])?.toFixed(1) ?? '—' }),
       metric: `M ${num(feature.properties.mag)?.toFixed(1) ?? '—'}`, timestamp: new Date(feature.properties.time).toISOString(), source: 'USGS',
       lat: feature.geometry.coordinates[1], lon: feature.geometry.coordinates[0], url: feature.properties.url
     })));
@@ -66,7 +67,7 @@ async function loadWorld() {
     const rows = (tasks[1].value.events || []).flatMap(item => {
       const geometry = item.geometry?.at(-1); if (!geometry || !Array.isArray(geometry.coordinates) || geometry.type !== 'Point') return [];
       const category = naturalCategory(item.categories?.[0]?.title); if (category === 'earthquakes') return [];
-      return [{ id: `eonet-${item.id}`, category, severity: naturalRisk(category, geometry.date), title: { wildfires: 'Incêndio ativo', storms: 'Tempestade monitorada', volcanoes: 'Atividade vulcânica', floods: 'Inundação ativa', other: 'Evento natural' }[category], location: item.title, summary: item.description || 'Evento aberto acompanhado pelo NASA EONET.', metric: geometry.magnitudeValue ? `${geometry.magnitudeValue} ${geometry.magnitudeUnit || ''}` : 'ATIVO', timestamp: geometry.date, source: `NASA EONET${item.sources?.[0]?.id ? ' / ' + item.sources[0].id : ''}`, lat: geometry.coordinates[1], lon: geometry.coordinates[0], url: item.sources?.[0]?.url || item.link }];
+      return [{ id: `eonet-${item.id}`, category, severity: naturalRisk(category, geometry.date), title: t({ wildfires: 'event.wildfire', storms: 'event.storm', volcanoes: 'event.volcano', floods: 'event.flood', other: 'event.other' }[category]), location: item.title, summary: item.description || t('event.eonetSummary'), metric: geometry.magnitudeValue ? `${geometry.magnitudeValue} ${geometry.magnitudeUnit || ''}` : t('event.active'), timestamp: geometry.date, source: `NASA EONET${item.sources?.[0]?.id ? ' / ' + item.sources[0].id : ''}`, lat: geometry.coordinates[1], lon: geometry.coordinates[0], url: item.sources?.[0]?.url || item.link }];
     });
     events.push(...rows); source('eonet', 'NASA EONET', true, rows.length);
   } else source('eonet', 'NASA EONET', false, 0, tasks[1].reason?.message);
@@ -92,7 +93,7 @@ async function loadIss() {
     const fallback = state.snapshot?.iss;
     if (fallback) { state.iss = fallback; addIssTrail(fallback); source('iss', 'ISS / SNAPSHOT', true, 1, 'Contingência'); }
     else source('iss', 'ISS / WTIA', false, 0, error.message);
-    $('#iss-status').textContent = fallback ? 'ISS: SNAPSHOT DE CONTINGÊNCIA' : 'ISS: FONTE INDISPONÍVEL';
+    $('#iss-status').textContent = fallback ? t('iss.snapshot') : t('iss.unavailable');
   }
   renderGlobeData();
 }
@@ -105,41 +106,41 @@ async function loadSpace() {
   let kp = num(kpRow?.Kp ?? kpRow?.kp), bz = num(magRow?.bz_gsm ?? magRow?.bz), wind = num(plasmaRow?.proton_speed ?? plasmaRow?.speed), time = kpRow?.time_tag || magRow?.time_tag || plasmaRow?.time_tag || new Date().toISOString();
   if (kp == null && state.snapshot?.space) ({ kp, bz, wind, time } = state.snapshot.space);
   state.space = { kp, bz, wind, time }; source('noaa-kp', 'NOAA KP', kp != null, kp == null ? 0 : 1); source('solar-wind', 'NOAA VENTO SOLAR', bz != null || wind != null, [bz, wind].filter(value => value != null).length);
-  const scale = kpScale(kp); $('#kp-value').textContent = kp == null ? '—' : kp.toFixed(1); $('#kp-scale').textContent = `${scale[0]} · ${scale[1]}`; $('#bz-value').textContent = bz == null ? '—' : bz.toFixed(1); $('#wind-value').textContent = wind == null ? '—' : Math.round(wind); $('#space-time').textContent = `Leitura mais recente: ${fmtTime(time, true)}. Bz negativo favorece acoplamento com o campo terrestre.`;
+  const scale = kpScale(kp); $('#kp-value').textContent = kp == null ? '—' : kp.toFixed(1); $('#kp-scale').textContent = `${scale[0]} · ${scale[1]}`; $('#bz-value').textContent = bz == null ? '—' : bz.toFixed(1); $('#wind-value').textContent = wind == null ? '—' : Math.round(wind); $('#space-time').textContent = t('space.latest', { time: fmtTime(time, true) });
   if (results[3].status === 'fulfilled') {
     const raw = results[3].value;
     state.aurora = (raw.coordinates || []).flatMap(point => { const rawLon = num(point[0]), lat = num(point[1]), intensity = num(point[2]); if (rawLon == null || lat == null || intensity == null || intensity < 3) return []; const lon = rawLon > 180 ? rawLon - 360 : rawLon; return Math.abs(Math.round(lat)) % 2 || Math.abs(Math.round(lon)) % 2 ? [] : [{ lat, lon, intensity }]; });
     source('ovation', 'NOAA OVATION', true, state.aurora.length);
   } else { state.aurora = state.snapshot?.aurora || []; source('ovation', 'NOAA OVATION', state.aurora.length > 0, state.aurora.length, results[3].reason?.message); }
-  $('#aurora-status').textContent = state.showAurora ? `AURORA: ${state.aurora.length} CÉLULAS NOAA` : 'AURORA: DESATIVADA'; renderGlobeData();
+  $('#aurora-status').textContent = state.showAurora ? t('layer.auroraCells', { count: state.aurora.length }) : t('status.auroraOff'); renderGlobeData();
 }
 
 async function loadTemperature() {
   if (!state.showTemperature) return;
-  $('#temperature-status').textContent = 'TEMPERATURA: CARREGANDO GRADE GLOBAL';
+  $('#temperature-status').textContent = t('layer.tempLoading');
   const coordinates = []; for (let lat = -80; lat <= 80; lat += 10) for (let lon = -180; lon < 180; lon += 10) coordinates.push({ lat, lon });
   const batches = []; for (let index = 0; index < coordinates.length; index += 90) batches.push(coordinates.slice(index, index + 90));
   const results = await Promise.allSettled(batches.map(async batch => { const url = new URL(API.weather); url.searchParams.set('latitude', batch.map(point => point.lat).join(',')); url.searchParams.set('longitude', batch.map(point => point.lon).join(',')); url.searchParams.set('current', 'temperature_2m'); url.searchParams.set('timezone', 'GMT'); const raw = await json(url, 20000); return (Array.isArray(raw) ? raw : [raw]).flatMap(row => Number.isFinite(row.current?.temperature_2m) ? [{ lat: row.latitude, lon: row.longitude, temperature: row.current.temperature_2m }] : []); }));
   state.temperature = results.flatMap(result => result.status === 'fulfilled' ? result.value : []); source('open-meteo', 'OPEN-METEO', state.temperature.length > 0, state.temperature.length);
-  const values = state.temperature.map(point => point.temperature); $('#temperature-status').textContent = values.length ? `TEMPERATURA: ${values.length} PONTOS · ${Math.min(...values).toFixed(1)} A ${Math.max(...values).toFixed(1)} °C` : 'TEMPERATURA: FONTE INDISPONÍVEL'; renderGlobeData();
+  const values = state.temperature.map(point => point.temperature); $('#temperature-status').textContent = values.length ? t('layer.tempPoints', { count: values.length, min: Math.min(...values).toFixed(1), max: Math.max(...values).toFixed(1) }) : t('layer.tempUnavailable'); renderGlobeData();
 }
 
 async function loadAdmin1() {
   if (state.admin1.length) return state.admin1;
-  $('#region-status').textContent = 'REGIÕES: CARREGANDO LIMITES GLOBAIS';
+  $('#region-status').textContent = t('layer.regionsLoading');
   try {
     const data = await json('data/admin1.json', 30000);
-    state.admin1 = (data.regions || []).map(([name, countryIndex, lat, lon], index) => ({ id: `region-${index}`, kind: 'region', name, country: data.countries[countryIndex], lat, lon, title: name, location: `${data.countries[countryIndex]} · clique para notícias`, metric: 'REGIÃO', color: '#60e6da' })); source('natural-earth', 'NATURAL EARTH', true, state.admin1.length, 'Centros administrativos');
-    $('#region-status').textContent = `REGIÕES: ${state.admin1.length} ESTADOS / PROVÍNCIAS`; renderGlobeData(); return state.admin1;
-  } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); $('#region-status').textContent = 'REGIÕES: FONTE INDISPONÍVEL'; return []; }
+    state.admin1 = (data.regions || []).map(([name, countryIndex, lat, lon], index) => ({ id: `region-${index}`, kind: 'region', name, country: data.countries[countryIndex], lat, lon, title: name, location: t('region.click', { country: data.countries[countryIndex] }), metric: t('region.metric'), color: '#60e6da' })); source('natural-earth', 'NATURAL EARTH', true, state.admin1.length, 'Administrative centers');
+    $('#region-status').textContent = t('layer.regionsCount', { count: state.admin1.length }); renderGlobeData(); return state.admin1;
+  } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); $('#region-status').textContent = t('layer.regionsUnavailable'); return []; }
 }
 
 function filteredEvents() { return state.events.filter(event => (state.category === 'all' || event.category === state.category) && (!state.priority || ['critical', 'high'].includes(event.severity))); }
-function renderCategories() { $('#category-list').innerHTML = categories.map(([id, code, label]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (['nuclear', 'hazmat'].includes(id) && count === 0) return ''; return `<button class="category ${state.category === id ? 'active' : ''}" data-category="${id}"><span class="code">${code}</span><span>${label}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
-function renderSources() { const list = [...state.sources.values()]; $('#source-list').innerHTML = list.length ? list.map(item => `<div class="source-row ${item.ok ? 'ok' : ''}" title="${esc(item.message || '')}"><span><i></i>${esc(item.label)}</span><b>${item.ok ? `${item.count} · OK` : 'FALHA'}</b></div>`).join('') : '<span class="muted">Consultando fontes públicas…</span>'; const ok = list.filter(item => item.ok).length; $('#source-count').textContent = ok; $('#online-dot').className = `live-dot ${ok === 0 ? 'offline' : ok < list.length ? 'partial' : ''}`; $('#system-status').textContent = ok === 0 ? 'SEM FONTES' : ok < list.length ? 'DADOS PARCIAIS' : 'SISTEMA ONLINE'; }
-function renderFeed() { const rows = filteredEvents().slice(0, 12); $('#visible-count').textContent = filteredEvents().length; $('#feed-count').textContent = rows.length; $('#event-feed').innerHTML = rows.length ? rows.map(event => `<button class="event-item ${state.selected === event.id ? 'active' : ''}" data-id="${esc(event.id)}"><i class="${event.severity}"></i><span><strong>${esc(event.title)}</strong><small>${esc(event.location)} · ${fmtTime(event.timestamp)}</small></span><span>${esc(event.metric)}</span></button>`).join('') : '<p class="muted" style="padding:18px">Nenhuma ocorrência corresponde aos filtros.</p>'; document.querySelectorAll('.event-item').forEach(button => button.onclick = () => selectEvent(button.dataset.id)); }
+function renderCategories() { $('#category-list').innerHTML = categories.map(([id, code, labelKey]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (['nuclear', 'hazmat'].includes(id) && count === 0) return ''; return `<button class="category ${state.category === id ? 'active' : ''}" data-category="${id}"><span class="code">${code}</span><span>${esc(t(labelKey))}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
+function renderSources() { const list = [...state.sources.values()]; $('#source-list').innerHTML = list.length ? list.map(item => `<div class="source-row ${item.ok ? 'ok' : ''}" title="${esc(item.message || '')}"><span><i></i>${esc(item.label)}</span><b>${item.ok ? esc(t('sources.ok', { count: item.count })) : esc(t('sources.fail'))}</b></div>`).join('') : `<span class="muted">${esc(t('sources.loading'))}</span>`; const ok = list.filter(item => item.ok).length; $('#source-count').textContent = ok; $('#online-dot').className = `live-dot ${ok === 0 ? 'offline' : ok < list.length ? 'partial' : ''}`; $('#system-status').textContent = ok === 0 ? t('system.offline') : ok < list.length ? t('system.partial') : t('system.online'); }
+function renderFeed() { const rows = filteredEvents().slice(0, 12); $('#visible-count').textContent = filteredEvents().length; $('#feed-count').textContent = rows.length; $('#event-feed').innerHTML = rows.length ? rows.map(event => `<button class="event-item ${state.selected === event.id ? 'active' : ''}" data-id="${esc(event.id)}"><i class="${event.severity}"></i><span><strong>${esc(event.title)}</strong><small>${esc(event.location)} · ${fmtTime(event.timestamp)}</small></span><span>${esc(event.metric)}</span></button>`).join('') : `<p class="muted" style="padding:18px">${esc(t('event.none'))}</p>`; document.querySelectorAll('.event-item').forEach(button => button.onclick = () => selectEvent(button.dataset.id)); }
 function selectEvent(id) { state.selected = id; const event = state.events.find(item => item.id === id); if (!event) return; renderSpotlight(event); renderFeed(); focusCoordinate(event.lat, event.lon, 1.6); loadWeather(event.lat, event.lon); loadNews(event.location, event.lat, event.lon); }
-function renderSpotlight(event) { if (!event) event = filteredEvents()[0]; if (!event) return; $('#risk-chip').textContent = { critical: 'NÍVEL CRÍTICO', high: 'NÍVEL ALTO', medium: 'NÍVEL MÉDIO', low: 'NÍVEL BAIXO' }[event.severity]; $('#risk-chip').style.borderColor = severityColors[event.severity]; $('#risk-chip').style.color = severityColors[event.severity]; $('#spot-title').textContent = event.title.toUpperCase(); $('#spot-location').textContent = event.location; $('#spot-summary').textContent = event.summary; $('#spot-metric').textContent = event.metric; $('#spot-source').textContent = event.source; $('#spot-time').textContent = fmtTime(event.timestamp, true); $('#spot-coordinates').textContent = `${event.lat.toFixed(2)}, ${event.lon.toFixed(2)}`; const link = $('#spot-link'); const verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified; renderCoordinate(event.lat, event.lon); }
+function renderSpotlight(event) { if (!event) event = filteredEvents()[0]; if (!event) return; $('#risk-chip').textContent = t(`risk.${event.severity}`); $('#risk-chip').style.borderColor = severityColors[event.severity]; $('#risk-chip').style.color = severityColors[event.severity]; $('#spot-title').textContent = event.title.toUpperCase(); $('#spot-location').textContent = event.location; $('#spot-summary').textContent = event.summary; $('#spot-metric').textContent = event.metric; $('#spot-source').textContent = event.source; $('#spot-time').textContent = fmtTime(event.timestamp, true); $('#spot-coordinates').textContent = `${event.lat.toFixed(2)}, ${event.lon.toFixed(2)}`; const link = $('#spot-link'); const verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified; renderCoordinate(event.lat, event.lon); }
 
 let globe, map, baseMapLayer, satelliteLayer, regionLayer, issTrailLayer;
 let mapMarkers = [], environmentMarkers = [];
@@ -161,8 +162,8 @@ function initVisuals() {
     window.addEventListener('resize', resizeGlobe); if (map) map.on('moveend zoomend', () => { if (state.showRegions) renderMapRegions(); }); resizeGlobe(); $('#visual-loading').hidden = true;
   } catch (error) {
     globe = null;
-    if (map) { state.view = 'map'; $('#globe').hidden = true; $('#map').hidden = false; $('#view-button').textContent = 'GLOBO 3D'; $('#visual-loading').hidden = true; setTimeout(() => map.invalidateSize(), 50); }
-    else $('#visual-loading').innerHTML = `<strong>CARTOGRAFIA INDISPONÍVEL</strong><small>${esc(error.message)}</small>`;
+    if (map) { state.view = 'map'; $('#globe').hidden = true; $('#map').hidden = false; $('#view-button').textContent = t('stage.globe3d'); $('#visual-loading').hidden = true; setTimeout(() => map.invalidateSize(), 50); }
+    else $('#visual-loading').innerHTML = `<strong>${esc(t('stage.unavailable'))}</strong><small>${esc(error.message)}</small>`;
   }
   renderGlobeData();
 }
@@ -184,14 +185,14 @@ function terminatorPath(date = new Date()) {
   return { points, color: '#f0d95f', stroke: .42 };
 }
 
-function regionName(region) { return region?.name || 'Região sem nome'; }
-function regionCountry(region) { return region?.country || 'País não informado'; }
-function selectRegion(region) { state.selectedRegion = region; const name = regionName(region), country = regionCountry(region); $('#region-input').value = `${name}, ${country}`; $('#region-status').textContent = `REGIÃO: ${name.toUpperCase()} · NOTÍCIAS SOB DEMANDA`; focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); loadNews(name, region.lat, region.lon, country); renderGlobeData(); }
+function regionName(region) { return region?.name || '—'; }
+function regionCountry(region) { return region?.country || '—'; }
+function selectRegion(region) { state.selectedRegion = region; const name = regionName(region), country = regionCountry(region); $('#region-input').value = `${name}, ${country}`; $('#region-status').textContent = t('layer.regionSelected', { name: name.toUpperCase() }); focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); loadNews(name, region.lat, region.lon, country); renderGlobeData(); }
 
 function environmentPoints() {
-  if (state.showTemperature) return state.temperature.map((point, index) => ({ ...point, id: `temp-${index}`, kind: 'temperature', color: tempColor(point.temperature), metric: `${point.temperature.toFixed(1)} °C`, title: 'Temperatura aproximada', location: 'Open-Meteo' }));
-  if (state.showAurora) return state.aurora.map((point, index) => ({ ...point, id: `aurora-${index}`, kind: 'aurora', color: point.lat > 0 ? `rgba(73,255,155,${Math.min(.95, .2 + point.intensity / 100)})` : `rgba(178,92,255,${Math.min(.95, .2 + point.intensity / 100)})`, metric: `${point.intensity}%`, title: point.lat > 0 ? 'Aurora boreal' : 'Aurora austral', location: 'Probabilidade NOAA OVATION' }));
-  if (state.showAir) return state.airQuality.map((point, index) => ({ ...point, id: `air-${index}`, kind: 'air', color: airColor(point.aqi), metric: `AQI ${Math.round(point.aqi)}`, title: 'Qualidade do ar', location: `PM2.5 ${point.pm25 == null ? '—' : point.pm25.toFixed(1)} µg/m³` }));
+  if (state.showTemperature) return state.temperature.map((point, index) => ({ ...point, id: `temp-${index}`, kind: 'temperature', color: tempColor(point.temperature), metric: `${point.temperature.toFixed(1)} °C`, title: t('temperature.approx'), location: 'Open-Meteo' }));
+  if (state.showAurora) return state.aurora.map((point, index) => ({ ...point, id: `aurora-${index}`, kind: 'aurora', color: point.lat > 0 ? `rgba(73,255,155,${Math.min(.95, .2 + point.intensity / 100)})` : `rgba(178,92,255,${Math.min(.95, .2 + point.intensity / 100)})`, metric: `${point.intensity}%`, title: point.lat > 0 ? t('aurora.north') : t('aurora.south'), location: t('aurora.probability') }));
+  if (state.showAir) return state.airQuality.map((point, index) => ({ ...point, id: `air-${index}`, kind: 'air', color: airColor(point.aqi), metric: `AQI ${Math.round(point.aqi)}`, title: t('air.title'), location: `PM2.5 ${point.pm25 == null ? '—' : point.pm25.toFixed(1)} µg/m³` }));
   return [];
 }
 
@@ -207,7 +208,7 @@ function renderMapRegions() {
 function renderGlobeData() {
   const events = filteredEvents();
   const points = events.map(event => ({ ...event, eventId: event.id, kind: 'event', color: state.selected === event.id ? '#c7ff4a' : severityColors[event.severity] }));
-  if (state.showIss && state.iss) points.push({ ...state.iss, id: 'iss', kind: 'iss', color: '#60e6da', title: 'Estação Espacial Internacional', location: `${Math.round(state.iss.altitude)} km de altitude`, metric: 'ISS' });
+  if (state.showIss && state.iss) points.push({ ...state.iss, id: 'iss', kind: 'iss', color: '#60e6da', title: t('iss.title'), location: t('iss.altitude', { altitude: Math.round(state.iss.altitude) }), metric: 'ISS' });
   const environmental = environmentPoints(); points.push(...environmental); if (state.showRegions) points.push(...state.admin1.map(region => ({ ...region, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
   if (globe) {
     globe.pointsData(points);
@@ -227,36 +228,38 @@ function focusCoordinate(lat, lon, altitude = 1.8) { if (state.view === 'globe' 
 function renderCoordinate(lat, lon) { $('#coordinate-readout').textContent = `LAT ${lat.toFixed(4)}° · LON ${lon.toFixed(4)}°`; $('#camera-link').href = `https://www.windy.com/-Webcams/webcams?lat=${lat}&lon=${lon}&zoom=8`; }
 
 async function loadWeather(lat, lon) {
-  const card = $('#weather-card'); card.hidden = false; card.textContent = 'Consultando Open-Meteo…';
-  try { const url = new URL(API.weather); url.searchParams.set('latitude', lat); url.searchParams.set('longitude', lon); url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code'); url.searchParams.set('timezone', 'auto'); const data = await json(url); card.innerHTML = `<strong>${data.current.temperature_2m} °C</strong><br>Sensação ${data.current.apparent_temperature} °C · Umidade ${data.current.relative_humidity_2m}%<br>Vento ${data.current.wind_speed_10m} km/h · ${esc(data.timezone_abbreviation || data.timezone)}`; source('weather', 'OPEN-METEO PONTUAL', true, 1); }
-  catch (error) { card.textContent = `Clima indisponível: ${error.message}`; source('weather', 'OPEN-METEO PONTUAL', false, 0, error.message); }
+  const card = $('#weather-card'); card.hidden = false; card.textContent = t('weather.loading');
+  try { const url = new URL(API.weather); url.searchParams.set('latitude', lat); url.searchParams.set('longitude', lon); url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code'); url.searchParams.set('timezone', 'auto'); const data = await json(url); card.innerHTML = `<strong>${data.current.temperature_2m} °C</strong><br>${esc(t('weather.feels'))} ${data.current.apparent_temperature} °C · ${esc(t('weather.humidity'))} ${data.current.relative_humidity_2m}%<br>${esc(t('weather.wind'))} ${data.current.wind_speed_10m} km/h · ${esc(data.timezone_abbreviation || data.timezone)}`; source('weather', 'OPEN-METEO', true, 1); }
+  catch (error) { card.textContent = t('weather.unavailable', { error: error.message }); source('weather', 'OPEN-METEO', false, 0, error.message); }
 }
 
 function newsCacheGet(key) { try { const item = JSON.parse(sessionStorage.getItem(key)); return item && Date.now() - item.time < 900000 ? item.articles : null; } catch { return null; } }
 function newsCacheSet(key, articles) { try { sessionStorage.setItem(key, JSON.stringify({ time: Date.now(), articles })); } catch { /* armazenamento pode estar desativado */ } }
-function renderNews(articles, label, fallback = false) { const list = $('#news-list'); const note = `<p class="muted">${fallback ? 'Cobertura regional insuficiente; exibindo o país.' : 'Resultados recentes e recorrentes, não uma garantia de “mais importantes”.'}</p>`; list.innerHTML = note + (articles.length ? articles.map(article => `<a class="news-item" href="${esc(safeUrl(article.url))}" target="_blank" rel="noopener"><strong>${esc(article.title)}</strong><small>${esc(article.domain || 'Fonte jornalística')} · ${esc(article.seendate || 'horário não informado')}</small></a>`).join('') : `<p class="muted">Nenhuma notícia encontrada nas últimas 48 horas para “${esc(label)}”.</p>`); }
+let currentNews = [];
+function openNewsPreview(article) { const url = safeUrl(article.url); if (url === '#') return; $('#news-preview-title').textContent = article.title; $('#news-preview-meta').textContent = `${article.domain || t('news.source')} · ${article.seendate || t('news.noTime')}`; $('#news-preview-link').href = url; $('#news-dialog').showModal(); }
+function renderNews(articles, label, fallback = false) { currentNews = articles; const list = $('#news-list'); const note = `<p class="muted">${esc(fallback ? t('news.fallback') : t('news.coverage'))}</p>`; list.innerHTML = note + (articles.length ? articles.map((article, index) => `<button class="news-item news-preview-button" type="button" data-news-index="${index}"><strong>${esc(article.title)}</strong><small>${esc(article.domain || t('news.source'))} · ${esc(article.seendate || t('news.noTime'))}</small></button>`).join('') : `<p class="muted">${esc(t('news.none', { term: label }))}</p>`); list.querySelectorAll('[data-news-index]').forEach(button => button.onclick = () => openNewsPreview(currentNews[Number(button.dataset.newsIndex)])); }
 async function loadNews(term, lat = null, lon = null, country = '', allowFallback = true) {
   const list = $('#news-list'); const clean = String(term || '').replace(/[<>\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100); const cleanCountry = String(country || '').replace(/[<>\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80); if (!clean) return;
-  list.innerHTML = '<p class="muted">Consultando GDELT…</p>'; if (lat != null) $('#camera-link').href = `https://www.windy.com/-Webcams/webcams?lat=${lat}&lon=${lon}&zoom=8`;
+  list.innerHTML = `<p class="muted">${esc(t('news.loading'))}</p>`; if (lat != null) $('#camera-link').href = `https://www.windy.com/-Webcams/webcams?lat=${lat}&lon=${lon}&zoom=8`;
   const query = cleanCountry && cleanCountry.toLowerCase() !== clean.toLowerCase() ? `"${clean.replaceAll('"', '')}" AND "${cleanCountry.replaceAll('"', '')}"` : `"${clean.replaceAll('"', '')}"`;
   const cacheKey = `news:${query}`; const cached = newsCacheGet(cacheKey); if (cached) { renderNews(cached, clean); return; }
   try {
     const url = new URL(API.gdelt); url.searchParams.set('query', query); url.searchParams.set('mode', 'artlist'); url.searchParams.set('maxrecords', '18'); url.searchParams.set('timespan', '48h'); url.searchParams.set('sort', 'datedesc'); url.searchParams.set('format', 'json');
     const data = await json(url, 18000); const seen = new Set(); const articles = (data.articles || []).filter(article => { const key = `${String(article.title).toLowerCase()}|${article.domain}`; if (!article.title || safeUrl(article.url) === '#' || seen.has(key)) return false; seen.add(key); return true; });
-    if (!articles.length && cleanCountry && allowFallback) return loadNews(cleanCountry, lat, lon, '', false).then(() => { const first = $('#news-list p'); if (first) first.textContent = 'Cobertura regional insuficiente; exibindo o país.'; });
+    if (!articles.length && cleanCountry && allowFallback) return loadNews(cleanCountry, lat, lon, '', false).then(() => { const first = $('#news-list p'); if (first) first.textContent = t('news.fallback'); });
     newsCacheSet(cacheKey, articles); renderNews(articles, clean, !allowFallback); source('gdelt', 'GDELT / NOTÍCIAS', true, articles.length);
-  } catch (error) { list.innerHTML = `<p class="muted">O navegador bloqueou ou o GDELT não respondeu. <a href="https://news.google.com/search?q=${encodeURIComponent(cleanCountry ? `${clean} ${cleanCountry}` : clean)}" target="_blank" rel="noopener">Pesquisar no Google Notícias ↗</a></p>`; source('gdelt', 'GDELT / NOTÍCIAS', false, 0, error.message); }
+  } catch (error) { list.innerHTML = `<p class="muted">${esc(t('news.error'))} <a href="https://news.google.com/search?q=${encodeURIComponent(cleanCountry ? `${clean} ${cleanCountry}` : clean)}" target="_blank" rel="noopener noreferrer">${esc(t('news.google'))}</a></p>`; source('gdelt', 'GDELT / NEWS', false, 0, error.message); }
 }
 
 function setEnvironment(kind, active) {
   const keys = ['temperature', 'aurora', 'air'];
   for (const key of keys) { state[`show${key[0].toUpperCase()}${key.slice(1)}`] = active && key === kind; $(`#${key}-toggle`).checked = active && key === kind; }
-  if (!state.showTemperature) $('#temperature-status').textContent = 'TEMPERATURA: DESATIVADA';
-  if (!state.showAurora) $('#aurora-status').textContent = 'AURORA: DESATIVADA';
-  if (!state.showAir) $('#air-status').textContent = 'AR: DESATIVADO';
+  if (!state.showTemperature) $('#temperature-status').textContent = t('status.temperatureOff');
+  if (!state.showAurora) $('#aurora-status').textContent = t('status.auroraOff');
+  if (!state.showAir) $('#air-status').textContent = t('status.airOff');
   if (state.showTemperature && !state.temperature.length) loadTemperature();
-  if (state.showAurora) $('#aurora-status').textContent = `AURORA: ${state.aurora.length} CÉLULAS NOAA`;
-  if (state.showAir) $('#air-status').textContent = state.airQuality.length ? `AR: ${state.airQuality.length} PONTOS · GRADE 15°` : 'AR: SNAPSHOT INDISPONÍVEL';
+  if (state.showAurora) $('#aurora-status').textContent = t('layer.auroraCells', { count: state.aurora.length });
+  if (state.showAir) $('#air-status').textContent = state.airQuality.length ? t('layer.airPoints', { count: state.airQuality.length }) : t('layer.airUnavailable');
   renderGlobeData();
 }
 
@@ -266,7 +269,7 @@ function toggleSatellite(active) {
   state.showSatellite = active; const date = satelliteDate();
   if (globe) globe.globeImageUrl(active ? gibsGlobeUrl(date) : 'assets/earth-night.jpg');
   if (map) { if (satelliteLayer) { satelliteLayer.remove(); satelliteLayer = null; } if (active) satelliteLayer = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', { layers: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', format: 'image/jpeg', transparent: false, time: date, attribution: 'NASA GIBS', opacity: .82, maxZoom: 9, className: 'satellite-tiles' }).addTo(map); }
-  $('#satellite-status').textContent = active ? `SATÉLITE: NASA GIBS · ${date} · DIÁRIO` : 'SATÉLITE: DESATIVADO';
+  $('#satellite-status').textContent = active ? t('layer.satelliteOn', { date }) : t('status.satelliteOff');
 }
 
 function storedAlertIds() { try { return new Set(JSON.parse(localStorage.getItem('seen-critical-events') || '[]')); } catch { return new Set(); } }
@@ -283,30 +286,44 @@ function processCriticalNotifications() {
 }
 async function enableNotifications() {
   const button = $('#notification-button');
-  if (!('Notification' in window)) { button.textContent = 'ALERTAS NÃO SUPORTADOS NESTE NAVEGADOR'; button.disabled = true; return; }
+  if (!('Notification' in window)) { button.textContent = t('notifications.unsupported'); button.disabled = true; return; }
   const permission = await Notification.requestPermission();
-  if (permission === 'granted') { state.notificationsReady = true; try { localStorage.setItem('browser-alerts-enabled', 'true'); } catch { /* armazenamento pode estar desativado */ } saveAlertIds(new Set(state.events.filter(event => event.severity === 'critical').map(event => event.id))); button.textContent = 'ALERTAS LOCAIS ATIVOS'; }
-  else button.textContent = 'ALERTAS NÃO AUTORIZADOS';
+  if (permission === 'granted') { state.notificationsReady = true; try { localStorage.setItem('browser-alerts-enabled', 'true'); } catch { /* armazenamento pode estar desativado */ } saveAlertIds(new Set(state.events.filter(event => event.severity === 'critical').map(event => event.id))); button.textContent = t('notifications.active'); }
+  else button.textContent = t('notifications.denied');
 }
 
-function renderAll() { document.body.classList.toggle('nuclear-alert', state.events.some(event => event.category === 'nuclear')); document.body.classList.toggle('hazmat-alert', !state.events.some(event => event.category === 'nuclear') && state.events.some(event => event.category === 'hazmat')); renderCategories(); renderFeed(); renderSpotlight(state.events.find(event => event.id === state.selected)); renderGlobeData(); $('#footer-sync').textContent = `ÚLTIMA SINCRONIA ${state.updatedAt ? fmtTime(state.updatedAt, true) : '—'}`; }
+function renderAll() { document.body.classList.toggle('nuclear-alert', state.events.some(event => event.category === 'nuclear')); document.body.classList.toggle('hazmat-alert', !state.events.some(event => event.category === 'nuclear') && state.events.some(event => event.category === 'hazmat')); renderCategories(); renderFeed(); renderSpotlight(state.events.find(event => event.id === state.selected)); renderGlobeData(); $('#footer-sync').textContent = state.updatedAt ? t('system.sync', { time: fmtTime(state.updatedAt, true) }) : t('footer.sync'); }
+function refreshLanguageUI() {
+  $('#regions-button').textContent = state.showRegions ? t('stage.hideRegions') : t('stage.regions');
+  $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d');
+  if (!state.showTemperature) $('#temperature-status').textContent = t('status.temperatureOff');
+  else if (state.temperature.length) { const values = state.temperature.map(point => point.temperature); $('#temperature-status').textContent = t('layer.tempPoints', { count: values.length, min: Math.min(...values).toFixed(1), max: Math.max(...values).toFixed(1) }); }
+  if (!state.showAurora) $('#aurora-status').textContent = t('status.auroraOff'); else $('#aurora-status').textContent = t('layer.auroraCells', { count: state.aurora.length });
+  if (!state.showAir) $('#air-status').textContent = t('status.airOff'); else $('#air-status').textContent = state.airQuality.length ? t('layer.airPoints', { count: state.airQuality.length }) : t('layer.airUnavailable');
+  if (!state.showRegions) $('#region-status').textContent = t('status.regionsOff'); else if (state.selectedRegion) $('#region-status').textContent = t('layer.regionSelected', { name: regionName(state.selectedRegion).toUpperCase() }); else $('#region-status').textContent = t('layer.regionsCount', { count: state.admin1.length });
+  toggleSatellite(state.showSatellite); renderSources(); renderAll(); clock();
+  if (state.space) { const scale = kpScale(state.space.kp); $('#kp-scale').textContent = `${scale[0]} · ${scale[1]}`; $('#space-time').textContent = t('space.latest', { time: fmtTime(state.space.time, true) }); }
+  $('#notification-button').textContent = state.notificationsReady ? t('notifications.active') : t('intel.notifications');
+}
 function bind() {
   $('#priority-toggle').onchange = event => { state.priority = event.target.checked; state.selected = null; renderAll(); };
   $('#iss-toggle').onchange = event => { state.showIss = event.target.checked; renderGlobeData(); };
   $('#temperature-toggle').onchange = event => setEnvironment('temperature', event.target.checked);
   $('#aurora-toggle').onchange = event => setEnvironment('aurora', event.target.checked);
   $('#air-toggle').onchange = event => setEnvironment('air', event.target.checked);
-  const toggleRegions = async active => { state.showRegions = active; $('#regions-toggle').checked = active; $('#regions-button').textContent = active ? 'OCULTAR REGIÕES' : 'REGIÕES'; if (active) await loadAdmin1(); else $('#region-status').textContent = 'REGIÕES: DESATIVADAS'; renderGlobeData(); };
+  const toggleRegions = async active => { state.showRegions = active; $('#regions-toggle').checked = active; $('#regions-button').textContent = active ? t('stage.hideRegions') : t('stage.regions'); if (active) await loadAdmin1(); else $('#region-status').textContent = t('status.regionsOff'); renderGlobeData(); };
   $('#regions-toggle').onchange = event => toggleRegions(event.target.checked); $('#regions-button').onclick = () => toggleRegions(!state.showRegions);
   $('#daylight-toggle').onchange = event => { state.showDaylight = event.target.checked; renderGlobeData(); };
   $('#satellite-toggle').onchange = event => toggleSatellite(event.target.checked);
-  $('#view-button').onclick = () => { if (state.view === 'map' && !globe) { alert('O globo 3D exige WebGL. Este navegador continuará no mapa 2D.'); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? 'MAPA 2D' : 'GLOBO 3D'; if (state.view === 'map') setTimeout(() => map.invalidateSize(), 50); else resizeGlobe(); };
+  $('#view-button').onclick = () => { if (state.view === 'map' && !globe) { alert(t('alert.webgl')); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d'); if (state.view === 'map') setTimeout(() => map.invalidateSize(), 50); else resizeGlobe(); };
   $('#refresh-button').onclick = async () => { await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); if (state.showTemperature) loadTemperature(); };
-  $('#locate-button').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(position => { focusCoordinate(position.coords.latitude, position.coords.longitude, 1.5); loadWeather(position.coords.latitude, position.coords.longitude); loadNews('notícias locais', position.coords.latitude, position.coords.longitude); }, () => alert('Localização não autorizada pelo navegador.')) : alert('Geolocalização indisponível.');
+  $('#locate-button').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(position => { focusCoordinate(position.coords.latitude, position.coords.longitude, 1.5); loadWeather(position.coords.latitude, position.coords.longitude); loadNews($('#region-input').placeholder, position.coords.latitude, position.coords.longitude); }, () => alert(t('alert.locationDenied'))) : alert(t('alert.locationUnavailable'));
   $('#intel-form').onsubmit = event => { event.preventDefault(); loadNews($('#region-input').value); };
   $('#notification-button').onclick = enableNotifications;
-  $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close();
+  $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close(); $('#news-close').onclick = () => $('#news-dialog').close();
+  $('#language-select').onchange = event => window.i18n.set(event.target.value);
+  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); refreshLanguageUI(); loadWorld(); });
 }
-function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = `SINCRONIA ${timeAgo(state.updatedAt)}`; }
-async function start() { bind(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = 'ALERTAS LOCAIS ATIVOS'; } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); setInterval(loadWorld, refresh.world); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { if (state.showDaylight) renderGlobeData(); }, 60000); }
+function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
+async function start() { bind(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); setInterval(loadWorld, refresh.world); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { if (state.showDaylight) renderGlobeData(); }, 60000); }
 start();
