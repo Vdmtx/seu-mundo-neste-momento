@@ -7,7 +7,7 @@
   <title>Seu Mundo Neste Momento</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <div class="app-shell">
@@ -46,6 +46,10 @@
           <p class="eyebrow">CAMADAS OPERACIONAIS</p>
           <label><input id="temperature-toggle" type="checkbox"><span>Temperatura global</span></label>
           <label><input id="aurora-toggle" type="checkbox"><span>Auroras norte e sul</span></label>
+          <label><input id="air-toggle" type="checkbox"><span>Qualidade do ar</span></label>
+          <label><input id="regions-toggle" type="checkbox"><span>Regiões e notícias</span></label>
+          <label><input id="daylight-toggle" type="checkbox" checked><span>Linha dia / noite</span></label>
+          <label><input id="satellite-toggle" type="checkbox"><span>Satélite NASA diário</span></label>
           <label><input id="iss-toggle" type="checkbox" checked><span>Posição da ISS</span></label>
         </section>
 
@@ -60,6 +64,7 @@
           <div><p class="eyebrow">VISÃO ORBITAL / DADOS PÚBLICOS</p><strong><span id="visible-count">0</span> OCORRÊNCIAS VISÍVEIS</strong></div>
           <div class="stage-actions">
             <button id="locate-button" type="button">⌖ PERTO DE MIM</button>
+            <button id="regions-button" type="button">REGIÕES</button>
             <button id="view-button" type="button">MAPA 2D</button>
             <button id="refresh-button" type="button">↻ ATUALIZAR</button>
           </div>
@@ -75,6 +80,9 @@
         <div class="layer-status">
           <span id="temperature-status">TEMPERATURA: DESATIVADA</span>
           <span id="aurora-status">AURORA: DESATIVADA</span>
+          <span id="air-status">AR: DESATIVADO</span>
+          <span id="region-status">REGIÕES: DESATIVADAS</span>
+          <span id="satellite-status">SATÉLITE: DESATIVADO</span>
           <span id="iss-status">ISS: AGUARDANDO</span>
         </div>
       </section>
@@ -112,6 +120,7 @@
           <div id="weather-card" class="weather-card" hidden></div>
           <div id="news-list" class="news-list"><p class="muted">Selecione um evento ou pesquise uma região.</p></div>
           <a id="camera-link" class="camera-link" href="https://www.windy.com/-Webcams/webcams" target="_blank" rel="noopener">LOCALIZAR CÂMERAS PÚBLICAS ↗</a>
+          <button id="notification-button" class="camera-link" type="button">ATIVAR ALERTAS NO NAVEGADOR</button>
           <p class="disclaimer">Notícias não são confirmação independente. Câmeras podem ter atraso, sair do ar ou não cobrir o ponto exato do evento.</p>
         </section>
       </aside>
@@ -120,10 +129,10 @@
     <footer><span><i></i> LEITURA DEMONSTRATIVA COM DADOS PÚBLICOS</span><span id="footer-sync">ÚLTIMA SINCRONIA —</span><span>VDMTX / CONCEITO 2026</span></footer>
   </div>
 
-  <dialog id="about-dialog"><button id="about-close" aria-label="Fechar">×</button><p class="eyebrow">SOBRE ESTE MONITOR</p><h2>Tempo quase real, não ficção.</h2><p>“Ao vivo” significa a leitura mais recente publicada por cada fonte. Terremotos, clima espacial, eventos naturais, temperatura, notícias e posição orbital têm ritmos diferentes. O painel mostra horário, origem e estado de cada fonte; quando algo falha, informa a falha em vez de inventar dados.</p><p>O GitHub Pages é estático. As leituras são feitas diretamente de APIs públicas e usam o último arquivo consolidado pelo GitHub Actions como contingência.</p></dialog>
+  <dialog id="about-dialog"><button id="about-close" aria-label="Fechar">×</button><p class="eyebrow">SOBRE ESTE MONITOR</p><h2>Tempo quase real, não ficção.</h2><p>“Ao vivo” significa a leitura mais recente publicada por cada fonte. Terremotos, desastres, tsunamis, clima espacial, auroras, qualidade do ar, temperatura, notícias e posição orbital têm ritmos diferentes. O painel mostra horário, origem e estado de cada fonte; quando algo falha, informa a falha em vez de inventar dados.</p><p>O GitHub Pages é estático. As leituras são feitas diretamente de APIs públicas e usam o último arquivo consolidado pelo GitHub Actions como contingência. A imagem de satélite é diária, as notícias dependem da cobertura jornalística e nenhuma câmera é tratada como confirmação independente.</p><p>Conflitos e incidentes nucleares, radiológicos ou biológicos só devem aparecer quando publicados por fontes civis ou autoridades reconhecidas. O monitor não calcula trajetória de armamentos, não prevê impacto de míssil e não atribui autoria sem confirmação oficial.</p></dialog>
 
   <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
