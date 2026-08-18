@@ -35,6 +35,6 @@ O GitHub Pages não executa um servidor. APIs podem impor limites, bloquear CORS
 
 O monitor não calcula nem publica trajetória de armamentos, previsão própria de impacto de míssil ou autoria não confirmada. Incidentes nucleares, radiológicos, biológicos e conflitos só devem ser incorporados a partir de alertas civis ou autoridades reconhecidas, com localização compatível com o que a fonte tornou público.
 
-A categoria nuclear/radiológica permanece invisível quando não há ocorrência oficial ativa. Se uma fonte oficial vier a alimentar um evento dessa categoria, ela surge automaticamente e o mapa adota o estado visual vermelho. A interface já aplica essa regra, mas nenhum agregador nuclear foi habilitado sem um feed oficial global suficientemente confiável.
+As categorias nuclear/radiológica e biológica/química permanecem invisíveis quando não há ocorrência oficial ativa. Se uma fonte oficial vier a alimentar um evento nuclear, a categoria surge automaticamente e o mapa adota o estado visual vermelho; um evento biológico/químico confirmado ativa um estado âmbar. A interface já aplica essas regras, mas nenhum agregador foi habilitado sem um feed oficial global suficientemente confiável.
 
 Alertas do navegador funcionam enquanto o site está aberto. E-mail, Telegram e WhatsApp exigem um serviço externo e credenciais guardadas em GitHub Secrets; nenhuma chave deve ser colocada em `index.html` ou `app.js`.

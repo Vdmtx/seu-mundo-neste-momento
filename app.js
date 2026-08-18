@@ -18,7 +18,7 @@ const state = {
   showAir: false, showIss: true, showRegions: false, showDaylight: true, showSatellite: false,
   view: 'globe', updatedAt: null, snapshot: null, notificationsReady: false
 };
-const categories = [['all', '00', 'Todos'], ['earthquakes', '01', 'Terremotos'], ['wildfires', '02', 'Incêndios'], ['storms', '03', 'Tempestades'], ['volcanoes', '04', 'Vulcões'], ['floods', '05', 'Inundações'], ['other', '06', 'Outros'], ['nuclear', '!', 'Nuclear / radiológico']];
+const categories = [['all', '00', 'Todos'], ['earthquakes', '01', 'Terremotos'], ['wildfires', '02', 'Incêndios'], ['storms', '03', 'Tempestades'], ['volcanoes', '04', 'Vulcões'], ['floods', '05', 'Inundações'], ['other', '06', 'Outros'], ['hazmat', '!', 'Biológico / químico'], ['nuclear', '!!', 'Nuclear / radiológico']];
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -135,7 +135,7 @@ async function loadAdmin1() {
 }
 
 function filteredEvents() { return state.events.filter(event => (state.category === 'all' || event.category === state.category) && (!state.priority || ['critical', 'high'].includes(event.severity))); }
-function renderCategories() { $('#category-list').innerHTML = categories.map(([id, code, label]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (id === 'nuclear' && count === 0) return ''; return `<button class="category ${state.category === id ? 'active' : ''}" data-category="${id}"><span class="code">${code}</span><span>${label}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
+function renderCategories() { $('#category-list').innerHTML = categories.map(([id, code, label]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (['nuclear', 'hazmat'].includes(id) && count === 0) return ''; return `<button class="category ${state.category === id ? 'active' : ''}" data-category="${id}"><span class="code">${code}</span><span>${label}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
 function renderSources() { const list = [...state.sources.values()]; $('#source-list').innerHTML = list.length ? list.map(item => `<div class="source-row ${item.ok ? 'ok' : ''}" title="${esc(item.message || '')}"><span><i></i>${esc(item.label)}</span><b>${item.ok ? `${item.count} · OK` : 'FALHA'}</b></div>`).join('') : '<span class="muted">Consultando fontes públicas…</span>'; const ok = list.filter(item => item.ok).length; $('#source-count').textContent = ok; $('#online-dot').className = `live-dot ${ok === 0 ? 'offline' : ok < list.length ? 'partial' : ''}`; $('#system-status').textContent = ok === 0 ? 'SEM FONTES' : ok < list.length ? 'DADOS PARCIAIS' : 'SISTEMA ONLINE'; }
 function renderFeed() { const rows = filteredEvents().slice(0, 12); $('#visible-count').textContent = filteredEvents().length; $('#feed-count').textContent = rows.length; $('#event-feed').innerHTML = rows.length ? rows.map(event => `<button class="event-item ${state.selected === event.id ? 'active' : ''}" data-id="${esc(event.id)}"><i class="${event.severity}"></i><span><strong>${esc(event.title)}</strong><small>${esc(event.location)} · ${fmtTime(event.timestamp)}</small></span><span>${esc(event.metric)}</span></button>`).join('') : '<p class="muted" style="padding:18px">Nenhuma ocorrência corresponde aos filtros.</p>'; document.querySelectorAll('.event-item').forEach(button => button.onclick = () => selectEvent(button.dataset.id)); }
 function selectEvent(id) { state.selected = id; const event = state.events.find(item => item.id === id); if (!event) return; renderSpotlight(event); renderFeed(); focusCoordinate(event.lat, event.lon, 1.6); loadWeather(event.lat, event.lon); loadNews(event.location, event.lat, event.lon); }
@@ -199,8 +199,8 @@ function renderMapRegions() {
   if (!map) return;
   if (regionLayer) { regionLayer.remove(); regionLayer = null; }
   if (!state.showRegions || !state.admin1.length) return;
-  const bounds = map.getBounds().pad(.12), zoom = map.getZoom(), stride = zoom <= 2 ? 6 : zoom === 3 ? 3 : 1;
-  const visible = state.admin1.filter((region, index) => index % stride === 0 && bounds.contains([region.lat, region.lon])).slice(0, 900);
+  const bounds = map.getBounds().pad(.12), zoom = map.getZoom(), stride = zoom <= 2 ? 12 : zoom === 3 ? 6 : zoom === 4 ? 2 : 1;
+  const visible = state.admin1.filter((region, index) => index % stride === 0 && bounds.contains([region.lat, region.lon])).slice(0, 300);
   regionLayer = L.layerGroup(visible.map(region => L.circleMarker([region.lat, region.lon], { renderer: L.canvas(), radius: region === state.selectedRegion ? 5 : 2.3, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da', weight: region === state.selectedRegion ? 1.3 : .45, fillColor: '#174958', fillOpacity: .7 }).bindTooltip(`${esc(regionName(region))} · ${esc(regionCountry(region))}`).on('click', () => selectRegion(region)))).addTo(map);
 }
 
@@ -289,7 +289,7 @@ async function enableNotifications() {
   else button.textContent = 'ALERTAS NÃO AUTORIZADOS';
 }
 
-function renderAll() { document.body.classList.toggle('nuclear-alert', state.events.some(event => event.category === 'nuclear')); renderCategories(); renderFeed(); renderSpotlight(state.events.find(event => event.id === state.selected)); renderGlobeData(); $('#footer-sync').textContent = `ÚLTIMA SINCRONIA ${state.updatedAt ? fmtTime(state.updatedAt, true) : '—'}`; }
+function renderAll() { document.body.classList.toggle('nuclear-alert', state.events.some(event => event.category === 'nuclear')); document.body.classList.toggle('hazmat-alert', !state.events.some(event => event.category === 'nuclear') && state.events.some(event => event.category === 'hazmat')); renderCategories(); renderFeed(); renderSpotlight(state.events.find(event => event.id === state.selected)); renderGlobeData(); $('#footer-sync').textContent = `ÚLTIMA SINCRONIA ${state.updatedAt ? fmtTime(state.updatedAt, true) : '—'}`; }
 function bind() {
   $('#priority-toggle').onchange = event => { state.priority = event.target.checked; state.selected = null; renderAll(); };
   $('#iss-toggle').onchange = event => { state.showIss = event.target.checked; renderGlobeData(); };
