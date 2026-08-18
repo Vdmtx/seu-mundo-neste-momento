@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vdmtx.github.io/seu-mundo-neste-momento/sitemap.xml

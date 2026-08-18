@@ -11,7 +11,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Camadas opcionais de temperatura global e qualidade do ar.
 - Linha astronômica aproximada de dia/noite.
 - Imagem diária VIIRS do NASA GIBS, carregada somente quando solicitada.
-- 4.589 estados, províncias e subdivisões do Natural Earth, representados por pontos administrativos carregados sob demanda; um clique pesquisa notícias recentes da região e, quando necessário, do país.
+- 4.589 estados, províncias e subdivisões do Natural Earth, representados por pontos administrativos carregados sob demanda; um clique filtra o cache recente de notícias e oferece busca externa quando não há correspondência.
 - Clima pontual, diretório externo de câmeras públicas e alertas críticos locais do navegador enquanto o site está aberto.
 
 ## Fontes e intervalos
@@ -23,7 +23,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - NOAA SWPC: Kp, Bz, vento solar e OVATION; navegador a cada 5 minutos e snapshot de contingência.
 - Where The ISS At: posição da ISS a cada 10 segundos.
 - Open-Meteo: clima pontual, temperatura sob demanda e grade de qualidade do ar atualizada no snapshot a cada 15 minutos.
-- GDELT: referências jornalísticas regionais das últimas 48 horas, sob demanda e com cache de 15 minutos no navegador.
+- Google News RSS: cache de manchetes públicas em português, inglês e espanhol, reconstruído pelo GitHub Actions a cada 15 minutos. A busca do site filtra esse conjunto e não promete cobertura completa de todos os estados.
 - NASA GIBS: imagem VIIRS do dia anterior, sob demanda.
 - Natural Earth Admin-1: pontos administrativos estáticos, compactados para desempenho. Dados em domínio público.
 

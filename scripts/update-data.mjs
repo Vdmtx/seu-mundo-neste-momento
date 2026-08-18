@@ -11,7 +11,10 @@ const URLS = {
   gdacs: 'https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=TC;FL;VO;DR;WF&alertlevel=Green;Orange;Red',
   tsunamiPaaq: 'https://www.tsunami.gov/events/xml/PAAQAtom.xml',
   tsunamiPheb: 'https://www.tsunami.gov/events/xml/PHEBAtom.xml',
-  air: 'https://air-quality-api.open-meteo.com/v1/air-quality'
+  air: 'https://air-quality-api.open-meteo.com/v1/air-quality',
+  newsPt: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20inc%C3%AAndio%20OR%20inunda%C3%A7%C3%A3o%20OR%20ciclone%20OR%20vulc%C3%A3o%20OR%20tsunami%20OR%20evacua%C3%A7%C3%A3o%20OR%20conflito%29%20when%3A1d&hl=pt-BR&gl=BR&ceid=BR%3Apt-419',
+  newsEn: 'https://news.google.com/rss/search?q=%28earthquake%20OR%20wildfire%20OR%20flood%20OR%20cyclone%20OR%20volcano%20OR%20tsunami%20OR%20evacuation%20OR%20conflict%29%20when%3A1d&hl=en-US&gl=US&ceid=US%3Aen',
+  newsEs: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20incendio%20OR%20inundaci%C3%B3n%20OR%20cicl%C3%B3n%20OR%20volc%C3%A1n%20OR%20tsunami%20OR%20evacuaci%C3%B3n%20OR%20conflicto%29%20when%3A1d&hl=es-419&gl=MX&ceid=MX%3Aes-419'
 };
 
 async function get(url, text = false) {
@@ -44,8 +47,26 @@ const last = table => {
   }
   return table.length > 1 && Array.isArray(table[0]) ? Object.fromEntries(table[0].map((header, index) => [header, table.at(-1)[index]])) : null;
 };
-const xmlText = value => String(value || '').replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+const xmlText = value => String(value || '').replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').replace(/&(?:amp|#38);/g, '&').replace(/&quot;|&#34;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
 const xmlTag = (entry, tag) => xmlText(entry.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
+const utcTimestamp = value => {
+  const text = String(value || '').trim();
+  if (!text) return new Date().toISOString();
+  const normalized = /(Z|[+-]\d\d:?\d\d)$/i.test(text) ? text : `${text}Z`;
+  const date = new Date(normalized);
+  return Number.isNaN(+date) ? new Date().toISOString() : date.toISOString();
+};
+
+function parseNews(xml, language) {
+  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].flatMap(([, item]) => {
+    const title = xmlTag(item, 'title');
+    const url = xmlTag(item, 'link');
+    const published = xmlTag(item, 'pubDate');
+    const source = xmlTag(item, 'source');
+    if (!title || !/^https?:\/\//i.test(url)) return [];
+    return [{ title, url, domain: source || 'Google News', seendate: utcTimestamp(published), language }];
+  });
+}
 
 function parseTsunami(xml, center) {
   return [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi)].flatMap(([, entry]) => {
@@ -93,9 +114,10 @@ async function loadAirQuality() {
 
 const results = await Promise.allSettled([
   get(URLS.usgs), get(URLS.eonet), get(URLS.iss), get(URLS.kp), get(URLS.mag), get(URLS.plasma),
-  get(URLS.aurora), get(URLS.gdacs), get(URLS.tsunamiPaaq, true), get(URLS.tsunamiPheb, true), loadAirQuality()
+  get(URLS.aurora), get(URLS.gdacs), get(URLS.tsunamiPaaq, true), get(URLS.tsunamiPheb, true), loadAirQuality(),
+  get(URLS.newsPt, true), get(URLS.newsEn, true), get(URLS.newsEs, true)
 ]);
-const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air] = results;
+const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air, newsPt, newsEn, newsEs] = results;
 const events = [];
 
 if (quakes.status === 'fulfilled') events.push(...(quakes.value.features || []).map(feature => {
@@ -133,7 +155,7 @@ if (gdacs.status === 'fulfilled') events.push(...(gdacs.value.features || []).fl
     title: { TC: 'Ciclone tropical', FL: 'Inundação GDACS', VO: 'Atividade vulcânica', WF: 'Incêndio GDACS', DR: 'Desastre monitorado' }[type] || 'Desastre monitorado',
     location: [properties.name, properties.country].filter(Boolean).join(' · ') || 'Local não informado',
     summary: properties.severitydata?.severitytext || properties.description || 'Evento atual publicado pelo sistema global GDACS.',
-    metric: String(properties.alertlevel || 'ATIVO').toUpperCase(), timestamp: properties.datemodified || properties.fromdate || new Date().toISOString(),
+    metric: String(properties.alertlevel || 'ATIVO').toUpperCase(), timestamp: utcTimestamp(properties.datemodified || properties.fromdate),
     source: 'GDACS', lat: coordinates[1], lon: coordinates[0], url: properties.url?.report || 'https://www.gdacs.org/'
   }];
 }));
@@ -150,6 +172,11 @@ const auroraPoints = aurora.status === 'fulfilled' ? (aurora.value.coordinates |
   const lon = rawLon > 180 ? rawLon - 360 : rawLon;
   return Math.abs(Math.round(lat)) % 2 || Math.abs(Math.round(lon)) % 2 ? [] : [{ lat, lon, intensity }];
 }) : [];
+const news = [...new Map([
+  ...(newsPt.status === 'fulfilled' ? parseNews(newsPt.value, 'pt-BR') : []),
+  ...(newsEn.status === 'fulfilled' ? parseNews(newsEn.value, 'en') : []),
+  ...(newsEs.status === 'fulfilled' ? parseNews(newsEs.value, 'es') : [])
+].map(article => [article.title.toLowerCase(), article])).values()].sort((a, b) => new Date(b.seendate) - new Date(a.seendate));
 
 const snapshot = {
   generatedAt: new Date().toISOString(),
@@ -158,9 +185,10 @@ const snapshot = {
   space: { kp: number(kpRow?.Kp ?? kpRow?.kp), bz: number(magRow?.bz_gsm ?? magRow?.bz), wind: number(plasmaRow?.proton_speed ?? plasmaRow?.speed), time: kpRow?.time_tag || magRow?.time_tag || plasmaRow?.time_tag || new Date().toISOString() },
   aurora: auroraPoints,
   airQuality: settled(air) || [],
-  sources: Object.fromEntries(['usgs', 'eonet', 'iss', 'kp', 'mag', 'plasma', 'ovation', 'gdacs', 'tsunamiPaaq', 'tsunamiPheb', 'airQuality'].map((name, index) => [name, results[index].status]))
+  news,
+  sources: Object.fromEntries(['usgs', 'eonet', 'iss', 'kp', 'mag', 'plasma', 'ovation', 'gdacs', 'tsunamiPaaq', 'tsunamiPheb', 'airQuality', 'newsPt', 'newsEn', 'newsEs'].map((name, index) => [name, results[index].status]))
 };
 
 await mkdir('data', { recursive: true });
 await writeFile('data/snapshot.json', JSON.stringify(snapshot));
-console.log(`snapshot: ${snapshot.events.length} events, ${snapshot.aurora.length} aurora cells, ${snapshot.airQuality.length} air-quality points`);
+console.log(`snapshot: ${snapshot.events.length} events, ${snapshot.aurora.length} aurora cells, ${snapshot.airQuality.length} air-quality points, ${snapshot.news.length} news items`);

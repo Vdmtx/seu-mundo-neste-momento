@@ -1,0 +1,14 @@
+{
+  "name": "Seu Mundo Neste Momento",
+  "short_name": "Seu Mundo",
+  "description": "Monitor público de acontecimentos e condições globais em tempo quase real.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05090d",
+  "theme_color": "#05090d",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
