@@ -1,1100 +1,130 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SEU MUNDO NESTE MOMENTO • Monitoramento Global</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#060c18;--bg2:#0b1525;--bg3:#111e33;--border:rgba(0,200,150,0.18);--green:#00e5a0;--green-dim:rgba(0,229,160,0.12);--red:#ff3b5c;--orange:#ff8c2a;--yellow:#ffd43b;--text:#c8d6e5;--text-dim:#6a7d95;--mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;}
-#status-bar{position:fixed;top:0;left:0;right:0;height:30px;background:rgba(6,12,24,0.96);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);z-index:9000;}
-.s-left,.s-right{display:flex;gap:20px;align-items:center;}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1.4s infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
-.s-item{display:flex;align-items:center;gap:6px;}
-.s-val{color:var(--text);font-weight:600;}
-#map{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:1;}
-#globe-container{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:2;display:none;background:var(--bg);}
-.wind-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;opacity:0.6;}
-.custom-div-icon{background:none;border:none;}
-.marker-container{display:flex;align-items:center;justify-content:center;position:relative;}
-.marker-icon{display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(6,12,24,0.9);border-radius:50%;width:32px;height:32px;border:2px solid rgba(255,255,255,0.3);box-shadow:0 0 10px rgba(0,0,0,0.8);z-index:2;position:relative;transition:transform 0.2s;}
-.marker-icon:hover{transform:scale(1.15);z-index:1000;border-color:#fff;}
-.marker-pulse{position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid var(--green);animation:pulse 2s infinite;opacity:0;}
-@keyframes pulse{0%{transform:scale(0.8);opacity:0.8;}100%{transform:scale(2.5);opacity:0;}}
-.accuracy-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-top:4px;}
-.accuracy-high{background:rgba(0,229,160,0.2);color:#00e5a0;}
-.accuracy-medium{background:rgba(255,212,59,0.2);color:#ffd43b;}
-.accuracy-low{background:rgba(255,140,42,0.2);color:#ff8c2a;}
-#left-panel{position:fixed;top:38px;left:14px;z-index:800;width:310px;max-height:calc(100vh - 50px);overflow-y:auto;overflow-x:hidden;}
-.panel-card{background:rgba(6,12,24,0.92);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;backdrop-filter:blur(10px);}
-.panel-title{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;}
-.panel-main-title{font-size:18px;font-weight:800;color:#fff;}
-.panel-main-sub{font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-top:4px;}
-.filter-select{width:100%;padding:9px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:8px;outline:none;}
-.stat-row{display:flex;gap:8px;margin-top:10px;}
-.stat-item{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
-.stat-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--green);}
-.stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-top:4px;}
-.api-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;}
-.api-dot{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;cursor:help;position:relative;}
-.api-dot span:first-child{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
-.api-dot.ok span:first-child{background:var(--green);}
-.api-dot.err span:first-child{background:var(--red);}
-.api-dot.loading span:first-child{background:var(--yellow);animation:blink 1s infinite;}
-.api-dot:hover::after{content:attr(data-freshness);position:absolute;left:100%;top:50%;transform:translateY(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:9px;white-space:nowrap;z-index:1000;margin-left:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
-.layer-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
-.layer-row:last-child{border-bottom:none;}
-.layer-label{display:flex;align-items:center;gap:7px;cursor:pointer;}
-.toggle-switch{position:relative;width:34px;height:18px;flex-shrink:0;}
-.toggle-switch input{opacity:0;width:0;height:0;}
-.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--bg3);border:1px solid var(--border);border-radius:18px;transition:0.3s;}
-.slider:before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--text-dim);border-radius:50%;transition:0.3s;}
-.toggle-switch input:checked+.slider{background:var(--green-dim);border-color:var(--green);}
-.toggle-switch input:checked+.slider:before{transform:translateX(16px);background:var(--green);}
-#info-panel{position:fixed;top:38px;right:14px;z-index:800;width:310px;max-height:calc(100vh - 50px);overflow-y:auto;transform:translateX(340px);transition:transform 0.35s;overflow-x:hidden;}
-#info-panel.open{transform:translateX(0);}
-.info-header{background:rgba(6,12,24,0.96);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;position:relative;backdrop-filter:blur(10px);}
-.info-loc-name{font-size:18px;font-weight:800;color:#fff;}
-.info-loc-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
-.info-close{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.info-close:hover{color:#fff;border-color:var(--red);}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;}
-.info-cell{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px;}
-.info-cell-label{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);}
-.info-cell-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);margin-top:3px;}
-.wiki-box{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:10px;font-size:11px;line-height:1.6;max-height:100px;overflow-y:auto;margin-top:8px;}
-.nearby-event-item{display:flex;gap:8px;align-items:flex-start;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;margin-bottom:5px;font-size:11px;cursor:pointer;}
-.nearby-event-item:hover{border-color:var(--green);}
-.nearby-event-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:2px;}
-.btn-streetview{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--green);border-radius:7px;color:var(--green);font-weight:700;cursor:pointer;margin-top:8px;}
-.btn-export{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--green);border-radius:7px;color:var(--green);font-weight:700;cursor:pointer;margin-top:8px;}
-.btn-geolocate{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--green);border-radius:7px;color:var(--green);font-weight:700;cursor:pointer;margin-top:8px;}
-#top-controls{position:fixed;top:38px;right:14px;z-index:801;display:flex;gap:7px;flex-wrap:wrap;}
-#top-controls.shifted{right:338px;}
-.ctrl-btn{padding:7px 14px;background:rgba(6,12,24,0.9);border:1px solid var(--border);border-radius:6px;color:var(--text);font-weight:700;cursor:pointer;font-size:11px;}
-.ctrl-btn:hover{border-color:var(--green);color:var(--green);}
-.ctrl-btn.active{background:var(--green-dim);border-color:var(--green);color:var(--green);}
-#eco-ticker{position:fixed;bottom:0;left:0;right:0;height:28px;background:rgba(6,12,24,0.96);border-top:1px solid var(--border);z-index:800;overflow:hidden;display:flex;align-items:center;}
-.ticker-wrap{display:flex;white-space:nowrap;animation:ticker 60s linear infinite;font-family:var(--mono);font-size:11px;gap:40px;align-items:center;}
-@keyframes ticker{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
-.t-item{display:flex;align-items:center;gap:6px;}
-.t-label{color:var(--text-dim);}
-.t-val{color:#fff;font-weight:600;}
-.t-up{color:var(--green);}
-.t-down{color:var(--red);}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:20000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
-.modal-overlay.active{display:flex;}
-.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;max-width:500px;width:92%;overflow:hidden;}
-.modal-head{background:var(--bg3);border-bottom:1px solid var(--border);padding:20px;text-align:center;}
-.modal-head h2{font-size:18px;font-weight:800;}
-.modal-head p{font-size:11px;color:var(--text-dim);margin-top:5px;font-family:var(--mono);}
-.modal-body{padding:20px;}
-.source-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
-.source-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 10px;font-size:11px;}
-.source-item strong{color:var(--green);}
-.modal-foot{padding:16px 20px;}
-.modal-foot button{width:100%;padding:11px;border-radius:7px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--green-dim);color:var(--green);}
-#aurora-legend{position:fixed;bottom:60px;right:20px;z-index:700;background:rgba(6,12,24,0.92);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;display:none;min-width:180px;}
-#aurora-legend.active{display:block;}
-.aurora-gradient{width:100%;height:12px;border-radius:6px;background:linear-gradient(90deg,rgba(0,255,0,0.1),rgba(0,255,255,0.4),rgba(138,43,226,0.7),rgba(255,0,255,0.95));margin:7px 0;}
-#loading{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:30000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
-.spin{width:40px;height:40px;border:3px solid rgba(0,229,160,0.15);border-top-color:var(--green);border-radius:50%;animation:spin 0.9s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.load-title{font-size:13px;font-weight:700;letter-spacing:0.05em;}
-.load-sources{font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:center;line-height:1.8;}
-.watermark{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:700;color:rgba(0,229,160,0.2);pointer-events:none;z-index:700;}
-.solar-panel{background:linear-gradient(135deg,#1a1f3a,#0f1428);border:1px solid rgba(0,200,150,0.3);border-radius:10px;padding:15px;color:#fff;margin-top:10px;display:none;}
-.xray-indicator{font-size:20px;font-weight:bold;padding:10px;border-radius:8px;text-align:center;margin:10px 0;background:rgba(0,0,0,0.3);border:2px solid;}
-.blackout-alert{padding:8px;border-radius:6px;font-weight:600;text-align:center;animation:pulse 2s infinite;margin:5px 0;}
-.solar-chart{width:100%;height:80px;background:rgba(0,0,0,0.3);border-radius:6px;margin:10px 0;position:relative;overflow:hidden;}
-.solar-chart canvas{width:100%;height:100%;}
-.aurora-probability{display:flex;justify-content:space-between;margin:10px 0;padding:8px;background:rgba(0,0,0,0.3);border-radius:6px;}
-.prob-item{text-align:center;flex:1;}
-.prob-value{font-size:20px;font-weight:bold;color:var(--green);}
-.prob-label{font-size:9px;color:var(--text-dim);margin-top:2px;}
-.accuracy-legend{display:flex;gap:12px;align-items:center;font-size:10px;color:var(--text-dim);margin-top:8px;padding:8px;background:rgba(17,30,51,0.5);border-radius:6px;}
-.legend-item{display:flex;align-items:center;gap:4px;}
-.legend-dot{width:8px;height:8px;border-radius:50%;}
-.webcam-link{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text);text-decoration:none;padding:8px;background:var(--bg3);border-radius:6px;transition:all 0.2s;margin-bottom:6px;}
-.webcam-link:hover{background:var(--bg2);transform:translateX(4px);}
-.toast{position:fixed;top:50px;right:20px;background:var(--bg3);border:1px solid var(--green);border-radius:8px;padding:12px 16px;z-index:10000;animation:slideIn 0.3s ease;}
-@keyframes slideIn{from{transform:translateX(400px);}to{transform:translateX(0);}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Monitor público de acontecimentos, clima, atividade sísmica, auroras e condições globais em tempo quase real.">
+  <title>Seu Mundo Neste Momento</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<div id="status-bar">
-  <div class="s-left">
-    <div class="s-item"><div class="live-dot"></div><span class="live-label">AO VIVO</span></div>
-    <div class="s-item">🕒 <span class="s-val" id="utc-clock">--:--:-- UTC</span></div>
-    <div class="s-item">📡 <span class="s-val" id="conn-status">Inicializando...</span></div>
-    <div class="s-item">⏱ Refresh: <span class="s-val" id="next-refresh">5:00</span></div>
-  </div>
-  <div class="s-right"><div class="s-item">VDMTX • v6.1</div></div>
-</div>
-
-<div id="map"></div>
-<div id="globe-container"></div>
-
-<div id="left-panel">
-  <div class="panel-card">
-    <div class="panel-main-title">SEU MUNDO NESTE MOMENTO</div>
-    <div class="panel-main-sub">MONITORAMENTO GLOBAL EM TEMPO REAL</div>
-    <div style="margin-top:12px;">
-      <select class="filter-select" id="typeFilter" onchange="filterData()">
-        <option value="all">🌐 Todos os Eventos</option>
-        <option value="earthquake">📉 Terremotos</option>
-        <option value="tsunami">🌊 Tsunamis</option>
-        <option value="wildfire">🔥 Incêndios</option>
-        <option value="conflict">️ Conflitos</option>
-        <option value="disaster">💥 Desastres</option>
-        <option value="volcano"> Vulcões</option>
-        <option value="health">🦠 Saúde/Surtos</option>
-        <option value="solar">️ Solar (NOAA)</option>
-        <option value="weather">🌤 Clima</option>
-      </select>
-      <select class="filter-select" id="severityFilter" onchange="filterData()">
-        <option value="all"> Qualquer Nível</option>
-        <option value="critical">🔴 Crítico</option>
-        <option value="high">🟠 Alto</option>
-        <option value="medium">🟡 Médio</option>
-      </select>
-    </div>
-    <div class="stat-row">
-      <div class="stat-item"><span class="stat-num" id="count-events">—</span><span class="stat-lbl" id="lbl-events">Eventos</span></div>
-      <div class="stat-item"><span class="stat-num" id="count-critical" style="color:var(--red)">—</span><span class="stat-lbl" id="lbl-critical">Críticos</span></div>
-    </div>
-    <button class="btn-geolocate" onclick="showNearbyEvents()">📍 Eventos Perto de Mim</button>
-    <button class="btn-export" onclick="exportEvents('csv')">📥 Exportar CSV</button>
-    <div class="accuracy-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div><span>Alta</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffd43b"></div><span>Média</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff8c2a"></div><span>Baixa</span></div>
-      <div style="margin-left:auto;cursor:pointer;color:var(--green);font-weight:600;" onclick="openAccuracyModal()">ℹ️ Precisão</div>
-    </div>
-    <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:8px;" id="last-update">Aguardando...</div>
-  </div>
-
-  <div class="solar-panel" id="solar-panel">
-    <div class="panel-title" style="color:#00ccff;margin-bottom:8px;">☀️ ATIVIDADE SOLAR</div>
-    <div class="xray-indicator" id="xray-level">Classe A - Normal</div>
-    <div class="blackout-alert" id="blackout-status" style="background:rgba(0,255,0,0.2);color:#00e5a0;">✓ Sem Blackout</div>
-    <div class="solar-chart"><canvas id="xray-canvas"></canvas></div>
-    <div class="aurora-probability">
-      <div class="prob-item"><div class="prob-value" id="kp-index">—</div><div class="prob-label">Kp Index</div></div>
-      <div class="prob-item"><div class="prob-value" id="aurora-north">—</div><div class="prob-label">Aurora N</div></div>
-      <div class="prob-item"><div class="prob-value" id="aurora-south">—</div><div class="prob-label">Aurora S</div></div>
-    </div>
-  </div>
-
-  <div class="panel-card">
-    <div class="panel-title" id="lbl-sources">📡 Status das Fontes</div>
-    <div class="api-grid">
-      <div class="api-dot loading" id="api-usgs" data-freshness=""><span></span>USGS</div>
-      <div class="api-dot loading" id="api-firms" data-freshness=""><span></span>NASA FIRMS</div>
-      <div class="api-dot loading" id="api-reliefweb" data-freshness=""><span></span>ReliefWeb</div>
-      <div class="api-dot loading" id="api-noaa" data-freshness=""><span></span>NOAA</div>
-      <div class="api-dot loading" id="api-meteo" data-freshness=""><span></span>Open-Meteo</div>
-    </div>
-  </div>
-
-  <div class="panel-card">
-    <div class="panel-title" id="lbl-layers">🗺 Camadas Avançadas</div>
-    <div class="layer-row">
-      <label class="layer-label" for="lyr-wind">💨 Vento Global ⚠️</label>
-      <label class="toggle-switch"><input type="checkbox" id="lyr-wind" onchange="toggleWind()"><span class="slider"></span></label>
-    </div>
-    <div class="layer-row">
-      <label class="layer-label" for="lyr-aurora">🌌 Aurora Boreal/Austral ✅</label>
-      <label class="toggle-switch"><input type="checkbox" id="lyr-aurora" onchange="toggleAurora()"><span class="slider"></span></label>
-    </div>
-    <div class="layer-row">
-      <label class="layer-label" for="lyr-solar">☀️ Dados Solares NOAA ✅</label>
-      <label class="toggle-switch"><input type="checkbox" id="lyr-solar" onchange="toggleSolar()"><span class="slider"></span></label>
-    </div>
-    <div class="layer-row">
-      <label class="layer-label" for="lyr-flights">✈️ Voos (OpenSky) ⚠️</label>
-      <label class="toggle-switch"><input type="checkbox" id="lyr-flights" onchange="toggleFlights()"><span class="slider"></span></label>
-    </div>
-    <div class="layer-row">
-      <label class="layer-label" for="lyr-iss">🛰️ ISS ✅</label>
-      <label class="toggle-switch"><input type="checkbox" id="lyr-iss" checked onchange="toggleISS()"><span class="slider"></span></label>
-    </div>
-  </div>
-</div>
-
-<div id="top-controls">
-  <button class="ctrl-btn active" id="btn-pt" onclick="setLang('pt')">🇧🇷 Português</button>
-  <button class="ctrl-btn" id="btn-en" onclick="setLang('en')">🇺🇸 English</button>
-  <button class="ctrl-btn" id="btn-globe" onclick="toggleGlobe()">🌐 Globo 3D</button>
-  <button class="ctrl-btn" onclick="openAbout()">ℹ️ Sobre</button>
-</div>
-
-<div id="info-panel">
-  <div class="info-header">
-    <div class="info-close" onclick="closePanel()">✕</div>
-    <div class="info-loc-name" id="info-name">—</div>
-    <div class="info-loc-sub" id="info-sub">—</div>
-    <div class="info-grid">
-      <div class="info-cell"><div class="info-cell-label" id="lbl-temp">🌡 TEMPERATURA</div><div class="info-cell-val" id="val-temp">—</div></div>
-      <div class="info-cell"><div class="info-cell-label" id="lbl-wind">💨 VENTO</div><div class="info-cell-val" id="val-wind">—</div></div>
-      <div class="info-cell"><div class="info-cell-label" id="lbl-curr">💰 MOEDA</div><div class="info-cell-val" id="val-curr">—</div></div>
-      <div class="info-cell"><div class="info-cell-label" id="lbl-time">🕐 HORA LOCAL</div><div class="info-cell-val" id="val-time">—</div></div>
-      <div class="info-cell"><div class="info-cell-label" id="lbl-cond">🌤 CONDIÇÃO</div><div class="info-cell-val" id="val-cond">—</div></div>
-      <div class="info-cell"><div class="info-cell-label" id="lbl-hum">💧 UMIDADE</div><div class="info-cell-val" id="val-hum">—</div></div>
-    </div>
-    <div class="wiki-box" id="wiki-text">Buscando...</div>
-    <button class="btn-streetview" id="btn-street" onclick="openStreet()">📸 Abrir no Street View</button>
-  </div>
-  <div class="panel-card">
-    <div class="panel-title" id="lbl-nearby">📍 Eventos Próximos</div>
-    <div id="nearby-list"><div style="font-size:11px;color:var(--text-dim);" id="txt-no-event">Nenhum evento próximo.</div></div>
-  </div>
-</div>
-
-<div id="aurora-legend">
-  <div style="font-weight:700;margin-bottom:4px;"> Oval Auroral</div>
-  <div>Kp: <strong id="kp-val" style="color:var(--green);">—</strong>/9</div>
-  <div class="aurora-gradient"></div>
-</div>
-
-<div id="eco-ticker"><div class="ticker-wrap" id="ticker-content"></div></div>
-
-<div class="modal-overlay" id="accuracy-modal" onclick="if(event.target===this)closeAccuracyModal()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head"><h2>📊 Precisão dos Dados</h2><p>Como interpretar a acurácia das informações</p></div>
-    <div class="modal-body" style="text-align:left;font-size:12px;line-height:1.6;">
-      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#00e5a0;"></div><strong style="color:#00e5a0;">✅ Alta Precisão (95%+)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Terremotos: ±5km • Atividade Solar: Satélite GOES • ISS: Posição em tempo real • Aurora: Modelo NOAA</div></div>
-      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ffd43b;"></div><strong style="color:#ffd43b;">⚠️ Média Precisão (80-90%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Incêndios: ±1km • Clima: ±3°C • Vulcões: Atividade reportada</div></div>
-      <div style="margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ff8c2a;"></div><strong style="color:#ff8c2a;"> Baixa Precisão (50-75%)</strong></div><div style="padding-left:18px;color:var(--text-dim);font-size:11px;">Conflitos: Coordenadas aproximadas • Surtos: Dados por país • Delay: 1-7 dias</div></div>
-      <div style="background:rgba(255,212,59,0.1);border:1px solid rgba(255,212,59,0.3);border-radius:6px;padding:10px;margin-top:10px;"><strong style="color:#ffd43b;font-size:11px;">⚠️ Importante:</strong><span style="color:var(--text-dim);font-size:11px;">Nenhum dado é "tempo real absoluto". Use como awareness situacional, não para decisões críticas.</span></div>
-    </div>
-    <div class="modal-foot"><button onclick="closeAccuracyModal()">Entendido ✓</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="about-modal" onclick="if(event.target===this)closeAbout()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <img src="https://raw.githubusercontent.com/Vdmtx/seu-mundo-neste-momento/main/logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX Logo" style="max-width:150px;margin-bottom:15px;">
-      <h2>SEU MUNDO NESTE MOMENTO</h2>
-      <p>Monitoramento global • v6.1</p>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:12px;">Dados 100% reais de fontes oficiais. 100% gratuito. 100% funcional.</p>
-      <div class="source-grid">
-        <div class="source-item"><strong>USGS</strong><br>Terremotos</div>
-        <div class="source-item"><strong>NASA FIRMS</strong><br>Incêndios</div>
-        <div class="source-item"><strong>ReliefWeb</strong><br>Conflitos</div>
-        <div class="source-item"><strong>NOAA/SWPC</strong><br>Solar/Aurora</div>
-        <div class="source-item"><strong>Open-Meteo</strong><br>Clima Global</div>
-        <div class="source-item"><strong>wheretheiss.at</strong><br>ISS Tracking</div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Seu Mundo Neste Momento">
+        <span class="brand-mark"><i></i></span>
+        <span><strong>SEU MUNDO</strong><small>NESTE MOMENTO</small></span>
+      </a>
+      <div class="status-ribbon">
+        <span id="online-dot" class="live-dot"></span><b id="system-status">SISTEMA ONLINE</b>
+        <span class="divider"></span><span><b id="source-count">0</b> FONTES RESPONDENDO</span>
+        <span class="divider"></span><span id="sync-age">SINCRONIZANDO</span>
       </div>
-    </div>
-    <div class="modal-foot"><button onclick="closeAbout()">Entendido ✓</button></div>
+      <div class="top-actions">
+        <button id="about-button" type="button">SOBRE</button>
+      </div>
+      <time id="utc-clock" class="clock"></time>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar left-panel">
+        <section class="manifesto">
+          <p class="eyebrow">MONITOR GLOBAL / AO VIVO</p>
+          <h1>O PLANETA<br><em>NÃO PAUSA.</em></h1>
+          <p>Ocorrências públicas reunidas em uma leitura única, com origem, horário e localização verificáveis.</p>
+        </section>
+
+        <nav id="category-list" class="categories" aria-label="Categorias"></nav>
+
+        <section class="control-block">
+          <p class="eyebrow">FILTRO DE RISCO</p>
+          <label class="switch-row"><span>Somente alta prioridade</span><input id="priority-toggle" type="checkbox"><i></i></label>
+        </section>
+
+        <section class="control-block layers">
+          <p class="eyebrow">CAMADAS OPERACIONAIS</p>
+          <label><input id="temperature-toggle" type="checkbox"><span>Temperatura global</span></label>
+          <label><input id="aurora-toggle" type="checkbox"><span>Auroras norte e sul</span></label>
+          <label><input id="iss-toggle" type="checkbox" checked><span>Posição da ISS</span></label>
+        </section>
+
+        <section class="control-block sources-block">
+          <p class="eyebrow">INTEGRIDADE DAS FONTES</p>
+          <div id="source-list" class="source-list"><span class="muted">Consultando fontes públicas…</span></div>
+        </section>
+      </aside>
+
+      <section class="stage">
+        <div class="stage-head">
+          <div><p class="eyebrow">VISÃO ORBITAL / DADOS PÚBLICOS</p><strong><span id="visible-count">0</span> OCORRÊNCIAS VISÍVEIS</strong></div>
+          <div class="stage-actions">
+            <button id="locate-button" type="button">⌖ PERTO DE MIM</button>
+            <button id="view-button" type="button">MAPA 2D</button>
+            <button id="refresh-button" type="button">↻ ATUALIZAR</button>
+          </div>
+        </div>
+        <div class="visual-shell">
+          <div id="globe"></div>
+          <div id="map" hidden></div>
+          <div id="visual-loading" class="visual-loading"><span></span><strong>INICIALIZANDO CARTOGRAFIA</strong></div>
+          <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+          <div id="coordinate-readout" class="coordinate-readout">LAT — · LON —</div>
+          <div id="legend" class="legend"><i class="critical"></i>Crítico <i class="high"></i>Alto <i class="medium"></i>Médio <i class="low"></i>Baixo</div>
+        </div>
+        <div class="layer-status">
+          <span id="temperature-status">TEMPERATURA: DESATIVADA</span>
+          <span id="aurora-status">AURORA: DESATIVADA</span>
+          <span id="iss-status">ISS: AGUARDANDO</span>
+        </div>
+      </section>
+
+      <aside class="right-panel">
+        <section id="spotlight" class="spotlight">
+          <div class="spot-index"><strong>01</strong><span id="risk-chip">AGUARDANDO</span></div>
+          <p class="eyebrow">EM DESTAQUE</p>
+          <h2 id="spot-title">CONSULTANDO FONTES</h2>
+          <p id="spot-location" class="location">—</p>
+          <p id="spot-summary" class="summary">Os dados reais aparecerão quando as fontes responderem.</p>
+          <div class="metric-row"><span>INDICADOR PRINCIPAL</span><strong id="spot-metric">—</strong></div>
+          <dl><div><dt>FONTE</dt><dd id="spot-source">—</dd></div><div><dt>ATUALIZAÇÃO</dt><dd id="spot-time">—</dd></div><div><dt>COORDENADAS</dt><dd id="spot-coordinates">—</dd></div></dl>
+          <a id="spot-link" class="source-link" href="#" target="_blank" rel="noopener" hidden>ABRIR FONTE ↗</a>
+        </section>
+
+        <section class="space-card">
+          <div><p class="eyebrow">CLIMA ESPACIAL / NOAA</p><h3>MAGNETISMO DA TERRA</h3></div>
+          <div class="space-grid">
+            <div><span>Kp</span><strong id="kp-value">—</strong><small id="kp-scale">—</small></div>
+            <div><span>Bz</span><strong id="bz-value">—</strong><small>nT</small></div>
+            <div><span>VENTO SOLAR</span><strong id="wind-value">—</strong><small>km/s</small></div>
+          </div>
+          <p id="space-time" class="microcopy">Aguardando NOAA SWPC.</p>
+        </section>
+
+        <section class="feed-card">
+          <div class="section-title"><div><p class="eyebrow">PULSO GLOBAL</p><h3>ÚLTIMAS LEITURAS</h3></div><span id="feed-count">0</span></div>
+          <div id="event-feed" class="event-feed"></div>
+        </section>
+
+        <section class="intel-card">
+          <div class="section-title"><div><p class="eyebrow">INTELIGÊNCIA REGIONAL</p><h3>NOTÍCIAS E CÂMERAS</h3></div></div>
+          <form id="intel-form" class="intel-form"><input id="region-input" placeholder="Estado, província ou país" autocomplete="off"><button>BUSCAR</button></form>
+          <div id="weather-card" class="weather-card" hidden></div>
+          <div id="news-list" class="news-list"><p class="muted">Selecione um evento ou pesquise uma região.</p></div>
+          <a id="camera-link" class="camera-link" href="https://www.windy.com/-Webcams/webcams" target="_blank" rel="noopener">LOCALIZAR CÂMERAS PÚBLICAS ↗</a>
+          <p class="disclaimer">Notícias não são confirmação independente. Câmeras podem ter atraso, sair do ar ou não cobrir o ponto exato do evento.</p>
+        </section>
+      </aside>
+    </main>
+
+    <footer><span><i></i> LEITURA DEMONSTRATIVA COM DADOS PÚBLICOS</span><span id="footer-sync">ÚLTIMA SINCRONIA —</span><span>VDMTX / CONCEITO 2026</span></footer>
   </div>
-</div>
 
-<div id="loading">
-  <div class="spin"></div>
-  <div class="load-title">BUSCANDO DADOS REAIS</div>
-  <div class="load-sources">Conectando APIs...</div>
-</div>
+  <dialog id="about-dialog"><button id="about-close" aria-label="Fechar">×</button><p class="eyebrow">SOBRE ESTE MONITOR</p><h2>Tempo quase real, não ficção.</h2><p>“Ao vivo” significa a leitura mais recente publicada por cada fonte. Terremotos, clima espacial, eventos naturais, temperatura, notícias e posição orbital têm ritmos diferentes. O painel mostra horário, origem e estado de cada fonte; quando algo falha, informa a falha em vez de inventar dados.</p><p>O GitHub Pages é estático. As leituras são feitas diretamente de APIs públicas e usam o último arquivo consolidado pelo GitHub Actions como contingência.</p></dialog>
 
-<div class="watermark">DESENVOLVIDO POR VDMTX</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/globe.gl"></script>
-<script>
-// ==================== CONFIGURAÇÕES GLOBAIS ====================
-const TYPE_ICONS = {earthquake:'📉',tsunami:'🌊',conflict:'⚔️',health:'🦠',wildfire:'🔥',volcano:'🌋',disaster:'',weather:'☁️',solar:'☀️'};
-const TYPE_COLORS = {earthquake:'#ff8c2a',tsunami:'#00ccff',conflict:'#ff3b5c',health:'#22c55e',wildfire:'#ff4444',volcano:'#ff6b35',disaster:'#a855f7',weather:'#38b6ff',solar:'#fbbf24'};
-const TYPE_ACCURACY = {earthquake:{level:'high',label:'Alta (±5km)'},tsunami:{level:'high',label:'Alta'},wildfire:{level:'medium',label:'Média (±1km)'},conflict:{level:'low',label:'Baixa (regional)'},disaster:{level:'medium',label:'Média'},volcano:{level:'medium',label:'Média'},health:{level:'low',label:'Baixa (país)'},solar:{level:'high',label:'Alta'},weather:{level:'medium',label:'Média'}};
-const TXT = {
-  pt:{temp:'🌡 TEMPERATURA',wind:'💨 VENTO',curr:'💰 MOEDA',time:'🕐 HORA LOCAL',cond:' CONDIÇÃO',hum:'💧 UMIDADE',street:'📸 Abrir no Street View',searching:'⟳ Buscando...',wait:'Aguarde...',noEvent:'Nenhum evento próximo.',calc:'Calculando...',error:'Erro',notFound:'Não encontrado',noSummary:'Sem resumo.',wikiError:'Erro Wikipedia.',events:'Eventos',critical:'Críticos',updated:'Atualizado:',sources:'📡 Status das Fontes',layers:'🗺 Camadas',nearby:' Eventos Próximos',freshness:'Atualizado há ',minutes:' min',justNow:'agora',notifyTitle:'🔔 Novo Evento',notifyEnabled:'Notificações ativadas!',geoEnabled:'Eventos próximos ativados!',exportCSV:'Exportado CSV!',exportJSON:'Exportado JSON!'},
-  en:{temp:' TEMPERATURE',wind:'💨 WIND',curr:'💰 CURRENCY',time:'🕐 LOCAL TIME',cond:'🌤 CONDITION',hum:'💧 HUMIDITY',street:'📸 Open in Street View',searching:'⟳ Searching...',wait:'Please wait...',noEvent:'No nearby events.',calc:'Calculating...',error:'Error',notFound:'Not found',noSummary:'No summary.',wikiError:'Wikipedia error.',events:'Events',critical:'Critical',updated:'Updated:',sources:'📡 API Status',layers:'🗺 Layers',nearby:'📍 Nearby Events',freshness:'Updated ',minutes:' min ago',justNow:'just now',notifyTitle:'🔔 New Event',notifyEnabled:'Notifications enabled!',geoEnabled:'Nearby events enabled!',exportCSV:'CSV exported!',exportJSON:'JSON exported!'}
-};
-const WX = {pt:{0:'Céu Limpo',1:'Limpo',2:'Parc. Nublado',3:'Nublado',45:'Nevoeiro',51:'Garoa',61:'Chuva',71:'Neve',95:'Tempestade'},en:{0:'Clear',1:'Clear',2:'Partly Cloudy',3:'Cloudy',45:'Fog',51:'Drizzle',61:'Rain',71:'Snow',95:'Thunderstorm'}};
-const CURRENCY = {'Brazil':'BRL','USA':'USD','UK':'GBP','Germany':'EUR','France':'EUR','Japan':'JPY','China':'CNY','India':'INR','Russia':'RUB','Australia':'AUD','Canada':'CAD','Mexico':'MXN','Nigeria':'NGN','Haiti':'HTG','Sudan':'SDG','Yemen':'YER','Ukraine':'UAH','Israel':'ILS','Syria':'SYP','Myanmar':'MMK','Egypt':'EGP','South Africa':'ZAR','Turkey':'TRY','South Korea':'KRW'};
-
-// ==================== ESTADO GLOBAL ====================
-let map,clickMarker,clickLat=0,clickLng=0,currentLang='pt',forexRates={},allEvents=[],markerGroup,issMarker,issInterval,windLayer,auroraLayer,flightLayer,apiOk={},lightTiles,darkTiles,currentTile;
-let refreshTimer=null,isTabVisible=true,lastDataHash='',lastEventIds=new Set();
-let wsOpenSky=null,globe=null,isGlobeMode=false,windParticles=[],windAnimationId=null;
-const sourceTimestamps={};
-
-// ==================== UTILITÁRIOS ====================
-function calculateDistance(lat1,lon1,lat2,lon2){
-  const R=6371;
-  const dLat=(lat2-lat1)*Math.PI/180;
-  const dLon=(lon2-lon1)*Math.PI/180;
-  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-  const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  return R*c;
-}
-
-function showToast(msg){
-  const toast=document.createElement('div');
-  toast.className='toast';
-  toast.textContent=msg;
-  document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(),3000);
-}
-
-function downloadBlob(data,filename,type){
-  const blob=new Blob([data],{type});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function setApiStatus(id,st){
-  const el=document.getElementById('api-'+id);
-  if(el){
-    el.className='api-dot '+st;
-    apiOk[id]=(st==='ok');
-    if(st==='ok'){
-      sourceTimestamps[id]=Date.now();
-      updateFreshnessDisplay(el,id);
-    }
-  }
-}
-
-function updateFreshnessDisplay(el,source){
-  const t=TXT[currentLang];
-  const ts=sourceTimestamps[source];
-  if(!ts){el.setAttribute('data-freshness','');return;}
-  const mins=Math.floor((Date.now()-ts)/60000);
-  el.setAttribute('data-freshness',mins<1?t.justNow:`${t.freshness}${mins}${t.minutes}`);
-}
-
-// ==================== NOTIFICAÇÕES PUSH ====================
-async function requestNotificationPermission(){
-  if(!('Notification' in window)) return false;
-  if(Notification.permission==='granted') return true;
-  if(Notification.permission!=='denied'){
-    const permission=await Notification.requestPermission();
-    return permission==='granted';
-  }
-  return false;
-}
-
-function sendNotification(event){
-  if(Notification.permission!=='granted') return;
-  if(lastEventIds.has(event.id)) return;
-  
-  new Notification(`${TXT[currentLang].notifyTitle}: ${event.title}`,{
-    body:event.desc,
-    tag:event.id,
-    requireInteraction:false
-  });
-  
-  lastEventIds.add(event.id);
-  setTimeout(()=>lastEventIds.delete(event.id),300000);
-}
-
-// ==================== GEOLOCALIZAÇÃO ====================
-async function showNearbyEvents(radiusKm=100){
-  if(!navigator.geolocation){
-    alert('Geolocalização não suportada');
-    return;
-  }
-  
-  try{
-    const pos=await new Promise((resolve,reject)=>{
-      navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:10000,maximumAge:0});
-    });
-    
-    const {latitude,longitude}=pos.coords;
-    const nearby=allEvents.filter(ev=>calculateDistance(latitude,longitude,ev.lat,ev.lon)<=radiusKm);
-    
-    if(nearby.length===0){
-      showToast(`Nenhum evento num raio de ${radiusKm}km`);
-      return;
-    }
-    
-    map.setView([latitude,longitude],6);
-    nearby.forEach(ev=>{
-      const marker=L.marker([ev.lat,ev.lon]).addTo(map);
-      marker.bindPopup(`<strong>${ev.title}</strong><br>${ev.desc}`);
-      setTimeout(()=>map.removeLayer(marker),10000);
-    });
-    
-    showToast(`${nearby.length} eventos num raio de ${radiusKm}km`);
-  }catch(err){
-    alert('Erro: '+err.message);
-  }
-}
-
-// ==================== EXPORTAÇÃO ====================
-function exportEvents(format='csv'){
-  if(allEvents.length===0){
-    showToast('Nenhum evento para exportar');
-    return;
-  }
-  
-  const data=allEvents.map(e=>({
-    id:e.id,tipo:e.type,titulo:e.title,descricao:e.desc,
-    latitude:e.lat,longitude:e.lon,severidade:e.severity,
-    fonte:e.source,data:e.date.toISOString(),precisao:e.accuracy?.label||'N/A'
-  }));
-  
-  if(format==='csv'){
-    const headers=Object.keys(data[0]).join(',');
-    const rows=data.map(row=>Object.values(row).map(v=>`"${v}"`).join(',')).join('\n');
-    downloadBlob(headers+'\n'+rows,'eventos_'+new Date().toISOString().split('T')[0]+'.csv','text/csv');
-    showToast(TXT[currentLang].exportCSV);
-  }else{
-    downloadBlob(JSON.stringify(data,null,2),'eventos_'+new Date().toISOString().split('T')[0]+'.json','application/json');
-    showToast(TXT[currentLang].exportJSON);
-  }
-}
-
-// ==================== APIs DE DADOS ====================
-async function fetchEarthquakes(){
-  setApiStatus('usgs','loading');
-  try{
-    const r=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
-    if(!r.ok) throw new Error();
-    const d=await r.json();
-    setApiStatus('usgs','ok');
-    
-    return d.features.map(eq=>({
-      id:'eq_'+eq.id,type:'earthquake',
-      severity:eq.properties.mag>=6.5?'critical':eq.properties.mag>=5.5?'high':'medium',
-      lat:eq.geometry.coordinates[1],lon:eq.geometry.coordinates[0],
-      title:'Terremoto M'+eq.properties.mag.toFixed(1),
-      source:'USGS',url:eq.properties.url,
-      desc:'Magnitude '+eq.properties.mag.toFixed(1),
-      date:new Date(eq.properties.time),
-      accuracy:TYPE_ACCURACY.earthquake
-    }));
-  }catch(e){
-    setApiStatus('usgs','err');
-    return [];
-  }
-}
-
-async function fetchWildfires(){
-  setApiStatus('firms','loading');
-  try{
-    const r=await fetch('https://firms.modaps.eosdis.nasa.gov/api/country/csv/936d3757982079f97173827824d022e4/VIIRS_SNPP/BRA/1');
-    if(!r.ok) throw new Error();
-    const txt=await r.text();
-    const rows=txt.trim().split('\n').slice(1).filter(r=>r.trim());
-    setApiStatus('firms','ok');
-    
-    return rows.slice(0,50).map(row=>{
-      const c=row.split(',');
-      const lat=parseFloat(c[0]),lon=parseFloat(c[1]),conf=parseFloat(c[8])||0;
-      if(isNaN(lat)||isNaN(lon)) return null;
-      return{
-        id:'fire_'+lat.toFixed(3),type:'wildfire',
-        severity:conf>80?'critical':conf>60?'high':'medium',
-        lat,lon,title:'Incêndio Florestal',source:'NASA FIRMS',
-        desc:'Confiança: '+conf.toFixed(0)+'%',
-        date:new Date(),accuracy:TYPE_ACCURACY.wildfire
-      };
-    }).filter(Boolean);
-  }catch(e){
-    setApiStatus('firms','err');
-    return [];
-  }
-}
-
-async function fetchConflicts(){
-  setApiStatus('reliefweb','loading');
-  try{
-    const r=await fetch('https://api.reliefweb.int/v1/disasters?appname=mundoagora&limit=10&sort[]=date:desc&filter[field]=status&filter[value][]=ongoing');
-    if(!r.ok) throw new Error();
-    const d=await r.json();
-    setApiStatus('reliefweb','ok');
-    
-    return(d.data||[]).map(item=>{
-      const f=item.fields;
-      const country=f.primary_country?.name||'Global';
-      return{
-        id:'rw_'+item.id,type:'conflict',severity:'critical',
-        lat:0,lon:0,location:country,
-        title:f.name||'Crisis',source:'ReliefWeb',
-        url:`https://reliefweb.int/disaster/${item.id}`,
-        desc:'Crise ativa',date:new Date(),
-        accuracy:TYPE_ACCURACY.conflict
-      };
-    });
-  }catch(e){
-    setApiStatus('reliefweb','err');
-    return [];
-  }
-}
-
-async function fetchWeather(){
-  setApiStatus('meteo','loading');
-  try{
-    const cities=[{name:'São Paulo',lat:-23.55,lon:-46.63},{name:'New York',lat:40.71,lon:-74.01}];
-    const lats=cities.map(c=>c.lat).join(','),lngs=cities.map(c=>c.lng).join(',');
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m&timezone=auto`);
-    if(!r.ok) throw new Error();
-    const d=await r.json();
-    setApiStatus('meteo','ok');
-    
-    return(Array.isArray(d)?d:[d]).map((item,i)=>{
-      const c=item.current||{};
-      const city=cities[i];
-      return{
-        id:'wx_'+city.name,type:'weather',
-        severity:c.temperature_2m>40?'high':'medium',
-        lat:city.lat,lon:city.lon,location:city.name,
-        title:city.name+': '+(c.temperature_2m??'--')+'°C',
-        source:'Open-Meteo',desc:'Clima',
-        date:new Date(),accuracy:TYPE_ACCURACY.weather
-      };
-    }).filter(Boolean);
-  }catch(e){
-    setApiStatus('meteo','err');
-    return [];
-  }
-}
-
-// ==================== RENDER ====================
-function renderMarkers(){
-  markerGroup.clearLayers();
-  const typeF=document.getElementById('typeFilter').value;
-  const sevF=document.getElementById('severityFilter').value;
-  let shown=0,crit=0;
-  
-  allEvents.forEach(ev=>{
-    if(typeF!=='all'&&ev.type!==typeF) return;
-    if(sevF!=='all'&&ev.severity!==sevF) return;
-    if(ev.severity==='critical') crit++;
-    
-    const iconHtml=`<div class="marker-container">
-      <div class="marker-pulse" style="border-color:${TYPE_COLORS[ev.type]}"></div>
-      <div class="marker-icon" style="border-color:${TYPE_COLORS[ev.type]}">${TYPE_ICONS[ev.type]||'📍'}</div>
-    </div>`;
-    
-    const icon=L.divIcon({className:'custom-div-icon',html:iconHtml,iconSize:[32,32],iconAnchor:[16,16]});
-    const m=L.marker([ev.lat,ev.lon],{icon});
-    
-    m.bindPopup(`<div style="font-weight:700">${ev.title}</div><div style="font-size:11px;color:var(--text-dim)">${ev.desc}</div><div style="font-size:9px;margin-top:4px">Source: ${ev.source}</div>`);
-    m.on('click',()=>openPanel(ev.lat,ev.lon,ev.type));
-    markerGroup.addLayer(m);
-    shown++;
-    
-    if(ev.severity==='critical') sendNotification(ev);
-  });
-  
-  document.getElementById('count-events').textContent=shown;
-  document.getElementById('count-critical').textContent=crit;
-  document.getElementById('last-update').textContent='Atualizado: '+new Date().toLocaleTimeString('pt-BR')+' • '+shown+' eventos';
-}
-
-// ==================== LOAD ====================
-async function loadAllData(){
-  document.getElementById('conn-status').textContent='Carregando...';
-  
-  try{
-    const[quakes,fires,conflicts,weather]=await Promise.all([
-      fetchEarthquakes(),fetchWildfires(),fetchConflicts(),fetchWeather()
-    ]);
-    
-    allEvents=[...quakes,...fires,...conflicts,...weather];
-    renderMarkers();
-    
-    const active=[quakes,fires,conflicts,weather].filter(a=>a.length>0).length;
-    document.getElementById('conn-status').textContent=`${active} fontes ativas`;
-  }catch(e){
-    console.error(e);
-    document.getElementById('conn-status').textContent='Modo offline';
-  }
-  
-  document.getElementById('loading').style.display='none';
-}
-
-// ==================== UI ====================
-function setLang(lang){
-  currentLang=lang;
-  document.getElementById('btn-pt').classList.toggle('active',lang==='pt');
-  document.getElementById('btn-en').classList.toggle('active',lang==='en');
-  renderMarkers();
-}
-
-async function toggleGlobe(){
-  const btn=document.getElementById('btn-globe');
-  const mapEl=document.getElementById('map');
-  const globeEl=document.getElementById('globe-container');
-  
-  if(isGlobeMode){
-    if(globe){
-      if(globe._renderer?.domElement?.parentNode){
-        globe._renderer.domElement.parentNode.removeChild(globe._renderer.domElement);
-      }
-      globe=null;
-    }
-    globeEl.style.display='none';
-    mapEl.style.display='block';
-    btn.classList.remove('active');
-    isGlobeMode=false;
-    setTimeout(()=>map?.invalidateSize(),100);
-    return;
-  }
-  
-  btn.classList.add('active');
-  mapEl.style.display='none';
-  globeEl.style.display='block';
-  globeEl.innerHTML='';
-  
-  if(!window.Globe){ alert('Erro: Globe.gl não carregou'); return; }
-  
-  const globeData=allEvents.map(e=>({
-    lat:e.lat,lng:e.lon,color:TYPE_COLORS[e.type]||'#aaa',
-    altitude:e.type==='conflict'?0.3:e.type==='earthquake'?0.15:0.1,
-    radius:e.type==='earthquake'?0.9:e.type==='conflict'?0.8:0.5,
-    title:e.title,desc:e.desc,source:e.source
-  }));
-  
-  globe=Globe()
-    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-    .backgroundColor('#060c18')
-    .width(globeEl.clientWidth)
-    .height(globeEl.clientHeight)
-    .pointsData(globeData)
-    .pointColor('color')
-    .pointAltitude('altitude')
-    .pointRadius('radius')
-    .onPointClick(d=>{
-      if(d.lat&&d.lng){
-        toggleGlobe();
-        setTimeout(()=>{map?.invalidateSize();},200);
-      }
-    })(globeEl);
-  
-  globe.controls().autoRotate=true;
-  globe.controls().autoRotateSpeed=0.2;
-  isGlobeMode=true;
-}
-
-// ==================== PAINEL INFO ====================
-async function openPanel(lat,lng,type=''){
-  if(isGlobeMode) toggleGlobe();
-  clickLat=lat; clickLng=lng;
-  
-  document.getElementById('info-panel').classList.add('open');
-  document.getElementById('top-controls').classList.add('shifted');
-  
-  const t=TXT[currentLang];
-  document.getElementById('info-name').textContent=`${lat.toFixed(2)}, ${lng.toFixed(2)}`;
-  document.getElementById('info-sub').textContent='Carregando...';
-  
-  if(clickMarker) map.removeLayer(clickMarker);
-  clickMarker=L.marker([lat,lng]).addTo(map);
-  
-  try{
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m&timezone=auto`);
-    const d=await r.json();
-    document.getElementById('val-temp').textContent=(d.current?.temperature_2m??'--')+'°C';
-    document.getElementById('info-sub').textContent=d.timezone||'Local';
-  }catch(e){
-    document.getElementById('info-sub').textContent='Localização';
-  }
-  
-  if(['earthquake','tsunami','conflict','volcano'].includes(type)){
-    document.getElementById('wiki-text').innerHTML='<div style="color:var(--green);"> Evento crítico - verifique câmeras locais no YouTube</div>';
-  }
-}
-
-function closePanel(){
-  document.getElementById('info-panel').classList.remove('open');
-  document.getElementById('top-controls').classList.remove('shifted');
-  if(clickMarker){ map.removeLayer(clickMarker); clickMarker=null; }
-}
-
-function openStreet(){
-  if(clickLat&&clickLng){
-    window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${clickLat},${clickLng}`,'_blank');
-  }
-}
-
-function openAbout(){ document.getElementById('about-modal').classList.add('active'); }
-function closeAbout(){ document.getElementById('about-modal').classList.remove('active'); }
-function openAccuracyModal(){ document.getElementById('accuracy-modal').classList.add('active'); }
-function closeAccuracyModal(){ document.getElementById('accuracy-modal').classList.remove('active'); }
-function filterData(){ renderMarkers(); }
-
-// ==================== CAMADAS - FUNCIONALIDADES 100% FUNCIONAIS ====================
-
-// ✅ ISS - Posição em tempo real
-async function startISS(){
-  if(!document.getElementById('lyr-iss').checked) return;
-  
-  async function update(){
-    if(!document.getElementById('lyr-iss').checked) return;
-    try{
-      const r=await fetch('https://api.wheretheiss.at/v1/satellites/25544');
-      const d=await r.json();
-      if(!issMarker){
-        issMarker=L.marker([d.latitude,d.longitude]).addTo(map);
-        issMarker.bindPopup('🛰 ISS<br>Alt: '+(d.altitude?.toFixed(0)||'~420')+' km');
-      }else{
-        issMarker.setLatLng([d.latitude,d.longitude]);
-      }
-      setApiStatus('iss','ok');
-    }catch(e){
-      setApiStatus('iss','err');
-    }
-  }
-  
-  await update();
-  issInterval=setInterval(update,5000);
-}
-
-function toggleISS(){
-  const on=document.getElementById('lyr-iss').checked;
-  if(on) startISS();
-  else{
-    if(issInterval) clearInterval(issInterval);
-    if(issMarker){ map.removeLayer(issMarker); issMarker=null; }
-  }
-}
-
-// ✅ DADOS SOLARES NOAA - Medição direta por satélite
-async function toggleSolar(){
-  const on=document.getElementById('lyr-solar').checked;
-  const panel=document.getElementById('solar-panel');
-  panel.style.display=on?'block':'none';
-  if(!on) return;
-  
-  try{
-    const r=await fetch('https://services.swpc.noaa.gov/products/goes-xray-flux.json');
-    const data=await r.json();
-    const vals=data.slice(-48).map(d=>d[1]);
-    const max=Math.max(...vals);
-    const flux=vals[vals.length-1];
-    
-    let cls,color,alert;
-    if(flux<1e-5){cls='Classe A';color='#00e5a0';alert='✓ Normal';}
-    else if(flux<1e-4){cls='Classe B';color='#88ff00';alert='✓ Baixo';}
-    else if(flux<1e-3){cls='Classe C';color='#ffff00';alert=' Moderado';}
-    else if(flux<1e-2){cls='Classe M';color='#ffa500';alert=' Alto';}
-    else{cls='Classe X';color='#ff0000';alert='🚨 EXTREMO';}
-    
-    document.getElementById('xray-level').textContent=`${cls} - ${flux.toExponential(2)} W/m²`;
-    document.getElementById('xray-level').style.borderColor=color;
-    document.getElementById('xray-level').style.color=color;
-    document.getElementById('blackout-status').textContent=alert;
-    
-    const canvas=document.getElementById('xray-canvas');
-    const ctx=canvas.getContext('2d');
-    canvas.width=canvas.offsetWidth;
-    canvas.height=canvas.offsetHeight;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.strokeStyle=color;
-    ctx.lineWidth=2;
-    ctx.beginPath();
-    vals.forEach((v,i)=>{
-      const x=(i/(vals.length-1))*canvas.width;
-      const y=canvas.height-(v/max)*(canvas.height-20)-10;
-      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-    });
-    ctx.stroke();
-    
-    const kpRes=await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-    const kpData=await kpRes.json();
-    const kp=kpData[kpData.length-1][1];
-    document.getElementById('kp-index').textContent=kp.toFixed(1);
-    document.getElementById('aurora-north').textContent=Math.min(95,kp*12).toFixed(0)+'%';
-    document.getElementById('aurora-south').textContent=Math.min(95,kp*10).toFixed(0)+'%';
-    
-    setApiStatus('noaa','ok');
-  }catch(e){
-    setApiStatus('noaa','err');
-    panel.style.display='none';
-  }
-}
-
-// ✅ AURORA BOREAL - Baseado em dados NOAA reais
-async function toggleAurora(){
-  const on=document.getElementById('lyr-aurora').checked;
-  if(auroraLayer){map.removeLayer(auroraLayer);auroraLayer=null;}
-  if(!on) return;
-  
-  try{
-    const r=await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-    const data=await r.json();
-    const kp=data[data.length-1][1];
-    
-    document.getElementById('kp-val').textContent=kp.toFixed(1);
-    auroraLayer=L.layerGroup().addTo(map);
-    
-    [67,-67].forEach(baseLat=>{
-      const factor=baseLat<0?-1:1;
-      const ovalLat=baseLat-(kp*2.5*0.5*factor);
-      
-      for(let lng=-180;lng<=180;lng+=8){
-        const lat=ovalLat+Math.sin(lng*Math.PI/180)*4;
-        const prob=Math.max(0,100-((9-kp)*12));
-        
-        if(prob>10){
-          const color=prob>70?'#ff00ff':prob>40?'#8a2be2':'#00ffcc';
-          auroraLayer.addLayer(L.circleMarker([lat,lng],{
-            radius:3+prob/25,
-            fillColor:color,
-            color:color,
-            weight:0,
-            fillOpacity:prob/160
-          }).bindPopup(`Probabilidade: ${prob.toFixed(0)}%`));
-        }
-      }
-    });
-    
-    document.getElementById('aurora-legend').classList.add('active');
-  }catch(e){
-    document.getElementById('aurora-legend').classList.remove('active');
-  }
-}
-
-// ==================== CAMADAS - FUNCIONALIDADES COM LIMITAÇÕES ====================
-
-// ⚠️ VOOS OPENSKY - Funciona mas com limitações
-async function toggleFlights(){
-  const on=document.getElementById('lyr-flights').checked;
-  
-  if(!on){
-    if(wsOpenSky){wsOpenSky.close();wsOpenSky=null;}
-    if(flightLayer){map.removeLayer(flightLayer);flightLayer=null;}
-    return;
-  }
-  
-  if(wsOpenSky) return;
-  
-  try{
-    const b=map.getBounds();
-    wsOpenSky=new WebSocket(
-      `wss://opensky-network.org/api/states/all?`+
-      `lamin=${b.getSouthWest().lat.toFixed(2)}&`+
-      `lomin=${b.getSouthWest().lng.toFixed(2)}&`+
-      `lamax=${b.getNorthEast().lat.toFixed(2)}&`+
-      `lomax=${b.getNorthEast().lng.toFixed(2)}`
-    );
-    
-    wsOpenSky.onmessage=e=>{
-      const d=JSON.parse(e.data);
-      if(!flightLayer) flightLayer=L.layerGroup().addTo(map);
-      flightLayer.clearLayers();
-      
-      (d.states||[]).slice(0,100).forEach(s=>{
-        const lon=s[5],lat=s[6],cs=(s[1]||'').trim();
-        if(!lat||!lon) return;
-        
-        const icon=L.divIcon({
-          className:'',
-          iconSize:[16,16],
-          iconAnchor:[8,8],
-          html:`<div style="transform:rotate(${(s[10]||0)}deg);font-size:13px;color:#38b6ff;">✈</div>`
-        });
-        
-        const m=L.marker([lat,lon],{icon});
-        if(cs) m.bindTooltip(cs);
-        flightLayer.addLayer(m);
-      });
-    };
-    
-    wsOpenSky.onclose=()=>{
-      wsOpenSky=null;
-      setTimeout(()=>{
-        if(document.getElementById('lyr-flights').checked) toggleFlights();
-      },5000);
-    };
-    
-  }catch(e){
-    console.warn('OpenSky: indisponível',e);
-    if(flightLayer){map.removeLayer(flightLayer);flightLayer=null;}
-  }
-}
-
-// ⚠️ VENTO GLOBAL - Partículas simuladas (NÃO é como Ventusky)
-async function toggleWind(){
-  const on=document.getElementById('lyr-wind').checked;
-  
-  if(windAnimationId){
-    cancelAnimationFrame(windAnimationId);
-    windAnimationId=null;
-  }
-  const canvas=document.querySelector('.wind-canvas');
-  if(canvas&&canvas.parentNode) canvas.parentNode.removeChild(canvas);
-  if(!on) return;
-  
-  const windCanvas=document.createElement('canvas');
-  windCanvas.className='wind-canvas';
-  map.getPanes().overlayPane.appendChild(windCanvas);
-  const ctx=windCanvas.getContext('2d');
-  
-  function resize(){
-    const s=map.getSize();
-    windCanvas.width=s.x;
-    windCanvas.height=s.y;
-  }
-  map.on('resize',resize);
-  resize();
-  
-  windParticles=[];
-  for(let i=0;i<500;i++){
-    windParticles.push({
-      lat:Math.random()*160-80,
-      lng:Math.random()*360-180,
-      speed:Math.random()*3+1,
-      dir:Math.random()*Math.PI*2,
-      age:0
-    });
-  }
-  
-  async function updateWindDirection(){
-    try{
-      const lats=[],lngs=[];
-      for(let lat=-60;lat<=60;lat+=30){
-        for(let lng=-150;lng<=150;lng+=30){
-          lats.push(lat);
-          lngs.push(lng);
-        }
-      }
-      
-      const res=await fetch(
-        `https://api.open-meteo.com/v1/forecast?`+
-        `latitude=${lats.join(',')}&`+
-        `longitude=${lngs.join(',')}&`+
-        `current=wind_speed_10m,wind_direction_10m&timezone=UTC`
-      );
-      const data=await res.json();
-      const items=Array.isArray(data)?data:[data];
-      
-      windParticles.forEach((p,i)=>{
-        const idx=Math.floor((p.lat+80)/30)*11+Math.floor((p.lng+180)/30);
-        if(items[idx]?.current){
-          p.dir=(items[idx].current.wind_direction_10m||0)*Math.PI/180;
-          p.speed=(items[idx].current.wind_speed_10m||10)/10;
-        }
-      });
-    }catch(e){}
-  }
-  
-  updateWindDirection();
-  setInterval(updateWindDirection,60000);
-  
-  function animate(){
-    ctx.clearRect(0,0,windCanvas.width,windCanvas.height);
-    
-    windParticles.forEach(p=>{
-      const pt=map.latLngToContainerPoint([p.lat,p.lng]);
-      if(pt.x<0||pt.x>windCanvas.width||pt.y<0||pt.y>windCanvas.height) return;
-      
-      const nLat=p.lat+Math.cos(p.dir)*p.speed*0.05;
-      const nLng=p.lng+Math.sin(p.dir)*p.speed*0.05;
-      const nPt=map.latLngToContainerPoint([nLat,nLng]);
-      
-      const ratio=Math.min(1,p.speed/5);
-      ctx.strokeStyle=`rgba(${100+155*ratio},${200-100*ratio},255,0.5)`;
-      ctx.lineWidth=1;
-      ctx.beginPath();
-      ctx.moveTo(pt.x,pt.y);
-      ctx.lineTo(nPt.x,nPt.y);
-      ctx.stroke();
-      
-      p.lat=nLat;
-      p.lng=nLng;
-      p.age++;
-      
-      if(p.lat<-85||p.lat>85||p.lng<-180||p.lng>180||p.age>100){
-        p.lat=Math.random()*160-80;
-        p.lng=Math.random()*360-180;
-        p.age=0;
-      }
-    });
-    
-    windAnimationId=requestAnimationFrame(animate);
-  }
-  
-  animate();
-}
-
-// ==================== FOREX ====================
-async function loadForex(){
-  try{
-    const r=await fetch('https://open.er-api.com/v6/latest/USD');
-    const d=await r.json();
-    if(d.rates) forexRates=d.rates;
-    
-    const items=[];
-    [['EUR','€'],['GBP','£'],['BRL','R$']].forEach(([c,s])=>{
-      if(forexRates[c]) items.push(`<span class="t-item"><span class="t-label">${s}${c}</span><span class="t-val">${forexRates[c].toFixed(3)}</span></span>`);
-    });
-    
-    document.getElementById('ticker-content').innerHTML=items.join(' • ')+(items.length?' • ':'');
-  }catch(e){}
-}
-
-// ==================== INIT ====================
-document.addEventListener('visibilitychange',()=>{
-  isTabVisible=!document.hidden;
-  if(isTabVisible){
-    if(refreshTimer) clearInterval(refreshTimer);
-    loadAllData();
-    refreshTimer=setInterval(loadAllData,300000);
-  }else{
-    if(refreshTimer) clearInterval(refreshTimer);
-  }
-});
-
-setInterval(()=>{
-  document.getElementById('utc-clock').textContent=new Date().toUTCString().split(' ')[4]+' UTC';
-},1000);
-
-let countdown=300;
-setInterval(()=>{
-  countdown--;
-  if(countdown<0) countdown=300;
-  document.getElementById('next-refresh').textContent=Math.floor(countdown/60)+':'+String(countdown%60).padStart(2,'0');
-},1000);
-
-window.addEventListener('DOMContentLoaded',async()=>{
-  setTimeout(()=>{
-    document.getElementById('loading').style.display='none';
-  },5000);
-  
-  try{
-    const granted=await requestNotificationPermission();
-    if(granted) showToast(TXT[currentLang].notifyEnabled);
-  }catch(e){ console.warn('Notificações:',e); }
-  
-  try{
-    map=L.map('map',{zoomControl:false}).setView([20,10],2);
-    L.control.zoom({position:'bottomright'}).addTo(map);
-    
-    lightTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
-    darkTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19});
-    currentTile=lightTiles.addTo(map);
-    markerGroup=L.layerGroup().addTo(map);
-    map.on('click',e=>openPanel(e.latlng.lat,e.latlng.lng,''));
-  }catch(e){
-    console.error('Mapa:',e);
-    document.getElementById('loading').style.display='none';
-  }
-  
-  if(isTabVisible){
-    loadAllData();
-    loadForex();
-    startISS();
-    refreshTimer=setInterval(loadAllData,300000);
-  }
-  
-  setInterval(loadForex,120000);
-});
-</script>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/globe.gl@2.41.12/dist/globe.gl.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
 </body>
 </html>
