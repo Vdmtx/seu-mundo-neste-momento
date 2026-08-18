@@ -13,7 +13,9 @@ permissions:
   id-token: write
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # A deployment already in progress must finish; cancelling it can leave the
+  # Pages environment locked and make the next deployment fail with HTTP 400.
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
