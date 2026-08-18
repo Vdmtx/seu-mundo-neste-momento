@@ -13,6 +13,9 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Imagem diária VIIRS do NASA GIBS, carregada somente quando solicitada.
 - 4.589 estados, províncias e subdivisões do Natural Earth, representados por pontos administrativos carregados sob demanda; um clique filtra o cache recente de notícias e oferece busca externa quando não há correspondência.
 - Clima pontual, diretório externo de câmeras públicas e alertas críticos locais do navegador enquanto o site está aberto.
+- Indicador de frescor por fonte, distinguindo horário de publicação e horário da última consulta do monitor.
+- Ficha detalhada de cada ocorrência com categoria, indicador, fonte, horário, coordenadas e link original.
+- Compartilhamento contextual com fonte e horário, usando o menu nativo do aparelho ou cópia para a área de transferência.
 
 ## Fontes e intervalos
 

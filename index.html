@@ -118,7 +118,10 @@
           <p id="spot-summary" class="summary" data-i18n="spot.initial">Os dados reais aparecerão quando as fontes responderem.</p>
           <div class="metric-row"><span data-i18n="spot.indicator">INDICADOR PRINCIPAL</span><strong id="spot-metric">—</strong></div>
           <dl><div><dt data-i18n="spot.source">FONTE</dt><dd id="spot-source">—</dd></div><div><dt data-i18n="spot.updated">ATUALIZAÇÃO</dt><dd id="spot-time">—</dd></div><div><dt data-i18n="spot.coordinates">COORDENADAS</dt><dd id="spot-coordinates">—</dd></div></dl>
-          <a id="spot-link" class="source-link" href="#" target="_blank" rel="noopener noreferrer" hidden data-i18n="spot.open">ABRIR FONTE ↗</a>
+          <div class="spot-actions">
+            <a id="spot-link" class="source-link" href="#" target="_blank" rel="noopener noreferrer" hidden data-i18n="spot.open">ABRIR FONTE ↗</a>
+            <button id="event-detail-button" class="source-link detail-trigger" type="button" hidden data-i18n="eventDetail.open">VER FICHA COMPLETA</button>
+          </div>
         </section>
 
         <section class="space-card">
@@ -172,6 +175,28 @@
     <a class="about-signature" href="https://github.com/Vdmtx" target="_blank" rel="noopener noreferrer" aria-label="VDMTX no GitHub"><img src="logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX"><span data-i18n="about.signature">CONCEITO, DIREÇÃO VISUAL E DESENVOLVIMENTO</span></a>
   </dialog>
 
+  <dialog id="event-dialog" class="event-dialog">
+    <button id="event-close" aria-label="Fechar">×</button>
+    <p class="eyebrow" data-i18n="eventDetail.eyebrow">FICHA DA OCORRÊNCIA</p>
+    <div class="event-detail-heading"><span id="event-detail-risk">—</span><h2 id="event-detail-title">—</h2></div>
+    <p id="event-detail-location" class="event-detail-location">—</p>
+    <p id="event-detail-summary" class="event-detail-summary">—</p>
+    <dl class="event-detail-grid">
+      <div><dt data-i18n="eventDetail.category">CATEGORIA</dt><dd id="event-detail-category">—</dd></div>
+      <div><dt data-i18n="eventDetail.indicator">INDICADOR</dt><dd id="event-detail-metric">—</dd></div>
+      <div><dt data-i18n="eventDetail.source">FONTE</dt><dd id="event-detail-source">—</dd></div>
+      <div><dt data-i18n="eventDetail.published">PUBLICADO</dt><dd id="event-detail-time">—</dd></div>
+      <div><dt data-i18n="eventDetail.coordinates">COORDENADAS</dt><dd id="event-detail-coordinates">—</dd></div>
+      <div><dt data-i18n="eventDetail.checked">CONSULTA DO MONITOR</dt><dd id="event-detail-checked">—</dd></div>
+    </dl>
+    <p class="event-detail-notice" data-i18n="eventDetail.notice">Esta ficha reproduz dados da fonte indicada. Ela não substitui autoridades ou serviços de emergência.</p>
+    <div class="event-actions">
+      <a id="event-detail-link" class="source-link" href="#" target="_blank" rel="noopener noreferrer" data-i18n="eventDetail.openSource">ABRIR FONTE ORIGINAL ↗</a>
+      <button id="event-share-button" type="button" data-i18n="eventDetail.share">COMPARTILHAR COM FONTE E HORÁRIO</button>
+    </div>
+    <p id="event-share-status" class="event-share-status" aria-live="polite"></p>
+  </dialog>
+
   <dialog id="news-dialog" class="news-dialog">
     <button id="news-close" aria-label="Fechar">×</button>
     <p class="eyebrow" data-i18n="news.preview">PRÉVIA DA NOTÍCIA</p>
@@ -186,10 +211,10 @@
     <button id="analytics-accept" type="button" data-i18n="consent.allow">PERMITIR</button>
     <button id="analytics-reject" type="button" data-i18n="consent.reject">RECUSAR</button>
   </aside>
-  <script src="i18n.js?v=2"></script>
+  <script src="i18n.js?v=3"></script>
 
   <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js" integrity="sha384-fS13P48RBFel+cPUp5960AhzvtEr64LerQ00neZuM+Hi/VDxxemdQnN7IcWPYvPb" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

@@ -25,12 +25,13 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&'
 function safeUrl(value) { try { const url = new URL(String(value)); return ['http:', 'https:'].includes(url.protocol) ? url.href : '#'; } catch { return '#'; } }
 function timeoutFetch(url, options = {}, ms = 15000) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), ms); return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer)); }
 async function json(url, ms = 15000) { const response = await timeoutFetch(url, { headers: { Accept: 'application/json' } }, ms); if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }
-function source(id, label, ok, count = 0, message = '') { state.sources.set(id, { id, label, ok, count, message, checkedAt: new Date().toISOString() }); renderSources(); }
+function source(id, label, ok, count = 0, message = '', publishedAt = null, staleAfterMs = null) { state.sources.set(id, { id, label, ok, count, message, publishedAt, staleAfterMs, checkedAt: new Date().toISOString() }); renderSources(); }
 function riskForQuake(magnitude) { return magnitude >= 6.5 ? 'critical' : magnitude >= 5.5 ? 'high' : magnitude >= 4.5 ? 'medium' : 'low'; }
 function naturalCategory(raw = '') { const text = raw.toLowerCase(); if (text.includes('wildfire')) return 'wildfires'; if (text.includes('storm') || text.includes('cyclone') || text.includes('severe')) return 'storms'; if (text.includes('volcano')) return 'volcanoes'; if (text.includes('flood')) return 'floods'; return 'other'; }
 function naturalRisk(category, date) { const hours = (Date.now() - new Date(date).getTime()) / 36e5; if (category === 'volcanoes' || category === 'storms') return hours < 48 ? 'high' : 'medium'; if (category === 'wildfires' || category === 'floods') return hours < 72 ? 'medium' : 'low'; return 'low'; }
 function fmtTime(value, withDate = false) { const date = new Date(value); if (Number.isNaN(+date)) return '—'; return new Intl.DateTimeFormat(window.i18n.locale(), withDate ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } : { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(date) + ' UTC'; }
 function timeAgo(value) { const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000)); const relative = new Intl.RelativeTimeFormat(window.i18n.locale(), { numeric: 'always', style: 'narrow' }); if (seconds < 60) return relative.format(-seconds, 'second'); if (seconds < 3600) return relative.format(-Math.floor(seconds / 60), 'minute'); return relative.format(-Math.floor(seconds / 3600), 'hour'); }
+function sourceFreshness(item) { const publishedDate = new Date(item.publishedAt); const hasPublication = item.publishedAt && !Number.isNaN(+publishedDate); const reference = hasPublication ? item.publishedAt : item.checkedAt; const age = Date.now() - new Date(reference).getTime(); const stale = item.ok && item.staleAfterMs != null && Number.isFinite(age) && age > item.staleAfterMs; return { stale, text: `${t(hasPublication ? 'sources.published' : 'sources.checked')} ${timeAgo(reference)}` }; }
 function tableLast(raw) { if (!Array.isArray(raw) || !raw.length) return null; if (raw[0] && typeof raw[0] === 'object' && !Array.isArray(raw[0])) return raw.reduce((latest, row) => !latest || new Date(row.time_tag || 0) > new Date(latest.time_tag || 0) ? row : latest, null); if (raw.length < 2 || !Array.isArray(raw[0])) return null; const headers = raw[0]; for (let index = raw.length - 1; index > 0; index--) if (Array.isArray(raw[index])) return Object.fromEntries(headers.map((key, column) => [key, raw[index][column]])); return null; }
 function num(value) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; }
 function utcTimestamp(value) { const text = String(value || '').trim(); if (!text) return new Date().toISOString(); const normalized = /(Z|[+-]\d\d:?\d\d)$/i.test(text) ? text : `${text}Z`; const date = new Date(normalized); return Number.isNaN(+date) ? new Date().toISOString() : date.toISOString(); }
@@ -44,10 +45,10 @@ async function loadSnapshot() {
     state.snapshot = next;
     state.airQuality = next.airQuality || [];
     state.news = next.news || [];
-    source('gdacs', 'GDACS', next.sources?.gdacs === 'fulfilled', next.events.filter(event => event.source === 'GDACS').length, t('sources.snapshot15'));
-    source('tsunami', 'NOAA TSUNAMI', next.sources?.tsunamiPaaq === 'fulfilled' || next.sources?.tsunamiPheb === 'fulfilled', next.events.filter(event => /^NOAA PA|^NOAA PH/.test(event.source)).length, t('sources.activeOnly'));
-    source('air', 'OPEN-METEO AR', state.airQuality.length > 0, state.airQuality.length, t('sources.grid15'));
-    source('news-cache', 'GOOGLE NEWS RSS', state.news.length > 0, state.news.length, t('sources.newsCache'));
+    source('gdacs', 'GDACS', next.sources?.gdacs === 'fulfilled', next.events.filter(event => event.source === 'GDACS').length, t('sources.snapshot15'), next.generatedAt, 45 * 60000);
+    source('tsunami', 'NOAA TSUNAMI', next.sources?.tsunamiPaaq === 'fulfilled' || next.sources?.tsunamiPheb === 'fulfilled', next.events.filter(event => /^NOAA PA|^NOAA PH/.test(event.source)).length, t('sources.activeOnly'), next.generatedAt, 45 * 60000);
+    source('air', 'OPEN-METEO AR', state.airQuality.length > 0, state.airQuality.length, t('sources.grid15'), next.generatedAt, 45 * 60000);
+    source('news-cache', 'GOOGLE NEWS RSS', state.news.length > 0, state.news.length, t('sources.newsCache'), next.generatedAt, 45 * 60000);
   } catch { if (!state.snapshot) state.snapshot = null; }
 }
 
@@ -65,7 +66,7 @@ async function loadWorld() {
       metric: `M ${num(feature.properties.mag)?.toFixed(1) ?? '—'}`, timestamp: new Date(feature.properties.time).toISOString(), source: 'USGS',
       lat: feature.geometry.coordinates[1], lon: feature.geometry.coordinates[0], url: feature.properties.url
     })));
-    source('usgs', 'USGS', true, rows.length);
+    source('usgs', 'USGS', true, rows.length, '', rows[0]?.properties?.time ? new Date(rows[0].properties.time).toISOString() : null);
   } else source('usgs', 'USGS', false, 0, tasks[0].reason?.message);
   if (tasks[1].status === 'fulfilled') {
     const rows = (tasks[1].value.events || []).flatMap(item => {
@@ -73,7 +74,7 @@ async function loadWorld() {
       const category = naturalCategory(item.categories?.[0]?.title); if (category === 'earthquakes') return [];
       return [{ id: `eonet-${item.id}`, category, severity: naturalRisk(category, geometry.date), title: t({ wildfires: 'event.wildfire', storms: 'event.storm', volcanoes: 'event.volcano', floods: 'event.flood', other: 'event.other' }[category]), location: item.title, summary: item.description || t('event.eonetSummary'), metric: geometry.magnitudeValue ? `${geometry.magnitudeValue} ${geometry.magnitudeUnit || ''}` : t('event.active'), timestamp: geometry.date, source: `NASA EONET${item.sources?.[0]?.id ? ' / ' + item.sources[0].id : ''}`, lat: geometry.coordinates[1], lon: geometry.coordinates[0], url: item.sources?.[0]?.url || item.link }];
     });
-    events.push(...rows); source('eonet', 'NASA EONET', true, rows.length);
+    events.push(...rows); source('eonet', 'NASA EONET', true, rows.length, '', rows[0]?.timestamp || null);
   } else source('eonet', 'NASA EONET', false, 0, tasks[1].reason?.message);
   if (!events.length && state.snapshot?.events?.length) { events = state.snapshot.events; source('snapshot', 'SNAPSHOT ACTIONS', true, events.length, 'Contingência'); }
   state.events = dedupeEvents(events).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -90,11 +91,11 @@ async function loadIss() {
   try {
     const data = await json(API.iss, 9000);
     state.iss = { lat: data.latitude, lon: data.longitude, altitude: data.altitude, velocity: data.velocity, timestamp: new Date(data.timestamp * 1000).toISOString() };
-    addIssTrail(state.iss); source('iss', 'ISS / WTIA', true, 1);
+    addIssTrail(state.iss); source('iss', 'ISS / WTIA', true, 1, '', state.iss.timestamp, 60000);
     $('#iss-status').textContent = `ISS: ${state.iss.lat.toFixed(2)}°, ${state.iss.lon.toFixed(2)}° · ${Math.round(state.iss.altitude)} KM`;
   } catch (error) {
     const fallback = state.snapshot?.iss;
-    if (fallback) { state.iss = fallback; addIssTrail(fallback); source('iss', 'ISS / SNAPSHOT', true, 1, 'Contingência'); }
+    if (fallback) { state.iss = fallback; addIssTrail(fallback); source('iss', 'ISS / SNAPSHOT', true, 1, 'Contingência', fallback.timestamp, 30 * 60000); }
     else source('iss', 'ISS / WTIA', false, 0, error.message);
     $('#iss-status').textContent = fallback ? t('iss.snapshot') : t('iss.unavailable');
   }
@@ -108,12 +109,12 @@ async function loadSpace() {
   const plasmaRow = results[2].status === 'fulfilled' ? tableLast(results[2].value) : null;
   let kp = num(kpRow?.Kp ?? kpRow?.kp), bz = num(magRow?.bz_gsm ?? magRow?.bz), wind = num(plasmaRow?.proton_speed ?? plasmaRow?.speed), time = kpRow?.time_tag || magRow?.time_tag || plasmaRow?.time_tag || new Date().toISOString();
   if (kp == null && state.snapshot?.space) ({ kp, bz, wind, time } = state.snapshot.space);
-  state.space = { kp, bz, wind, time }; source('noaa-kp', 'NOAA KP', kp != null, kp == null ? 0 : 1); source('solar-wind', 'NOAA VENTO SOLAR', bz != null || wind != null, [bz, wind].filter(value => value != null).length);
+  state.space = { kp, bz, wind, time }; source('noaa-kp', 'NOAA KP', kp != null, kp == null ? 0 : 1, '', time, 30 * 60000); source('solar-wind', 'NOAA VENTO SOLAR', bz != null || wind != null, [bz, wind].filter(value => value != null).length, '', time, 30 * 60000);
   const scale = kpScale(kp); $('#kp-value').textContent = kp == null ? '—' : kp.toFixed(1); $('#kp-scale').textContent = `${scale[0]} · ${scale[1]}`; $('#bz-value').textContent = bz == null ? '—' : bz.toFixed(1); $('#wind-value').textContent = wind == null ? '—' : Math.round(wind); $('#space-time').textContent = t('space.latest', { time: fmtTime(time, true) });
   if (results[3].status === 'fulfilled') {
     const raw = results[3].value;
     state.aurora = (raw.coordinates || []).flatMap(point => { const rawLon = num(point[0]), lat = num(point[1]), intensity = num(point[2]); if (rawLon == null || lat == null || intensity == null || intensity < 3) return []; const lon = rawLon > 180 ? rawLon - 360 : rawLon; return Math.abs(Math.round(lat)) % 2 || Math.abs(Math.round(lon)) % 2 ? [] : [{ lat, lon, intensity }]; });
-    source('ovation', 'NOAA OVATION', true, state.aurora.length);
+    source('ovation', 'NOAA OVATION', true, state.aurora.length, '', raw['Observation Time'] || raw['Forecast Time'] || null, 90 * 60000);
   } else { state.aurora = state.snapshot?.aurora || []; source('ovation', 'NOAA OVATION', state.aurora.length > 0, state.aurora.length, results[3].reason?.message); }
   $('#aurora-status').textContent = state.showAurora ? t('layer.auroraCells', { count: state.aurora.length }) : t('status.auroraOff'); renderGlobeData();
 }
@@ -145,10 +146,31 @@ function displayEventTitle(event) {
   return event.title;
 }
 function renderCategories() { $('#category-list').innerHTML = categories.map(([id, code, labelKey]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (['nuclear', 'hazmat'].includes(id) && count === 0) return ''; return `<button class="category ${state.category === id ? 'active' : ''}" data-category="${id}"><span class="code">${code}</span><span>${esc(t(labelKey))}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
-function renderSources() { const list = [...state.sources.values()]; $('#source-list').innerHTML = list.length ? list.map(item => `<div class="source-row ${item.ok ? 'ok' : ''}" title="${esc(item.message || '')}"><span><i></i>${esc(item.label)}</span><b>${item.ok ? esc(t('sources.ok', { count: item.count })) : esc(t('sources.fail'))}</b></div>`).join('') : `<span class="muted">${esc(t('sources.loading'))}</span>`; const ok = list.filter(item => item.ok).length; $('#source-count').textContent = ok; $('#online-dot').className = `live-dot ${ok === 0 ? 'offline' : ok < list.length ? 'partial' : ''}`; $('#system-status').textContent = ok === 0 ? t('system.offline') : ok < list.length ? t('system.partial') : t('system.online'); }
+function renderSources() { const list = [...state.sources.values()]; const decorated = list.map(item => ({ ...item, freshness: sourceFreshness(item) })); $('#source-list').innerHTML = decorated.length ? decorated.map(item => `<div class="source-row ${item.ok ? 'ok' : ''} ${item.freshness.stale ? 'stale' : ''}" title="${esc(item.message || '')}"><span><i></i><span>${esc(item.label)}<small>${esc(item.freshness.text)}${item.freshness.stale ? ` · ${esc(t('sources.stale'))}` : ''}</small></span></span><b>${item.ok ? esc(t('sources.ok', { count: item.count })) : esc(t('sources.fail'))}</b></div>`).join('') : `<span class="muted">${esc(t('sources.loading'))}</span>`; const healthy = decorated.filter(item => item.ok && !item.freshness.stale).length; $('#source-count').textContent = healthy; $('#online-dot').className = `live-dot ${healthy === 0 ? 'offline' : healthy < decorated.length ? 'partial' : ''}`; $('#system-status').textContent = healthy === 0 ? t('system.offline') : healthy < decorated.length ? t('system.partial') : t('system.online'); }
 function renderFeed() { const rows = filteredEvents().slice(0, 12); $('#visible-count').textContent = filteredEvents().length; $('#feed-count').textContent = rows.length; $('#event-feed').innerHTML = rows.length ? rows.map(event => `<button class="event-item ${state.selected === event.id ? 'active' : ''}" data-id="${esc(event.id)}"><i class="${event.severity}"></i><span><strong>${esc(displayEventTitle(event))}</strong><small>${esc(event.location)} · ${fmtTime(event.timestamp)}</small></span><span>${esc(event.metric)}</span></button>`).join('') : `<p class="muted" style="padding:18px">${esc(t('event.none'))}</p>`; document.querySelectorAll('.event-item').forEach(button => button.onclick = () => selectEvent(button.dataset.id)); }
-function selectEvent(id) { state.selected = id; const event = state.events.find(item => item.id === id); if (!event) return; renderSpotlight(event); renderFeed(); focusCoordinate(event.lat, event.lon, 1.6); loadWeather(event.lat, event.lon); loadNews(event.location, event.lat, event.lon); }
-function renderSpotlight(event) { if (!event) event = filteredEvents()[0]; if (!event) return; $('#risk-chip').textContent = t(`risk.${event.severity}`); $('#risk-chip').style.borderColor = severityColors[event.severity]; $('#risk-chip').style.color = severityColors[event.severity]; $('#spot-title').textContent = displayEventTitle(event).toUpperCase(); $('#spot-location').textContent = event.location; $('#spot-summary').textContent = event.summary; $('#spot-metric').textContent = event.metric; $('#spot-source').textContent = event.source; $('#spot-time').textContent = fmtTime(event.timestamp, true); $('#spot-coordinates').textContent = `${event.lat.toFixed(2)}, ${event.lon.toFixed(2)}`; const link = $('#spot-link'); const verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified; renderCoordinate(event.lat, event.lon); }
+function selectEvent(id, openDetails = true) { state.selected = id; const event = state.events.find(item => item.id === id); if (!event) return; renderSpotlight(event); renderFeed(); focusCoordinate(event.lat, event.lon, 1.6); loadWeather(event.lat, event.lon); loadNews(event.location, event.lat, event.lon); if (openDetails) openEventDetail(event); }
+function renderSpotlight(event) { if (!event) event = filteredEvents()[0]; if (!event) return; $('#risk-chip').textContent = t(`risk.${event.severity}`); $('#risk-chip').style.borderColor = severityColors[event.severity]; $('#risk-chip').style.color = severityColors[event.severity]; $('#spot-title').textContent = displayEventTitle(event).toUpperCase(); $('#spot-location').textContent = event.location; $('#spot-summary').textContent = event.summary; $('#spot-metric').textContent = event.metric; $('#spot-source').textContent = event.source; $('#spot-time').textContent = fmtTime(event.timestamp, true); $('#spot-coordinates').textContent = `${event.lat.toFixed(2)}, ${event.lon.toFixed(2)}`; const link = $('#spot-link'); const verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified; const details = $('#event-detail-button'); details.hidden = false; details.onclick = () => openEventDetail(event); renderCoordinate(event.lat, event.lon); }
+
+function eventCategoryLabel(event) { return t(categories.find(([id]) => id === event.category)?.[2] || 'cat.other'); }
+function openEventDetail(event) {
+  state.selected = event.id;
+  const risk = $('#event-detail-risk'); risk.textContent = t(`risk.${event.severity}`); risk.style.color = severityColors[event.severity];
+  $('#event-detail-title').textContent = displayEventTitle(event); $('#event-detail-location').textContent = event.location; $('#event-detail-summary').textContent = event.summary;
+  $('#event-detail-category').textContent = eventCategoryLabel(event); $('#event-detail-metric').textContent = event.metric; $('#event-detail-source').textContent = event.source;
+  $('#event-detail-time').textContent = fmtTime(event.timestamp, true); $('#event-detail-coordinates').textContent = `${event.lat.toFixed(4)}, ${event.lon.toFixed(4)}`; $('#event-detail-checked').textContent = state.updatedAt ? fmtTime(state.updatedAt, true) : '—';
+  const link = $('#event-detail-link'), verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified;
+  $('#event-share-status').textContent = ''; const dialog = $('#event-dialog'); if (!dialog.open) dialog.showModal();
+}
+async function shareSelectedEvent() {
+  const event = state.events.find(item => item.id === state.selected); if (!event) return;
+  const url = new URL(location.href); url.search = ''; url.searchParams.set('event', event.id);
+  const text = `${displayEventTitle(event)}\n${event.location}\n${event.metric} · ${fmtTime(event.timestamp, true)}\n${t('eventDetail.source')}: ${event.source}`;
+  const status = $('#event-share-status');
+  try {
+    if (navigator.share) await navigator.share({ title: displayEventTitle(event), text, url: url.href });
+    else { await navigator.clipboard.writeText(`${text}\n${url.href}`); status.textContent = t('eventDetail.copied'); }
+  } catch (error) { if (error.name !== 'AbortError') status.textContent = t('eventDetail.shareFailed'); }
+}
 
 let globe, map, baseMapLayer, satelliteLayer, regionLayer, issTrailLayer;
 let mapMarkers = [], environmentMarkers = [];
@@ -250,7 +272,7 @@ async function loadNews(term, lat = null, lon = null, country = '') {
   list.innerHTML = `<p class="muted">${esc(t('news.loading'))}</p>`; if (lat != null) $('#camera-link').href = `https://www.windy.com/-Webcams/webcams?lat=${lat}&lon=${lon}&zoom=8`;
   const query = [clean, cleanCountry].filter(Boolean).join(' '); const phrase = normalizedText(clean); const tokens = normalizedText(query).split(/\s+/).filter(token => token.length >= 3);
   const articles = state.news.map(article => { const haystack = normalizedText(`${article.title} ${article.domain || ''}`); const score = (phrase && haystack.includes(phrase) ? 8 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0); return { article, score }; }).filter(row => row.score > 0).sort((a, b) => b.score - a.score || new Date(b.article.seendate) - new Date(a.article.seendate)).slice(0, 18).map(row => row.article);
-  renderNews(articles, clean, query); source('news-cache', 'GOOGLE NEWS RSS', state.news.length > 0, state.news.length, t('sources.newsCache'));
+  renderNews(articles, clean, query); source('news-cache', 'GOOGLE NEWS RSS', state.news.length > 0, state.news.length, t('sources.newsCache'), state.snapshot?.generatedAt || null, 45 * 60000);
 }
 
 function setEnvironment(kind, active) {
@@ -322,11 +344,11 @@ function bind() {
   $('#locate-button').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(position => { focusCoordinate(position.coords.latitude, position.coords.longitude, 1.5); loadWeather(position.coords.latitude, position.coords.longitude); loadNews($('#region-input').placeholder, position.coords.latitude, position.coords.longitude); }, () => alert(t('alert.locationDenied'))) : alert(t('alert.locationUnavailable'));
   $('#intel-form').onsubmit = event => { event.preventDefault(); loadNews($('#region-input').value); };
   $('#notification-button').onclick = enableNotifications;
-  $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close(); $('#news-close').onclick = () => $('#news-dialog').close();
+  $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close(); $('#news-close').onclick = () => $('#news-dialog').close(); $('#event-close').onclick = () => $('#event-dialog').close(); $('#event-share-button').onclick = shareSelectedEvent;
   $('#language-select').onchange = event => window.i18n.set(event.target.value);
-  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); refreshLanguageUI(); loadWorld(); });
+  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); refreshLanguageUI(); loadWorld(); const selected = state.events.find(item => item.id === state.selected); if (selected && $('#event-dialog').open) openEventDetail(selected); });
 }
 function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
 async function refreshSnapshot() { await loadSnapshot(); await loadWorld(); if (state.showAir || state.showAurora) renderGlobeData(); }
-async function start() { bind(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { if (state.showDaylight) renderGlobeData(); }, 60000); }
+async function start() { bind(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
 start();
