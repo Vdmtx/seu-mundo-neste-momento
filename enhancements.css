@@ -258,3 +258,150 @@ html[data-theme="light"] .temperature-scale { border-color: rgba(16, 45, 49, .18
   .temperature-legend { top: 12px; right: 12px; width: min(230px, calc(100% - 24px)); }
   .temperature-readout { right: 12px; bottom: 12px; max-width: calc(100% - 24px); }
 }
+
+/* Mobile keeps the operational controls available without taking the map over. */
+@media (max-width: 900px) {
+  .risk-block,
+  .control-block.layers {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 14px;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .risk-block::-webkit-scrollbar,
+  .control-block.layers::-webkit-scrollbar,
+  .categories::-webkit-scrollbar,
+  .layer-status::-webkit-scrollbar { display: none; }
+
+  .risk-block .eyebrow,
+  .control-block.layers .eyebrow {
+    flex: 0 0 auto;
+    margin: 0 4px 0 0;
+    white-space: nowrap;
+  }
+
+  .risk-block .switch-row,
+  .control-block.layers label {
+    flex: 0 0 auto;
+    min-height: 40px;
+    margin: 0;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    background: rgba(10,20,27,.58);
+    white-space: nowrap;
+  }
+
+  .risk-block .switch-row { gap: 12px; }
+  .control-block.layers label { display: flex; }
+}
+
+@media (max-width: 620px) {
+  html, body { overflow-x: hidden; }
+  button, a, input, select, label { touch-action: manipulation; }
+
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .brand { min-width: 0; }
+  .brand > span:last-child { min-width: 0; }
+  .top-actions { gap: 4px; }
+  .top-actions button,
+  .language-control select,
+  .theme-button { min-height: 42px; }
+  #about-button { width: 42px; min-width: 42px; overflow: hidden; font-size: 0; }
+  #about-button::before { content: "ⓘ"; font-size: 16px; }
+
+  .manifesto { padding: 18px 14px 16px; }
+  .manifesto .eyebrow { margin-bottom: 8px; }
+  .manifesto h1 { font-size: 25px; }
+  .manifesto > p:last-child { margin-top: 10px; line-height: 1.45; }
+
+  .categories {
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .category { min-width: 124px; min-height: 44px; padding: 10px 13px; }
+
+  .risk-block,
+  .control-block.layers { padding: 8px 12px; }
+  .risk-block .eyebrow,
+  .control-block.layers .eyebrow { display: none; }
+  .risk-block .switch-row,
+  .control-block.layers label { min-height: 44px; }
+
+  .stage-head { padding: 10px 12px; }
+  .stage-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .stage-actions button { min-height: 44px; padding: 8px 5px; }
+  .visual-shell { height: 66svh; min-height: 360px; max-height: 620px; }
+  .coordinate-readout { left: 12px; bottom: 12px; }
+  .corner.tl, .corner.bl { left: 10px; }
+  .corner.tr, .corner.br { right: 10px; }
+
+  .layer-status {
+    min-height: 40px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 9px 12px;
+    scrollbar-width: none;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .leaflet-touch .leaflet-control-zoom a {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+  }
+
+  .event-item { min-height: 52px; padding: 14px; }
+  .event-item strong, .news-item strong { font-size: 11px; }
+  .event-item small, .news-item small { font-size: 9px; }
+  .news-list { padding: 0 14px; }
+  .news-item { min-height: 52px; padding: 13px 0; }
+
+  .intel-form { padding: 0 14px 12px; }
+  .intel-form input, .intel-form button { min-height: 44px; }
+  .weather-card { margin-right: 14px; margin-left: 14px; }
+  .camera-link { min-height: 44px; margin-right: 14px; margin-left: 14px; display: grid; place-items: center; }
+  .camera-link[type=button] { width: calc(100% - 28px); }
+  .disclaimer { margin-right: 14px; margin-left: 14px; font-size: 9px; }
+
+  dialog,
+  .about-dialog,
+  .event-dialog {
+    width: calc(100% - 20px);
+    max-height: 92dvh;
+    margin: auto;
+    padding: 28px 18px 22px;
+  }
+  dialog h2 { font-size: 23px; }
+  dialog > button:first-child { min-width: 42px; min-height: 42px; }
+
+  .analytics-consent {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: calc(100% - 20px);
+  }
+  .analytics-consent button { min-height: 44px; }
+}
+
+@media (max-width: 380px) {
+  .brand { gap: 8px; }
+  .brand small { display: none; }
+  .brand strong { font-size: 11px; }
+  .top-actions { padding-right: 4px; }
+  .language-control select { max-width: 50px; }
+  .stage-actions button { font-size: 7px; letter-spacing: .04em; }
+}
+
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+  .manifesto { display: none; }
+  .visual-shell { height: 76svh; min-height: 300px; }
+}
