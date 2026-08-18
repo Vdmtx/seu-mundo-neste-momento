@@ -16,7 +16,7 @@
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-3BHTT4DGNX"></script>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <div class="app-shell">
@@ -135,10 +135,29 @@
       </aside>
     </main>
 
-    <footer><span><i></i> LEITURA DEMONSTRATIVA COM DADOS PÚBLICOS</span><span id="footer-sync">ÚLTIMA SINCRONIA —</span><span>VDMTX / CONCEITO 2026</span></footer>
+    <footer><span><i></i> MONITOR INDEPENDENTE · DADOS PÚBLICOS</span><span id="footer-sync">ÚLTIMA SINCRONIA —</span><span>VDMTX / 2026</span></footer>
   </div>
 
-  <dialog id="about-dialog"><button id="about-close" aria-label="Fechar">×</button><p class="eyebrow">SOBRE ESTE MONITOR</p><h2>Tempo quase real, não ficção.</h2><p>“Ao vivo” significa a leitura mais recente publicada por cada fonte. Terremotos, desastres, tsunamis, clima espacial, auroras, qualidade do ar, temperatura, notícias e posição orbital têm ritmos diferentes. O painel mostra horário, origem e estado de cada fonte; quando algo falha, informa a falha em vez de inventar dados.</p><p>O GitHub Pages é estático. As leituras são feitas diretamente de APIs públicas e usam o último arquivo consolidado pelo GitHub Actions como contingência. A imagem de satélite é diária, as notícias dependem da cobertura jornalística e nenhuma câmera é tratada como confirmação independente.</p><p>Conflitos e incidentes nucleares, radiológicos ou biológicos só devem aparecer quando publicados por fontes civis ou autoridades reconhecidas. O monitor não calcula trajetória de armamentos, não prevê impacto de míssil e não atribui autoria sem confirmação oficial.</p></dialog>
+  <dialog id="about-dialog" class="about-dialog">
+    <button id="about-close" aria-label="Fechar">×</button>
+    <p class="eyebrow">SOBRE ESTE MONITOR</p>
+    <h2>Informação global, com fonte e contexto.</h2>
+    <p class="about-lead">Seu Mundo Neste Momento reúne dados públicos sobre acontecimentos naturais, condições ambientais, clima espacial e atividade humana em uma única visualização. O objetivo é facilitar o acesso à informação, não provocar medo nem antecipar conclusões.</p>
+    <h3>O que significa “tempo quase real”</h3>
+    <p>Cada instituição publica em um ritmo diferente. A posição da ISS pode mudar em segundos; terremotos, alertas, auroras, clima e imagens de satélite podem levar de minutos a horas. O horário exibido pertence à leitura mais recente disponibilizada pela fonte — não necessariamente ao instante exato em que o fato começou.</p>
+    <h3>Como os dados são tratados</h3>
+    <p>O painel informa fonte, horário e localização sempre que esses dados existem. Se uma fonte falhar, o sistema sinaliza a indisponibilidade ou utiliza o último snapshot identificado como contingência. Valores ausentes não são preenchidos por estimativas inventadas.</p>
+    <h3>Limites importantes</h3>
+    <ul>
+      <li>Este projeto não substitui autoridades, defesa civil, serviços meteorológicos ou atendimento de emergência.</li>
+      <li>Notícias são referências jornalísticas e não confirmação independente.</li>
+      <li>Câmeras públicas podem ter atraso, sair do ar ou não mostrar o local exato.</li>
+      <li>Alertas nucleares, radiológicos, biológicos ou químicos só podem aparecer após publicação de uma fonte oficial previamente aceita.</li>
+      <li>O monitor não calcula trajetórias de armamentos, não prevê impactos e não atribui responsabilidade sem confirmação oficial.</li>
+    </ul>
+    <p class="about-note">Projeto independente, sem vínculo institucional com as fontes consultadas. O Google Analytics é usado somente após consentimento para contar visitas e usuários ativos.</p>
+    <a class="about-signature" href="https://github.com/Vdmtx" target="_blank" rel="noopener" aria-label="VDMTX no GitHub"><img src="logo%20vdmtx%20monocrom%C3%A1tico%20branco.png" alt="VDMTX"><span>CONCEITO, DIREÇÃO VISUAL E DESENVOLVIMENTO</span></a>
+  </dialog>
 
   <aside id="analytics-consent" class="analytics-consent" aria-label="Preferência de medição" hidden>
     <span>Este site usa medição anônima do Google Analytics para contar visitas e usuários ativos.</span>
