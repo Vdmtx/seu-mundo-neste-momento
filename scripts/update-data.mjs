@@ -1,5 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
+const googleNewsFeed = (query, hl, gl, ceid) => {
+  const url = new URL('https://news.google.com/rss/search');
+  url.searchParams.set('q', `(${query}) when:1d`); url.searchParams.set('hl', hl); url.searchParams.set('gl', gl); url.searchParams.set('ceid', ceid);
+  return url.href;
+};
+
 const URLS = {
   usgs: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
   eonet: 'https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=250',
@@ -15,7 +21,10 @@ const URLS = {
   temperature: 'https://api.open-meteo.com/v1/gfs',
   newsPt: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20inc%C3%AAndio%20OR%20inunda%C3%A7%C3%A3o%20OR%20ciclone%20OR%20vulc%C3%A3o%20OR%20tsunami%20OR%20evacua%C3%A7%C3%A3o%20OR%20conflito%29%20when%3A1d&hl=pt-BR&gl=BR&ceid=BR%3Apt-419',
   newsEn: 'https://news.google.com/rss/search?q=%28earthquake%20OR%20wildfire%20OR%20flood%20OR%20cyclone%20OR%20volcano%20OR%20tsunami%20OR%20evacuation%20OR%20conflict%29%20when%3A1d&hl=en-US&gl=US&ceid=US%3Aen',
-  newsEs: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20incendio%20OR%20inundaci%C3%B3n%20OR%20cicl%C3%B3n%20OR%20volc%C3%A1n%20OR%20tsunami%20OR%20evacuaci%C3%B3n%20OR%20conflicto%29%20when%3A1d&hl=es-419&gl=MX&ceid=MX%3Aes-419'
+  newsEs: 'https://news.google.com/rss/search?q=%28terremoto%20OR%20incendio%20OR%20inundaci%C3%B3n%20OR%20cicl%C3%B3n%20OR%20volc%C3%A1n%20OR%20tsunami%20OR%20evacuaci%C3%B3n%20OR%20conflicto%29%20when%3A1d&hl=es-419&gl=MX&ceid=MX%3Aes-419',
+  conflictPt: googleNewsFeed('guerra OR conflito armado OR ataque aéreo OR bombardeio OR artilharia OR míssil OR cessar-fogo OR evacuação', 'pt-BR', 'BR', 'BR:pt-419'),
+  conflictEn: googleNewsFeed('war OR armed conflict OR airstrike OR shelling OR artillery OR missile attack OR ceasefire OR evacuation', 'en-US', 'US', 'US:en'),
+  conflictEs: googleNewsFeed('guerra OR conflicto armado OR ataque aéreo OR bombardeo OR artillería OR misil OR alto el fuego OR evacuación', 'es-419', 'MX', 'MX:es-419')
 };
 
 async function get(url, text = false) {
@@ -180,10 +189,11 @@ async function loadTemperatureGrid() {
 const results = await Promise.allSettled([
   get(URLS.usgs), get(URLS.eonet), get(URLS.iss), get(URLS.kp), get(URLS.mag), get(URLS.plasma),
   get(URLS.aurora), get(URLS.gdacs), get(URLS.tsunamiPaaq, true), get(URLS.tsunamiPheb, true), loadAirQuality(),
-  get(URLS.newsPt, true), get(URLS.newsEn, true), get(URLS.newsEs, true), loadTemperatureGrid()
+  get(URLS.newsPt, true), get(URLS.newsEn, true), get(URLS.newsEs, true),
+  get(URLS.conflictPt, true), get(URLS.conflictEn, true), get(URLS.conflictEs, true), loadTemperatureGrid()
 ]);
-const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air, newsPt, newsEn, newsEs, temperatureGrid] = results;
-const sourceNames = ['USGS', 'NASA EONET', 'ISS', 'NOAA Kp', 'NOAA magnetômetro', 'NOAA plasma', 'NOAA aurora', 'GDACS', 'Tsunami PAAQ', 'Tsunami PHEB', 'Open-Meteo ar', 'Notícias PT', 'Notícias EN', 'Notícias ES', 'Open-Meteo GFS'];
+const [quakes, eonet, iss, kp, mag, plasma, aurora, gdacs, tsunamiPaaq, tsunamiPheb, air, newsPt, newsEn, newsEs, conflictPt, conflictEn, conflictEs, temperatureGrid] = results;
+const sourceNames = ['USGS', 'NASA EONET', 'ISS', 'NOAA Kp', 'NOAA magnetômetro', 'NOAA plasma', 'NOAA aurora', 'GDACS', 'Tsunami PAAQ', 'Tsunami PHEB', 'Open-Meteo ar', 'Notícias PT', 'Notícias EN', 'Notícias ES', 'Conflitos PT', 'Conflitos EN', 'Conflitos ES', 'Open-Meteo GFS'];
 results.forEach((result, index) => {
   if (result.status === 'rejected') console.warn(`[fonte indisponível] ${sourceNames[index]}: ${result.reason?.message || result.reason}`);
 });
@@ -246,6 +256,10 @@ const news = [...new Map([
   ...(newsEn.status === 'fulfilled' ? parseNews(newsEn.value, 'en') : []),
   ...(newsEs.status === 'fulfilled' ? parseNews(newsEs.value, 'es') : [])
 ].map(article => [article.title.toLowerCase(), article])).values()].sort((a, b) => new Date(b.seendate) - new Date(a.seendate)).slice(0, 120);
+const conflictNews = ['pt-BR', 'en', 'es'].flatMap((language, index) => {
+  const result = [conflictPt, conflictEn, conflictEs][index];
+  return (result.status === 'fulfilled' ? parseNews(result.value, language) : []).map(article => ({ ...article, topic: 'conflict-media' })).sort((a, b) => new Date(b.seendate) - new Date(a.seendate)).slice(0, 20);
+});
 
 const snapshot = {
   generatedAt: new Date().toISOString(),
@@ -256,9 +270,10 @@ const snapshot = {
   airQuality: settled(air) || [],
   temperatureGrid: settled(temperatureGrid),
   news,
-  sources: Object.fromEntries(['usgs', 'eonet', 'iss', 'kp', 'mag', 'plasma', 'ovation', 'gdacs', 'tsunamiPaaq', 'tsunamiPheb', 'airQuality', 'newsPt', 'newsEn', 'newsEs', 'temperatureGrid'].map((name, index) => [name, results[index].status]))
+  conflictNews,
+  sources: Object.fromEntries(['usgs', 'eonet', 'iss', 'kp', 'mag', 'plasma', 'ovation', 'gdacs', 'tsunamiPaaq', 'tsunamiPheb', 'airQuality', 'newsPt', 'newsEn', 'newsEs', 'conflictPt', 'conflictEn', 'conflictEs', 'temperatureGrid'].map((name, index) => [name, results[index].status]))
 };
 
 await mkdir('data', { recursive: true });
 await writeFile('data/snapshot.json', JSON.stringify(snapshot));
-console.log(`snapshot: ${snapshot.events.length} events, ${snapshot.aurora.length} aurora cells, ${snapshot.airQuality.length} air-quality points, ${snapshot.temperatureGrid?.values?.filter(value => value !== null).length || 0} temperature cells, ${snapshot.news.length} news items`);
+console.log(`snapshot: ${snapshot.events.length} events, ${snapshot.aurora.length} aurora cells, ${snapshot.airQuality.length} air-quality points, ${snapshot.temperatureGrid?.values?.filter(value => value !== null).length || 0} temperature cells, ${snapshot.news.length} news items, ${snapshot.conflictNews.length} conflict-media items`);

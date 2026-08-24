@@ -14,6 +14,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Linha astronômica aproximada de dia/noite.
 - Imagem diária VIIRS do NASA GIBS, carregada somente quando solicitada.
 - 4.589 estados, províncias e subdivisões do Natural Earth, representados por pontos administrativos carregados sob demanda; um clique filtra o cache recente de notícias e oferece busca externa quando não há correspondência.
+- Camada opcional “Conflitos na imprensa”, limitada a manchetes das últimas 24 horas no idioma selecionado e geolocalizada somente quando há menção explícita a um estado, província ou país. Seus pontos são referências editoriais, não coordenadas militares.
 - Clima pontual, diretório externo de câmeras públicas e alertas críticos locais do navegador enquanto o site está aberto.
 - Indicador de frescor por fonte, distinguindo horário de publicação e horário da última consulta do monitor.
 - Ficha detalhada de cada ocorrência com categoria, indicador, fonte, horário, coordenadas e link original.
@@ -29,6 +30,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Where The ISS At: posição da ISS a cada 10 segundos.
 - Open-Meteo: clima pontual, temperatura sob demanda, grade térmica global de 12° renovada em até 6 horas e grade de qualidade do ar atualizada no snapshot a cada 15 minutos.
 - Google News RSS: cache de manchetes públicas em português, inglês e espanhol, reconstruído pelo GitHub Actions a cada 15 minutos. A busca do site filtra esse conjunto e não promete cobertura completa de todos os estados.
+- Google News RSS — conflitos: consulta temática separada, também a cada 15 minutos. Ela indica cobertura jornalística e não confirma de forma independente o conteúdo publicado.
 - NASA GIBS: imagem VIIRS do dia anterior, sob demanda.
 - Natural Earth Admin-1: pontos administrativos estáticos, compactados para desempenho. Dados em domínio público.
 
@@ -38,7 +40,7 @@ O GitHub Actions consolida e republica o snapshot a cada 15 minutos sem criar co
 
 O GitHub Pages não executa um servidor. APIs podem impor limites, bloquear CORS ou ficar temporariamente fora do ar. Notícias não garantem cobertura uniforme nem representam confirmação independente. Câmeras podem atrasar, sair do ar ou não mostrar o evento selecionado.
 
-O monitor não calcula nem publica trajetória de armamentos, previsão própria de impacto de míssil ou autoria não confirmada. Incidentes nucleares, radiológicos, biológicos e conflitos só devem ser incorporados a partir de alertas civis ou autoridades reconhecidas, com localização compatível com o que a fonte tornou público.
+O monitor não calcula nem publica trajetória de armamentos, previsão própria de impacto de míssil ou autoria não confirmada. A camada jornalística de conflitos permanece visualmente e textualmente separada dos eventos confirmados. Incidentes nucleares, radiológicos e biológicos/químicos só devem ser incorporados como ocorrências a partir de alertas civis ou autoridades reconhecidas, com localização compatível com o que a fonte tornou público.
 
 As categorias nuclear/radiológica e biológica/química permanecem invisíveis quando não há ocorrência oficial ativa. Se uma fonte oficial vier a alimentar um evento nuclear, a categoria surge automaticamente e o mapa adota o estado visual vermelho; um evento biológico/químico confirmado ativa um estado âmbar. A interface já aplica essas regras, mas nenhum agregador foi habilitado sem um feed oficial global suficientemente confiável.
 
