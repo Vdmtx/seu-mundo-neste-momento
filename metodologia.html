@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Metodologia, fontes, intervalos de atualização, limitações e critérios de integridade do monitor Seu Mundo Neste Momento.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#05090d">
+  <meta name="color-scheme" content="dark light">
+  <link rel="canonical" href="https://vdmtx.github.io/seu-mundo-neste-momento/metodologia.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Seu Mundo Neste Momento">
+  <meta property="og:title" content="Metodologia e Integridade — Seu Mundo Neste Momento">
+  <meta property="og:description" content="Como o monitor trata fontes, latência, risco, notícias e incidentes sensíveis.">
+  <meta property="og:url" content="https://vdmtx.github.io/seu-mundo-neste-momento/metodologia.html">
+  <meta property="og:image" content="https://vdmtx.github.io/seu-mundo-neste-momento/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; form-action 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; manifest-src 'self'; upgrade-insecure-requests">
+  <title>Metodologia e Integridade — Seu Mundo Neste Momento</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="methodology.css?v=1">
+</head>
+<body>
+  <header class="method-header">
+    <a class="method-brand" href="index.html" aria-label="Seu Mundo Neste Momento">
+      <span class="brand-mark"><i></i></span>
+      <span><strong>SEU MUNDO</strong><small>NESTE MOMENTO</small></span>
+    </a>
+    <nav class="method-actions" aria-label="Controles da página">
+      <label><span data-ui="language">IDIOMA</span><select id="method-language" aria-label="Idioma"><option value="pt-BR">PT</option><option value="en">EN</option><option value="es">ES</option></select></label>
+      <button id="method-theme" type="button">MODO CLARO</button>
+      <a href="index.html" data-ui="back">VOLTAR AO MONITOR</a>
+    </nav>
+  </header>
+
+  <main class="method-main">
+    <article data-language="pt-BR">
+      <header class="method-hero">
+        <p class="eyebrow">METODOLOGIA / INTEGRIDADE</p>
+        <h1>O que o monitor sabe.<br><em>E o que ele não pode afirmar.</em></h1>
+        <p>Esta página explica de onde vêm os dados, com que frequência o site os consulta, como são classificados e quais limitações permanecem. “Tempo quase real” significa a publicação mais recente disponibilizada pela fonte — não observação instantânea de todo o planeta.</p>
+        <p class="revision">VERSÃO 1.0 · 24 AGO 2026</p>
+      </header>
+
+      <section aria-labelledby="principios-pt">
+        <p class="section-code">01 / PRINCÍPIOS</p><h2 id="principios-pt">Quatro regras que não podem ser negociadas</h2>
+        <div class="principle-grid">
+          <div><b>RASTREABILIDADE</b><p>Uma ocorrência precisa conservar fonte, horário e localização disponíveis no registro original.</p></div>
+          <div><b>SEM PREENCHIMENTO FICTÍCIO</b><p>Ausência, falha ou atraso são informados. O sistema não cria valores para completar lacunas.</p></div>
+          <div><b>SEPARAÇÃO DE EVIDÊNCIAS</b><p>Dados oficiais e científicos não são apresentados como equivalentes a manchetes jornalísticas.</p></div>
+          <div><b>PROPORÇÃO</b><p>A interface prioriza clareza e gravidade verificável, sem transformar incerteza em espetáculo.</p></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="fontes-pt">
+        <p class="section-code">02 / FONTES E LATÊNCIA</p><h2 id="fontes-pt">O que alimenta cada camada</h2>
+        <p class="section-intro">Os intervalos abaixo são do monitor. A idade real de um dado também depende do ritmo de publicação de cada instituição.</p>
+        <div class="source-ledger" role="list">
+          <div class="source-entry" role="listitem"><div><strong>USGS</strong><span>TERREMOTOS · FONTE CIENTÍFICA</span></div><p>Magnitude 2,5 ou maior nas últimas 24 horas.</p><b>A CADA 5 MIN</b><small>Registros podem ser revisados pelo USGS após a publicação inicial.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>NASA EONET</strong><span>EVENTOS NATURAIS · AGREGADOR CIENTÍFICO</span></div><p>Incêndios, tempestades, vulcões, inundações e outros eventos abertos.</p><b>A CADA 5 MIN</b><small>“Aberto” significa acompanhado pela fonte, não necessariamente emergência ativa em todo o perímetro.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>GDACS</strong><span>DESASTRES · SISTEMA INTERNACIONAL</span></div><p>Ciclones, inundações, vulcões, secas e incêndios consolidados no snapshot.</p><b>A CADA 15 MIN</b><small>A classificação exibida preserva o evento publicado e não substitui alertas locais.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>NOAA TSUNAMI</strong><span>ALERTA CIVIL OFICIAL</span></div><p>Somente Warning, Watch, Advisory ou Threat ativos.</p><b>A CADA 15 MIN</b><small>A instrução válida é sempre a emitida pela autoridade responsável pela região.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>NOAA SWPC</strong><span>CLIMA ESPACIAL · FONTE OFICIAL</span></div><p>Índice Kp, Bz, vento solar e modelo OVATION de auroras.</p><b>A CADA 5 MIN</b><small>OVATION é uma estimativa probabilística; não garante aurora visível no solo.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>NOAA GFS / OPEN-METEO</strong><span>TEMPERATURA · MODELO METEOROLÓGICO</span></div><p>Temperatura do ar a 2 metros em grade global, interpolada visualmente.</p><b>ATÉ 6 HORAS</b><small>É saída de modelo, não leitura de termômetros em cada ponto; relevo e microclimas podem divergir.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>OPEN-METEO</strong><span>CLIMA LOCAL E QUALIDADE DO AR</span></div><p>Consulta pontual sob demanda e grade ambiental de baixa resolução.</p><b>15 MIN / SOB DEMANDA</b><small>A grade global serve para contexto, não para decisões médicas ou ambientais locais.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>WHERE THE ISS AT</strong><span>POSIÇÃO ORBITAL</span></div><p>Latitude, longitude e altitude aproximadas da ISS.</p><b>A CADA 10 S</b><small>A marca mostra posição orbital, não uma câmera ao vivo nem visibilidade garantida.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>GOOGLE NEWS RSS</strong><span>COBERTURA JORNALÍSTICA</span></div><p>Manchetes em português, inglês e espanhol, limitadas às últimas 24 horas.</p><b>A CADA 15 MIN</b><small>Não há garantia de cobertura completa, tradução automática ou confirmação independente.</small></div>
+          <div class="source-entry" role="listitem"><div><strong>NASA GIBS / NATURAL EARTH</strong><span>CARTOGRAFIA E CONTEXTO</span></div><p>Imagem diária VIIRS e referências administrativas estáticas.</p><b>DIÁRIO / ESTÁTICO</b><small>Limites e nomes cartográficos são referências visuais e podem não refletir disputas territoriais.</small></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="risco-pt">
+        <p class="section-code">03 / PRIORIDADE VISUAL</p><h2 id="risco-pt">Cor não é uma nova escala oficial</h2>
+        <p>Crítico, alto, médio e baixo organizam a atenção dentro do monitor. Em terremotos, a magnitude orienta essa prioridade; em outras categorias, entram a classe publicada, a atualidade e a existência de alerta oficial. A cor não substitui as escalas da instituição de origem e não mede, sozinha, impacto humano.</p>
+      </section>
+
+      <section aria-labelledby="sensiveis-pt">
+        <p class="section-code">04 / CONFLITOS E INCIDENTES SENSÍVEIS</p><h2 id="sensiveis-pt">O limite entre informar e especular</h2>
+        <div class="warning-block">
+          <p><strong>CONFLITOS:</strong> os pontos mostram apenas uma região mencionada por manchetes recentes. Não representam coordenadas militares, origem de disparo, trajetória, alvo ou impacto confirmado.</p>
+          <p><strong>NUCLEAR, RADIOLÓGICO, BIOLÓGICO OU QUÍMICO:</strong> uma ocorrência só pode ser publicada após comunicado de autoridade civil, organismo internacional ou fonte oficial previamente aceita. A ausência da categoria não prova ausência de risco; significa apenas que o monitor não recebeu um alerta compatível.</p>
+          <p><strong>SEM PREVISÃO PRÓPRIA:</strong> o projeto não calcula trajetória de armamentos, tempo de impacto, autoria ou dispersão de agentes.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="operacao-pt">
+        <p class="section-code">05 / OPERAÇÃO, PRIVACIDADE E CORREÇÕES</p><h2 id="operacao-pt">Como interpretar falhas e contestar informações</h2>
+        <p>GitHub Pages hospeda arquivos estáticos. Um processo automatizado consolida parte das fontes a cada 15 minutos; outras são consultadas pelo navegador. Bloqueios de rede, CORS, indisponibilidade do provedor ou atraso editorial podem interromper uma camada sem significar que o fenômeno deixou de existir.</p>
+        <p>O Google Analytics só é carregado após consentimento e serve para estimar visitas e usuários ativos. O monitor não exige cadastro para navegação e não armazena um perfil pessoal no GitHub Pages.</p>
+        <p>Erros de localização, fonte, tradução da interface ou interpretação podem ser informados publicamente no repositório. Uma correção deve preservar o registro do que foi alterado e não apagar silenciosamente uma limitação relevante.</p>
+        <a class="method-cta" href="https://github.com/Vdmtx/seu-mundo-neste-momento/issues" target="_blank" rel="noopener noreferrer">INFORMAR UM PROBLEMA NO GITHUB ↗</a>
+      </section>
+    </article>
+
+    <article data-language="en" hidden>
+      <header class="method-hero"><p class="eyebrow">METHODOLOGY / INTEGRITY</p><h1>What the monitor knows.<br><em>And what it cannot claim.</em></h1><p>This page explains where the data comes from, how often the site checks it, how it is classified, and which limitations remain. “Near real time” means the latest record made available by the source—not instantaneous observation of the entire planet.</p><p class="revision">VERSION 1.0 · 24 AUG 2026</p></header>
+      <section><p class="section-code">01 / PRINCIPLES</p><h2>Four rules that cannot be negotiated</h2><div class="principle-grid"><div><b>TRACEABILITY</b><p>An event must preserve the source, time and location available in the original record.</p></div><div><b>NO FICTIONAL FILL</b><p>Missing, failed or delayed data is reported. The system does not invent values to complete gaps.</p></div><div><b>SEPARATION OF EVIDENCE</b><p>Official and scientific data is not presented as equivalent to news headlines.</p></div><div><b>PROPORTION</b><p>The interface prioritizes clarity and verifiable severity without turning uncertainty into spectacle.</p></div></div></section>
+      <section><p class="section-code">02 / SOURCES AND LATENCY</p><h2>What feeds each layer</h2><p class="section-intro">The intervals below belong to the monitor. Actual data age also depends on each institution’s publication cycle.</p><div class="source-ledger" role="list">
+        <div class="source-entry" role="listitem"><div><strong>USGS</strong><span>EARTHQUAKES · SCIENTIFIC SOURCE</span></div><p>Magnitude 2.5 or greater during the last 24 hours.</p><b>EVERY 5 MIN</b><small>USGS may revise records after initial publication.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NASA EONET</strong><span>NATURAL EVENTS · SCIENTIFIC AGGREGATOR</span></div><p>Open wildfires, storms, volcanoes, floods and other events.</p><b>EVERY 5 MIN</b><small>“Open” means tracked by the source, not necessarily an emergency throughout the whole perimeter.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>GDACS</strong><span>DISASTERS · INTERNATIONAL SYSTEM</span></div><p>Cyclones, floods, volcanoes, droughts and wildfires consolidated in the snapshot.</p><b>EVERY 15 MIN</b><small>The display does not replace local alerts.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NOAA TSUNAMI</strong><span>OFFICIAL CIVIL ALERT</span></div><p>Active Warning, Watch, Advisory or Threat notices only.</p><b>EVERY 15 MIN</b><small>Instructions from the authority responsible for the region always take precedence.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NOAA SWPC</strong><span>SPACE WEATHER · OFFICIAL SOURCE</span></div><p>Kp index, Bz, solar wind and OVATION aurora model.</p><b>EVERY 5 MIN</b><small>OVATION is probabilistic and does not guarantee ground visibility.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NOAA GFS / OPEN-METEO</strong><span>TEMPERATURE · WEATHER MODEL</span></div><p>Two-metre air temperature on a global grid with visual interpolation.</p><b>UP TO 6 HOURS</b><small>Model output is not a thermometer reading at every point; terrain and microclimates may differ.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>OPEN-METEO</strong><span>LOCAL WEATHER AND AIR QUALITY</span></div><p>On-demand local lookup and low-resolution environmental grid.</p><b>15 MIN / ON DEMAND</b><small>The global grid is context, not a basis for local medical or environmental decisions.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>WHERE THE ISS AT</strong><span>ORBITAL POSITION</span></div><p>Approximate ISS latitude, longitude and altitude.</p><b>EVERY 10 S</b><small>The marker is an orbital position, not a live camera or guaranteed visibility.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>GOOGLE NEWS RSS</strong><span>JOURNALISTIC COVERAGE</span></div><p>Portuguese, English and Spanish headlines from the last 24 hours.</p><b>EVERY 15 MIN</b><small>Complete coverage, automatic translation and independent confirmation are not guaranteed.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NASA GIBS / NATURAL EARTH</strong><span>CARTOGRAPHY AND CONTEXT</span></div><p>Daily VIIRS imagery and static administrative references.</p><b>DAILY / STATIC</b><small>Boundaries and labels are visual references and may not reflect territorial disputes.</small></div>
+      </div></section>
+      <section><p class="section-code">03 / VISUAL PRIORITY</p><h2>Colour is not a new official scale</h2><p>Critical, high, medium and low organize attention inside the monitor. Earthquake magnitude guides priority; other categories also consider the published class, recency and official alert status. Colour does not replace the source institution’s scale and does not measure human impact by itself.</p></section>
+      <section><p class="section-code">04 / CONFLICTS AND SENSITIVE INCIDENTS</p><h2>The boundary between reporting and speculation</h2><div class="warning-block"><p><strong>CONFLICTS:</strong> points show only a region mentioned in recent headlines. They are not military coordinates or confirmation of launch origin, trajectory, target or impact.</p><p><strong>NUCLEAR, RADIOLOGICAL, BIOLOGICAL OR CHEMICAL:</strong> an event may appear only after a statement from a civil authority, international organization or previously accepted official source. An absent category does not prove there is no risk; it means the monitor received no compatible alert.</p><p><strong>NO IN-HOUSE FORECAST:</strong> the project does not calculate weapons trajectories, impact times, attribution or agent dispersion.</p></div></section>
+      <section><p class="section-code">05 / OPERATION, PRIVACY AND CORRECTIONS</p><h2>How to read failures and challenge information</h2><p>GitHub Pages hosts static files. An automated process consolidates part of the sources every 15 minutes; others are queried by the browser. Network blocks, CORS, provider outages or editorial delays may interrupt a layer without proving that the underlying phenomenon has ended.</p><p>Google Analytics loads only after consent and estimates visits and active users. The monitor requires no account for browsing and stores no personal profile on GitHub Pages.</p><p>Location, source, interface translation or interpretation errors can be reported publicly in the repository. A correction should preserve what changed instead of silently erasing a relevant limitation.</p><a class="method-cta" href="https://github.com/Vdmtx/seu-mundo-neste-momento/issues" target="_blank" rel="noopener noreferrer">REPORT A PROBLEM ON GITHUB ↗</a></section>
+    </article>
+
+    <article data-language="es" hidden>
+      <header class="method-hero"><p class="eyebrow">METODOLOGÍA / INTEGRIDAD</p><h1>Lo que sabe el monitor.<br><em>Y lo que no puede afirmar.</em></h1><p>Esta página explica el origen de los datos, la frecuencia de consulta, su clasificación y sus limitaciones. “Tiempo casi real” significa el registro más reciente publicado por la fuente, no una observación instantánea de todo el planeta.</p><p class="revision">VERSIÓN 1.0 · 24 AGO 2026</p></header>
+      <section><p class="section-code">01 / PRINCIPIOS</p><h2>Cuatro reglas que no se pueden negociar</h2><div class="principle-grid"><div><b>TRAZABILIDAD</b><p>Un evento debe conservar la fuente, hora y ubicación disponibles en el registro original.</p></div><div><b>SIN RELLENO FICTICIO</b><p>La ausencia, falla o demora se informa. El sistema no inventa valores para completar vacíos.</p></div><div><b>SEPARACIÓN DE EVIDENCIAS</b><p>Los datos oficiales y científicos no se presentan como equivalentes a titulares periodísticos.</p></div><div><b>PROPORCIÓN</b><p>La interfaz prioriza claridad y gravedad verificable sin convertir la incertidumbre en espectáculo.</p></div></div></section>
+      <section><p class="section-code">02 / FUENTES Y LATENCIA</p><h2>Qué alimenta cada capa</h2><p class="section-intro">Los intervalos siguientes pertenecen al monitor. La edad real del dato también depende del ritmo de publicación de cada institución.</p><div class="source-ledger" role="list">
+        <div class="source-entry" role="listitem"><div><strong>USGS</strong><span>TERREMOTOS · FUENTE CIENTÍFICA</span></div><p>Magnitud 2,5 o superior durante las últimas 24 horas.</p><b>CADA 5 MIN</b><small>USGS puede revisar los registros después de su publicación inicial.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NASA EONET</strong><span>EVENTOS NATURALES · AGREGADOR CIENTÍFICO</span></div><p>Incendios, tormentas, volcanes, inundaciones y otros eventos abiertos.</p><b>CADA 5 MIN</b><small>“Abierto” significa monitoreado por la fuente, no necesariamente una emergencia en todo el perímetro.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>GDACS</strong><span>DESASTRES · SISTEMA INTERNACIONAL</span></div><p>Ciclones, inundaciones, volcanes, sequías e incendios consolidados.</p><b>CADA 15 MIN</b><small>La visualización no reemplaza alertas locales.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NOAA TSUNAMI</strong><span>ALERTA CIVIL OFICIAL</span></div><p>Solo avisos Warning, Watch, Advisory o Threat activos.</p><b>CADA 15 MIN</b><small>Siempre prevalece la instrucción de la autoridad responsable de la región.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NOAA SWPC</strong><span>CLIMA ESPACIAL · FUENTE OFICIAL</span></div><p>Índice Kp, Bz, viento solar y modelo OVATION de auroras.</p><b>CADA 5 MIN</b><small>OVATION es probabilístico y no garantiza visibilidad desde el suelo.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NOAA GFS / OPEN-METEO</strong><span>TEMPERATURA · MODELO METEOROLÓGICO</span></div><p>Temperatura del aire a dos metros en una cuadrícula global interpolada visualmente.</p><b>HASTA 6 HORAS</b><small>Es una salida de modelo, no un termómetro en cada punto; el relieve y los microclimas pueden diferir.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>OPEN-METEO</strong><span>CLIMA LOCAL Y CALIDAD DEL AIRE</span></div><p>Consulta local bajo demanda y cuadrícula ambiental de baja resolución.</p><b>15 MIN / BAJO DEMANDA</b><small>La cuadrícula global sirve como contexto, no para decisiones médicas o ambientales locales.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>WHERE THE ISS AT</strong><span>POSICIÓN ORBITAL</span></div><p>Latitud, longitud y altitud aproximadas de la ISS.</p><b>CADA 10 S</b><small>El marcador es una posición orbital, no una cámara en vivo ni visibilidad garantizada.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>GOOGLE NEWS RSS</strong><span>COBERTURA PERIODÍSTICA</span></div><p>Titulares en portugués, inglés y español de las últimas 24 horas.</p><b>CADA 15 MIN</b><small>No se garantiza cobertura completa, traducción automática ni confirmación independiente.</small></div>
+        <div class="source-entry" role="listitem"><div><strong>NASA GIBS / NATURAL EARTH</strong><span>CARTOGRAFÍA Y CONTEXTO</span></div><p>Imagen VIIRS diaria y referencias administrativas estáticas.</p><b>DIARIO / ESTÁTICO</b><small>Los límites y nombres son referencias visuales y pueden no reflejar disputas territoriales.</small></div>
+      </div></section>
+      <section><p class="section-code">03 / PRIORIDAD VISUAL</p><h2>El color no es una nueva escala oficial</h2><p>Crítico, alto, medio y bajo organizan la atención dentro del monitor. La magnitud orienta los terremotos; otras categorías también consideran la clase publicada, la actualidad y la existencia de una alerta oficial. El color no reemplaza la escala de la institución de origen ni mide por sí solo el impacto humano.</p></section>
+      <section><p class="section-code">04 / CONFLICTOS E INCIDENTES SENSIBLES</p><h2>El límite entre informar y especular</h2><div class="warning-block"><p><strong>CONFLICTOS:</strong> los puntos muestran solo una región mencionada en titulares recientes. No son coordenadas militares ni confirmación de origen, trayectoria, objetivo o impacto.</p><p><strong>NUCLEAR, RADIOLÓGICO, BIOLÓGICO O QUÍMICO:</strong> un evento solo puede aparecer después de un comunicado de una autoridad civil, organismo internacional o fuente oficial previamente aceptada. La ausencia de la categoría no prueba ausencia de riesgo; significa que el monitor no recibió una alerta compatible.</p><p><strong>SIN PRONÓSTICO PROPIO:</strong> el proyecto no calcula trayectorias de armas, tiempos de impacto, atribución ni dispersión de agentes.</p></div></section>
+      <section><p class="section-code">05 / OPERACIÓN, PRIVACIDAD Y CORRECCIONES</p><h2>Cómo interpretar fallas y cuestionar información</h2><p>GitHub Pages aloja archivos estáticos. Un proceso automatizado consolida parte de las fuentes cada 15 minutos; otras son consultadas por el navegador. Bloqueos de red, CORS, indisponibilidad del proveedor o retrasos editoriales pueden interrumpir una capa sin demostrar que el fenómeno terminó.</p><p>Google Analytics solo se carga con consentimiento y estima visitas y usuarios activos. El monitor no exige una cuenta para navegar ni almacena un perfil personal en GitHub Pages.</p><p>Los errores de ubicación, fuente, traducción de la interfaz o interpretación pueden informarse públicamente en el repositorio. Una corrección debe conservar lo que cambió en lugar de borrar silenciosamente una limitación relevante.</p><a class="method-cta" href="https://github.com/Vdmtx/seu-mundo-neste-momento/issues" target="_blank" rel="noopener noreferrer">INFORMAR UN PROBLEMA EN GITHUB ↗</a></section>
+    </article>
+  </main>
+
+  <footer class="method-footer"><span>VDMTX / 2026</span><span data-ui="independent">MONITOR INDEPENDENTE · DADOS PÚBLICOS</span></footer>
+  <script src="methodology.js?v=1"></script>
+</body>
+</html>

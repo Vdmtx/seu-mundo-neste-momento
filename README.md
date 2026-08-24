@@ -18,6 +18,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Camada opcional “Conflitos na imprensa”, limitada a manchetes das últimas 24 horas no idioma selecionado e geolocalizada somente quando há menção explícita a um estado, província ou país. Seus pontos são referências editoriais, não coordenadas militares.
 - Clima pontual, diretório externo de câmeras públicas e alertas críticos locais do navegador enquanto o site está aberto.
 - Indicador de frescor por fonte, distinguindo horário de publicação e horário da última consulta do monitor.
+- Página permanente de metodologia e integridade, em português, inglês e espanhol, com intervalos, limitações, critérios de risco, regras para conflitos e incidentes sensíveis, privacidade e canal público de correções.
 - Ficha detalhada de cada ocorrência com categoria, indicador, fonte, horário, coordenadas e link original.
 - Compartilhamento contextual com fonte e horário, usando o menu nativo do aparelho ou cópia para a área de transferência.
 
