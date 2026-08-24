@@ -245,7 +245,7 @@ const news = [...new Map([
   ...(newsPt.status === 'fulfilled' ? parseNews(newsPt.value, 'pt-BR') : []),
   ...(newsEn.status === 'fulfilled' ? parseNews(newsEn.value, 'en') : []),
   ...(newsEs.status === 'fulfilled' ? parseNews(newsEs.value, 'es') : [])
-].map(article => [article.title.toLowerCase(), article])).values()].sort((a, b) => new Date(b.seendate) - new Date(a.seendate));
+].map(article => [article.title.toLowerCase(), article])).values()].sort((a, b) => new Date(b.seendate) - new Date(a.seendate)).slice(0, 120);
 
 const snapshot = {
   generatedAt: new Date().toISOString(),

@@ -10,8 +10,9 @@ const API = {
   weather: 'https://api.open-meteo.com/v1/forecast'
 };
 const refresh = { world: 300000, snapshot: 900000, iss: 10000, space: 300000, temperature: 1800000 };
+const NEWS_MAX_AGE = 24 * 60 * 60 * 1000;
 const state = {
-  events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], admin1: [],
+  events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], admin1: [], newsRegions: [],
   selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: false, showAurora: false,
   showAir: false, showIss: true, showRegions: false, showDaylight: true, showSatellite: false,
   view: 'map', updatedAt: null, snapshot: null, notificationsReady: false
@@ -47,6 +48,7 @@ async function loadSnapshot() {
     state.temperatureGrid = next.temperatureGrid || null;
     state.temperature = temperatureGridPoints(state.temperatureGrid);
     state.news = next.news || [];
+    if (state.admin1.length) rebuildNewsRegions();
     source('gdacs', 'GDACS', next.sources?.gdacs === 'fulfilled', next.events.filter(event => event.source === 'GDACS').length, t('sources.snapshot15'), next.generatedAt, 45 * 60000);
     source('tsunami', 'NOAA TSUNAMI', next.sources?.tsunamiPaaq === 'fulfilled' || next.sources?.tsunamiPheb === 'fulfilled', next.events.filter(event => /^NOAA PA|^NOAA PH/.test(event.source)).length, t('sources.activeOnly'), next.generatedAt, 45 * 60000);
     source('air', 'OPEN-METEO AR', state.airQuality.length > 0, state.airQuality.length, t('sources.grid15'), next.generatedAt, 45 * 60000);
@@ -129,12 +131,12 @@ async function loadTemperature() {
 }
 
 async function loadAdmin1() {
-  if (state.admin1.length) return state.admin1;
+  if (state.admin1.length) { rebuildNewsRegions(); return state.newsRegions; }
   $('#region-status').textContent = t('layer.regionsLoading');
   try {
     const data = await json('data/admin1.json', 30000);
     state.admin1 = (data.regions || []).map(([name, countryIndex, lat, lon], index) => ({ id: `region-${index}`, kind: 'region', name, country: data.countries[countryIndex], lat, lon, title: name, location: t('region.click', { country: data.countries[countryIndex] }), metric: t('region.metric'), color: '#60e6da' })); source('natural-earth', 'NATURAL EARTH', true, state.admin1.length, 'Administrative centers');
-    $('#region-status').textContent = t('layer.regionsCount', { count: state.admin1.length }); return state.admin1;
+    rebuildNewsRegions(); $('#region-status').textContent = t('layer.regionsCount', { count: state.newsRegions.length }); return state.newsRegions;
   } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); $('#region-status').textContent = t('layer.regionsUnavailable'); return []; }
 }
 
@@ -330,7 +332,29 @@ function terminatorPath(date = new Date()) {
 
 function regionName(region) { return region?.name || '—'; }
 function regionCountry(region) { return region?.country || '—'; }
-function selectRegion(region) { state.selectedRegion = region; const name = regionName(region), country = regionCountry(region); $('#region-input').value = `${name}, ${country}`; $('#region-status').textContent = t('layer.regionSelected', { name: name.toUpperCase() }); focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); loadNews(name, region.lat, region.lon, country); renderGlobeData(); }
+function newsComparable(value) { return ` ${normalizedText(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `; }
+function newsHasPhrase(comparable, value) { const phrase = newsComparable(value).trim(); return phrase.length >= 3 && comparable.includes(` ${phrase} `); }
+function regionSearchName(name) { return String(name || '').replace(/^(?:de|da|do|das|dos)\s+/i, ''); }
+function recentNews() {
+  const now = Date.now();
+  return state.news.filter(article => { const time = new Date(article.seendate).getTime(); return Number.isFinite(time) && time <= now + 15 * 60000 && now - time <= NEWS_MAX_AGE; }).sort((a, b) => new Date(b.seendate) - new Date(a.seendate));
+}
+function rebuildNewsRegions() {
+  if (!state.admin1.length) { state.newsRegions = []; return []; }
+  const articles = recentNews().map(article => ({ article, text: newsComparable(article.title) }));
+  const nameCounts = new Map(), countryNames = new Set(state.admin1.map(region => newsComparable(region.country).trim()));
+  state.admin1.forEach(region => { const key = newsComparable(regionSearchName(region.name)).trim(); if (key) nameCounts.set(key, (nameCounts.get(key) || 0) + 1); });
+  state.newsRegions = state.admin1.flatMap(region => {
+    const name = regionSearchName(region.name), key = newsComparable(name).trim(); if (key.length < 3) return [];
+    const ambiguous = nameCounts.get(key) !== 1 || countryNames.has(key);
+    const matches = articles.filter(row => newsHasPhrase(row.text, name) && (!ambiguous || newsHasPhrase(row.text, region.country))).slice(0, 5).map(row => row.article);
+    if (!matches.length) return [];
+    return [{ ...region, articles: matches, headline: matches[0], title: matches[0].title, metric: t('region.newsMetric'), location: `${region.name} · ${region.country}` }];
+  });
+  if (state.showRegions) $('#region-status').textContent = t('layer.regionsCount', { count: state.newsRegions.length });
+  return state.newsRegions;
+}
+function selectRegion(region) { state.selectedRegion = region; const name = regionName(region), country = regionCountry(region); $('#region-input').value = `${name}, ${country}`; $('#region-status').textContent = t('layer.regionSelected', { name: name.toUpperCase() }); focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); if (region.articles?.length) renderNews(region.articles, name, `${name} ${country}`); else loadNews(name, region.lat, region.lon, country); renderGlobeData(); }
 
 function environmentPoints() {
   if (state.showTemperature) return sample(state.temperature, 600).map((point, index) => ({ ...point, id: `temp-${index}`, kind: 'temperature', color: tempColor(point.temperature), metric: `${point.temperature.toFixed(1)} °C`, title: t('temperature.approx'), location: 'Open-Meteo' }));
@@ -342,12 +366,10 @@ function environmentPoints() {
 function renderMapRegions() {
   if (!map) return;
   if (regionLayer) { regionLayer.remove(); regionLayer = null; }
-  if (!state.showRegions || !state.admin1.length) return;
-  const bounds = map.getBounds().pad(.12), zoom = map.getZoom(), stride = zoom <= 2 ? 12 : zoom === 3 ? 6 : zoom === 4 ? 2 : 1;
-  const visible = state.admin1.filter((region, index) => index % stride === 0 && bounds.contains([region.lat, region.lon])).slice(0, 300);
-  // O mapa já usa preferCanvas; sem um renderer por marcador, todos os pontos
-  // compartilham o mesmo canvas em vez de criar até 300 superfícies gráficas.
-  regionLayer = L.layerGroup(visible.map(region => L.circleMarker([region.lat, region.lon], { radius: region === state.selectedRegion ? 5 : 2.3, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da', weight: region === state.selectedRegion ? 1.3 : .45, fillColor: '#174958', fillOpacity: .7 }).bindTooltip(`${esc(regionName(region))} · ${esc(regionCountry(region))}`).on('click', () => selectRegion(region)))).addTo(map);
+  if (!state.showRegions || !state.newsRegions.length) return;
+  const bounds = map.getBounds().pad(.12);
+  const visible = state.newsRegions.filter(region => bounds.contains([region.lat, region.lon])).slice(0, 40);
+  regionLayer = L.layerGroup(visible.map(region => L.circleMarker([region.lat, region.lon], { radius: region === state.selectedRegion ? 6 : 3.6, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da', weight: region === state.selectedRegion ? 1.3 : .7, fillColor: '#174958', fillOpacity: .82 }).bindTooltip(`<strong>${esc(regionName(region))}</strong> · ${esc(regionCountry(region))}<br>${esc(region.headline?.title || '')}`).on('click', () => selectRegion(region)))).addTo(map);
 }
 
 function scheduleMapRegions() {
@@ -359,7 +381,7 @@ function renderGlobeData() {
   const events = filteredEvents();
   const points = events.map(event => ({ ...event, title: displayEventTitle(event), eventId: event.id, kind: 'event', color: state.selected === event.id ? '#c7ff4a' : severityColors[event.severity] }));
   if (state.showIss && state.iss) points.push({ ...state.iss, id: 'iss', kind: 'iss', color: '#60e6da', title: t('iss.title'), location: t('iss.altitude', { altitude: Math.round(state.iss.altitude) }), metric: 'ISS' });
-  const environmental = environmentPoints(); points.push(...environmental); if (state.showRegions && globe) points.push(...sample(state.admin1, 600).map(region => ({ ...region, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
+  const environmental = environmentPoints(); points.push(...environmental); if (state.showRegions && globe) points.push(...state.newsRegions.slice(0, 80).map(region => ({ ...region, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
   if (globe) {
     globe.pointsData(points);
     const paths = []; if (state.showDaylight) paths.push(terminatorPath()); if (state.showIss && state.issTrail.length > 1) paths.push({ points: state.issTrail, color: '#60e6da', stroke: .55 }); globe.pathsData(paths);
@@ -385,13 +407,13 @@ async function loadWeather(lat, lon) {
 
 let currentNews = [];
 function openNewsPreview(article) { const url = safeUrl(article.url); if (url === '#') return; $('#news-preview-title').textContent = article.title; $('#news-preview-meta').textContent = `${article.domain || t('news.source')} · ${article.seendate || t('news.noTime')}`; $('#news-preview-link').href = url; $('#news-dialog').showModal(); }
-function renderNews(articles, label, query) { currentNews = articles; const list = $('#news-list'); const google = `https://news.google.com/search?q=${encodeURIComponent(query)}`; const note = `<p class="muted">${esc(t('news.coverage'))}</p>`; list.innerHTML = note + (articles.length ? articles.map((article, index) => `<button class="news-item news-preview-button" type="button" data-news-index="${index}"><strong>${esc(article.title)}</strong><small>${esc(article.domain || t('news.source'))} · ${esc(article.seendate ? fmtTime(article.seendate, true) : t('news.noTime'))}</small></button>`).join('') : `<p class="muted">${esc(t('news.none', { term: label }))} <a href="${esc(google)}" target="_blank" rel="noopener noreferrer">${esc(t('news.google'))}</a></p>`); list.querySelectorAll('[data-news-index]').forEach(button => button.onclick = () => openNewsPreview(currentNews[Number(button.dataset.newsIndex)])); }
+function renderNews(articles, label) { currentNews = articles.slice(0, 6); const list = $('#news-list'); const note = `<p class="muted">${esc(t('news.coverage'))}</p>`; list.innerHTML = note + (currentNews.length ? currentNews.map((article, index) => `<button class="news-item news-preview-button" type="button" data-news-index="${index}"><strong>${esc(article.title)}</strong><small>${esc(article.domain || t('news.source'))} · ${esc(article.seendate ? fmtTime(article.seendate, true) : t('news.noTime'))}</small></button>`).join('') : `<p class="muted">${esc(t('news.none', { term: label }))}</p>`); list.querySelectorAll('[data-news-index]').forEach(button => button.onclick = () => openNewsPreview(currentNews[Number(button.dataset.newsIndex)])); }
 function normalizedText(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 async function loadNews(term, lat = null, lon = null, country = '') {
   const list = $('#news-list'); const clean = String(term || '').replace(/[<>\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100); const cleanCountry = String(country || '').replace(/[<>\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80); if (!clean) return;
   list.innerHTML = `<p class="muted">${esc(t('news.loading'))}</p>`; if (lat != null) $('#camera-link').href = `https://www.windy.com/-Webcams/webcams?lat=${lat}&lon=${lon}&zoom=8`;
   const query = [clean, cleanCountry].filter(Boolean).join(' '); const phrase = normalizedText(clean); const tokens = normalizedText(query).split(/\s+/).filter(token => token.length >= 3);
-  const articles = state.news.map(article => { const haystack = normalizedText(`${article.title} ${article.domain || ''}`); const score = (phrase && haystack.includes(phrase) ? 8 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0); return { article, score }; }).filter(row => row.score > 0).sort((a, b) => b.score - a.score || new Date(b.article.seendate) - new Date(a.article.seendate)).slice(0, 18).map(row => row.article);
+  const articles = recentNews().map(article => { const haystack = normalizedText(`${article.title} ${article.domain || ''}`); const score = (phrase && haystack.includes(phrase) ? 8 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0); return { article, score }; }).filter(row => row.score > 0).sort((a, b) => b.score - a.score || new Date(b.article.seendate) - new Date(a.article.seendate)).slice(0, 6).map(row => row.article);
   renderNews(articles, clean, query); source('news-cache', 'GOOGLE NEWS RSS', state.news.length > 0, state.news.length, t('sources.newsCache'), state.snapshot?.generatedAt || null, 45 * 60000);
 }
 
@@ -445,7 +467,7 @@ function refreshLanguageUI() {
   else $('#temperature-status').textContent = temperatureStatus();
   if (!state.showAurora) $('#aurora-status').textContent = t('status.auroraOff'); else $('#aurora-status').textContent = t('layer.auroraCells', { count: state.aurora.length });
   if (!state.showAir) $('#air-status').textContent = t('status.airOff'); else $('#air-status').textContent = state.airQuality.length ? t('layer.airPoints', { count: state.airQuality.length }) : t('layer.airUnavailable');
-  if (!state.showRegions) $('#region-status').textContent = t('status.regionsOff'); else if (state.selectedRegion) $('#region-status').textContent = t('layer.regionSelected', { name: regionName(state.selectedRegion).toUpperCase() }); else $('#region-status').textContent = t('layer.regionsCount', { count: state.admin1.length });
+  if (!state.showRegions) $('#region-status').textContent = t('status.regionsOff'); else if (state.selectedRegion) $('#region-status').textContent = t('layer.regionSelected', { name: regionName(state.selectedRegion).toUpperCase() }); else $('#region-status').textContent = t('layer.regionsCount', { count: state.newsRegions.length });
   toggleSatellite(state.showSatellite); renderSources(); renderAll(); clock();
   if (state.space) { const scale = kpScale(state.space.kp); $('#kp-scale').textContent = `${scale[0]} · ${scale[1]}`; $('#space-time').textContent = t('space.latest', { time: fmtTime(state.space.time, true) }); }
   $('#notification-button').textContent = state.notificationsReady ? t('notifications.active') : t('intel.notifications');
@@ -468,7 +490,7 @@ function bind() {
   $('#notification-button').onclick = enableNotifications;
   $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close(); $('#news-close').onclick = () => $('#news-dialog').close(); $('#event-close').onclick = () => $('#event-dialog').close(); $('#event-share-button').onclick = shareSelectedEvent;
   $('#language-select').onchange = event => window.i18n.set(event.target.value);
-  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); refreshLanguageUI(); loadWorld(); const selected = state.events.find(item => item.id === state.selected); if (selected && $('#event-dialog').open) openEventDetail(selected); });
+  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); rebuildNewsRegions(); refreshLanguageUI(); loadWorld(); const selected = state.events.find(item => item.id === state.selected); if (selected && $('#event-dialog').open) openEventDetail(selected); });
 }
 function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
 async function refreshSnapshot() { await loadSnapshot(); await loadWorld(); if (state.showAir || state.showAurora || state.showTemperature) renderGlobeData(); }
