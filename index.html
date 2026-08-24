@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <link rel="stylesheet" href="styles.css?v=9">
-  <link rel="stylesheet" href="enhancements.css?v=4">
+  <link rel="stylesheet" href="enhancements.css?v=5">
 </head>
 <body>
   <div class="app-shell">
@@ -189,9 +189,27 @@
       <div><dt data-i18n="eventDetail.indicator">INDICADOR</dt><dd id="event-detail-metric">—</dd></div>
       <div><dt data-i18n="eventDetail.source">FONTE</dt><dd id="event-detail-source">—</dd></div>
       <div><dt data-i18n="eventDetail.published">PUBLICADO</dt><dd id="event-detail-time">—</dd></div>
-      <div><dt data-i18n="eventDetail.coordinates">COORDENADAS</dt><dd id="event-detail-coordinates">—</dd></div>
+      <div><dt data-i18n="eventDetail.coordinates">GPS (LATITUDE / LONGITUDE)</dt><dd id="event-detail-coordinates">—</dd></div>
       <div><dt data-i18n="eventDetail.checked">CONSULTA DO MONITOR</dt><dd id="event-detail-checked">—</dd></div>
     </dl>
+    <section class="event-location-card" aria-labelledby="event-location-title">
+      <div>
+        <span id="event-location-title" data-i18n="eventDetail.reportedLocation">LOCAL INFORMADO PELA FONTE</span>
+        <strong id="event-detail-reported-location">—</strong>
+      </div>
+      <div>
+        <span data-i18n="eventDetail.nearRegion">REFERÊNCIA ADMINISTRATIVA PRÓXIMA</span>
+        <strong id="event-detail-near-region">—</strong>
+        <small id="event-detail-distance"></small>
+      </div>
+      <a id="event-map-link" class="event-map-link" href="#" target="_blank" rel="noopener noreferrer" data-i18n="eventDetail.openMap">ABRIR PONTO NO OPENSTREETMAP ↗</a>
+    </section>
+    <section class="event-related" aria-labelledby="event-related-title">
+      <p class="eyebrow" data-i18n="eventDetail.relatedEyebrow">CONTEXTO REGIONAL</p>
+      <h3 id="event-related-title" data-i18n="eventDetail.relatedTitle">NOTÍCIAS RECENTES DO LOCAL</h3>
+      <p class="event-related-note" data-i18n="eventDetail.relatedNote">Referências jornalísticas das últimas 24 horas com correspondência clara ao local. Não constituem confirmação independente.</p>
+      <div id="event-related-news" class="event-related-news" aria-live="polite"><p class="muted" data-i18n="eventDetail.relatedLoading">VERIFICANDO COBERTURA LOCAL…</p></div>
+    </section>
     <p class="event-detail-notice" data-i18n="eventDetail.notice">Esta ficha reproduz dados da fonte indicada. Ela não substitui autoridades ou serviços de emergência.</p>
     <div class="event-actions">
       <a id="event-detail-link" class="source-link" href="#" target="_blank" rel="noopener noreferrer" data-i18n="eventDetail.openSource">ABRIR FONTE ORIGINAL ↗</a>
@@ -214,10 +232,10 @@
     <button id="analytics-accept" type="button" data-i18n="consent.allow">PERMITIR</button>
     <button id="analytics-reject" type="button" data-i18n="consent.reject">RECUSAR</button>
   </aside>
-  <script src="i18n.js?v=7"></script>
+  <script src="i18n.js?v=8"></script>
 
   <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js" integrity="sha384-fS13P48RBFel+cPUp5960AhzvtEr64LerQ00neZuM+Hi/VDxxemdQnN7IcWPYvPb" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

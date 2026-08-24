@@ -15,7 +15,7 @@ const state = {
   events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], admin1: [], newsRegions: [],
   selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: false, showAurora: false,
   showAir: false, showIss: true, showRegions: false, showDaylight: true, showSatellite: false,
-  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false
+  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null
 };
 const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['other', '06', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
@@ -130,14 +130,15 @@ async function loadTemperature() {
   $('#temperature-status').textContent = temperatureStatus(); renderGlobeData();
 }
 
-async function loadAdmin1() {
+async function loadAdmin1(options = {}) {
+  const silent = options.silent === true;
   if (state.admin1.length) { rebuildNewsRegions(); return state.newsRegions; }
-  $('#region-status').textContent = t('layer.regionsLoading');
+  if (!silent) $('#region-status').textContent = t('layer.regionsLoading');
   try {
     const data = await json('data/admin1.json', 30000);
     state.admin1 = (data.regions || []).map(([name, countryIndex, lat, lon], index) => ({ id: `region-${index}`, kind: 'region', name, country: data.countries[countryIndex], lat, lon, title: name, location: t('region.click', { country: data.countries[countryIndex] }), metric: t('region.metric'), color: '#60e6da' })); source('natural-earth', 'NATURAL EARTH', true, state.admin1.length, 'Administrative centers');
-    rebuildNewsRegions(); $('#region-status').textContent = t('layer.regionsCount', { count: state.newsRegions.length }); return state.newsRegions;
-  } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); $('#region-status').textContent = t('layer.regionsUnavailable'); return []; }
+    rebuildNewsRegions(); if (!silent) $('#region-status').textContent = t('layer.regionsCount', { count: state.newsRegions.length }); return state.newsRegions;
+  } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); if (!silent) $('#region-status').textContent = t('layer.regionsUnavailable'); return []; }
 }
 
 function filteredEvents() { return state.events.filter(event => (state.category === 'all' || event.category === state.category) && (!state.priority || ['critical', 'high'].includes(event.severity))); }
@@ -153,14 +154,59 @@ function selectEvent(id, openDetails = true) { state.selected = id; const event 
 function renderSpotlight(event) { if (!event) event = filteredEvents()[0]; if (!event) return; $('#risk-chip').textContent = t(`risk.${event.severity}`); $('#risk-chip').style.borderColor = severityColors[event.severity]; $('#risk-chip').style.color = severityColors[event.severity]; $('#spot-title').textContent = displayEventTitle(event).toUpperCase(); $('#spot-location').textContent = event.location; $('#spot-summary').textContent = event.summary; $('#spot-metric').textContent = event.metric; $('#spot-source').textContent = event.source; $('#spot-time').textContent = fmtTime(event.timestamp, true); $('#spot-coordinates').textContent = `${event.lat.toFixed(2)}, ${event.lon.toFixed(2)}`; const link = $('#spot-link'); const verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified; const details = $('#event-detail-button'); details.hidden = false; details.onclick = () => openEventDetail(event); renderCoordinate(event.lat, event.lon); }
 
 function eventCategoryLabel(event) { return t(categories.find(([id]) => id === event.category)?.[2] || 'cat.other'); }
+function coordinateLabel(value, positive, negative) { return `${Math.abs(Number(value)).toFixed(5)}° ${Number(value) >= 0 ? positive : negative}`; }
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const radians = value => value * Math.PI / 180, radius = 6371;
+  const dLat = radians(lat2 - lat1), dLon = radians(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(dLon / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function nearestAdminRegion(event) {
+  return state.admin1.reduce((nearest, region) => {
+    const distance = distanceKm(event.lat, event.lon, region.lat, region.lon);
+    return !nearest || distance < nearest.distance ? { region, distance } : nearest;
+  }, null);
+}
+const eventNewsStopwords = new Set(['about', 'active', 'activity', 'alert', 'area', 'coast', 'east', 'earthquake', 'event', 'flood', 'from', 'incendio', 'near', 'north', 'oeste', 'perto', 'regiao', 'region', 'south', 'storm', 'terremoto', 'tempestade', 'typhoon', 'west', 'wildfire']);
+function eventNewsTokens(value) { return normalizedText(value).split(/[^a-z0-9]+/).filter(token => token.length >= 4 && !eventNewsStopwords.has(token) && !/^\d+$/.test(token)); }
+function relatedNewsForEvent(event, nearby) {
+  const eventLocation = newsComparable(event.location), eventTitle = newsComparable(event.title), regionNameValue = nearby?.region?.name || '', country = nearby?.region?.country || '';
+  const locationTokens = [...new Set(eventNewsTokens(`${event.location} ${event.title}`))];
+  return recentNews().map(article => {
+    const text = newsComparable(article.title), locationPhrase = eventLocation.trim().length >= 5 && text.includes(eventLocation), titlePhrase = eventTitle.trim().length >= 5 && text.includes(eventTitle);
+    const regionPhrase = regionNameValue && newsHasPhrase(text, regionSearchName(regionNameValue));
+    const matchedTokens = locationTokens.filter(token => text.includes(` ${token} `));
+    const countryMatch = country && newsHasPhrase(text, country);
+    const localMatch = locationPhrase || titlePhrase || regionPhrase || matchedTokens.length > 0;
+    const score = (locationPhrase ? 14 : 0) + (titlePhrase ? 12 : 0) + (regionPhrase ? 9 : 0) + matchedTokens.length * 3 + (countryMatch ? 1 : 0);
+    return { article, score, localMatch };
+  }).filter(row => row.localMatch && row.score >= 3).sort((a, b) => b.score - a.score || new Date(b.article.seendate) - new Date(a.article.seendate)).slice(0, 5).map(row => row.article);
+}
+function renderEventRelatedNews(articles) {
+  const container = $('#event-related-news');
+  if (!articles.length) { container.innerHTML = `<p class="muted">${esc(t('eventDetail.noRelated'))}</p>`; return; }
+  container.innerHTML = articles.map((article, index) => `<button type="button" class="event-related-item" data-event-news-index="${index}"><strong>${esc(article.title)}</strong><small>${esc(article.domain || t('news.source'))} · ${esc(article.seendate ? fmtTime(article.seendate, true) : t('news.noTime'))}</small></button>`).join('');
+  container.querySelectorAll('[data-event-news-index]').forEach(button => button.onclick = () => openNewsPreview(articles[Number(button.dataset.eventNewsIndex)]));
+}
+async function enrichEventDetail(event) {
+  await loadAdmin1({ silent: true });
+  if (state.selected !== event.id || !$('#event-dialog').open) return;
+  const nearby = nearestAdminRegion(event), withinRange = nearby && nearby.distance <= 600;
+  $('#event-detail-near-region').textContent = withinRange ? `${nearby.region.name} · ${nearby.region.country}` : t('eventDetail.noNearbyRegion');
+  $('#event-detail-distance').textContent = withinRange ? t('eventDetail.distanceApprox', { distance: Math.round(nearby.distance) }) : '';
+  renderEventRelatedNews(relatedNewsForEvent(event, withinRange ? nearby : null));
+}
 function openEventDetail(event) {
   state.selected = event.id;
   const risk = $('#event-detail-risk'); risk.textContent = t(`risk.${event.severity}`); risk.style.color = severityColors[event.severity];
   $('#event-detail-title').textContent = displayEventTitle(event); $('#event-detail-location').textContent = event.location; $('#event-detail-summary').textContent = event.summary;
   $('#event-detail-category').textContent = eventCategoryLabel(event); $('#event-detail-metric').textContent = event.metric; $('#event-detail-source').textContent = event.source;
-  $('#event-detail-time').textContent = fmtTime(event.timestamp, true); $('#event-detail-coordinates').textContent = `${event.lat.toFixed(4)}, ${event.lon.toFixed(4)}`; $('#event-detail-checked').textContent = state.updatedAt ? fmtTime(state.updatedAt, true) : '—';
+  $('#event-detail-time').textContent = fmtTime(event.timestamp, true); $('#event-detail-coordinates').textContent = `${coordinateLabel(event.lat, 'N', 'S')} · ${coordinateLabel(event.lon, 'E', 'W')}`; $('#event-detail-checked').textContent = state.updatedAt ? fmtTime(state.updatedAt, true) : '—';
+  $('#event-detail-reported-location').textContent = event.location; $('#event-detail-near-region').textContent = t('eventDetail.locating'); $('#event-detail-distance').textContent = '';
+  const mapUrl = new URL('https://www.openstreetmap.org/'); mapUrl.searchParams.set('mlat', event.lat); mapUrl.searchParams.set('mlon', event.lon); mapUrl.hash = `map=7/${event.lat}/${event.lon}`; $('#event-map-link').href = mapUrl.href;
+  $('#event-related-news').innerHTML = `<p class="muted">${esc(t('eventDetail.relatedLoading'))}</p>`;
   const link = $('#event-detail-link'), verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified;
-  $('#event-share-status').textContent = ''; const dialog = $('#event-dialog'); if (!dialog.open) dialog.showModal();
+  $('#event-share-status').textContent = ''; const dialog = $('#event-dialog'); if (!dialog.open) dialog.showModal(); enrichEventDetail(event);
 }
 async function shareSelectedEvent() {
   const event = state.events.find(item => item.id === state.selected); if (!event) return;
@@ -332,12 +378,14 @@ function terminatorPath(date = new Date()) {
 
 function regionName(region) { return region?.name || '—'; }
 function regionCountry(region) { return region?.country || '—'; }
+function selectedNewsLanguage() { return window.i18n?.language || 'pt-BR'; }
 function newsComparable(value) { return ` ${normalizedText(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `; }
 function newsHasPhrase(comparable, value) { const phrase = newsComparable(value).trim(); return phrase.length >= 3 && comparable.includes(` ${phrase} `); }
 function regionSearchName(name) { return String(name || '').replace(/^(?:de|da|do|das|dos)\s+/i, ''); }
 function recentNews() {
   const now = Date.now();
-  return state.news.filter(article => { const time = new Date(article.seendate).getTime(); return Number.isFinite(time) && time <= now + 15 * 60000 && now - time <= NEWS_MAX_AGE; }).sort((a, b) => new Date(b.seendate) - new Date(a.seendate));
+  const language = selectedNewsLanguage();
+  return state.news.filter(article => { const time = new Date(article.seendate).getTime(); return article.language === language && Number.isFinite(time) && time <= now + 15 * 60000 && now - time <= NEWS_MAX_AGE; }).sort((a, b) => new Date(b.seendate) - new Date(a.seendate));
 }
 function rebuildNewsRegions() {
   if (!state.admin1.length) { state.newsRegions = []; return []; }
@@ -354,7 +402,7 @@ function rebuildNewsRegions() {
   if (state.showRegions) $('#region-status').textContent = t('layer.regionsCount', { count: state.newsRegions.length });
   return state.newsRegions;
 }
-function selectRegion(region) { state.selectedRegion = region; const name = regionName(region), country = regionCountry(region); $('#region-input').value = `${name}, ${country}`; $('#region-status').textContent = t('layer.regionSelected', { name: name.toUpperCase() }); focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); if (region.articles?.length) renderNews(region.articles, name, `${name} ${country}`); else loadNews(name, region.lat, region.lon, country); renderGlobeData(); }
+function selectRegion(region) { state.selectedRegion = region; const name = regionName(region), country = regionCountry(region); state.newsQuery = { term: name, lat: region.lat, lon: region.lon, country }; $('#region-input').value = `${name}, ${country}`; $('#region-status').textContent = t('layer.regionSelected', { name: name.toUpperCase() }); focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); if (region.articles?.length) renderNews(region.articles, name); else loadNews(name, region.lat, region.lon, country); renderGlobeData(); }
 
 function environmentPoints() {
   if (state.showTemperature) return sample(state.temperature, 600).map((point, index) => ({ ...point, id: `temp-${index}`, kind: 'temperature', color: tempColor(point.temperature), metric: `${point.temperature.toFixed(1)} °C`, title: t('temperature.approx'), location: 'Open-Meteo' }));
@@ -407,10 +455,11 @@ async function loadWeather(lat, lon) {
 
 let currentNews = [];
 function openNewsPreview(article) { const url = safeUrl(article.url); if (url === '#') return; $('#news-preview-title').textContent = article.title; $('#news-preview-meta').textContent = `${article.domain || t('news.source')} · ${article.seendate || t('news.noTime')}`; $('#news-preview-link').href = url; $('#news-dialog').showModal(); }
-function renderNews(articles, label) { currentNews = articles.slice(0, 6); const list = $('#news-list'); const note = `<p class="muted">${esc(t('news.coverage'))}</p>`; list.innerHTML = note + (currentNews.length ? currentNews.map((article, index) => `<button class="news-item news-preview-button" type="button" data-news-index="${index}"><strong>${esc(article.title)}</strong><small>${esc(article.domain || t('news.source'))} · ${esc(article.seendate ? fmtTime(article.seendate, true) : t('news.noTime'))}</small></button>`).join('') : `<p class="muted">${esc(t('news.none', { term: label }))}</p>`); list.querySelectorAll('[data-news-index]').forEach(button => button.onclick = () => openNewsPreview(currentNews[Number(button.dataset.newsIndex)])); }
+function renderNews(articles, label) { currentNews = articles.filter(article => article.language === selectedNewsLanguage()).slice(0, 6); const list = $('#news-list'); const note = `<p class="muted">${esc(t('news.coverage'))}</p>`; list.innerHTML = note + (currentNews.length ? currentNews.map((article, index) => `<button class="news-item news-preview-button" type="button" data-news-index="${index}"><strong>${esc(article.title)}</strong><small>${esc(article.domain || t('news.source'))} · ${esc(article.seendate ? fmtTime(article.seendate, true) : t('news.noTime'))}</small></button>`).join('') : `<p class="muted">${esc(t('news.none', { term: label }))}</p>`); list.querySelectorAll('[data-news-index]').forEach(button => button.onclick = () => openNewsPreview(currentNews[Number(button.dataset.newsIndex)])); }
 function normalizedText(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 async function loadNews(term, lat = null, lon = null, country = '') {
   const list = $('#news-list'); const clean = String(term || '').replace(/[<>\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100); const cleanCountry = String(country || '').replace(/[<>\[\]{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80); if (!clean) return;
+  state.newsQuery = { term: clean, lat, lon, country: cleanCountry };
   list.innerHTML = `<p class="muted">${esc(t('news.loading'))}</p>`; if (lat != null) $('#camera-link').href = `https://www.windy.com/-Webcams/webcams?lat=${lat}&lon=${lon}&zoom=8`;
   const query = [clean, cleanCountry].filter(Boolean).join(' '); const phrase = normalizedText(clean); const tokens = normalizedText(query).split(/\s+/).filter(token => token.length >= 3);
   const articles = recentNews().map(article => { const haystack = normalizedText(`${article.title} ${article.domain || ''}`); const score = (phrase && haystack.includes(phrase) ? 8 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0); return { article, score }; }).filter(row => row.score > 0).sort((a, b) => b.score - a.score || new Date(b.article.seendate) - new Date(a.article.seendate)).slice(0, 6).map(row => row.article);
@@ -490,7 +539,7 @@ function bind() {
   $('#notification-button').onclick = enableNotifications;
   $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close(); $('#news-close').onclick = () => $('#news-dialog').close(); $('#event-close').onclick = () => $('#event-dialog').close(); $('#event-share-button').onclick = shareSelectedEvent;
   $('#language-select').onchange = event => window.i18n.set(event.target.value);
-  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); rebuildNewsRegions(); refreshLanguageUI(); loadWorld(); const selected = state.events.find(item => item.id === state.selected); if (selected && $('#event-dialog').open) openEventDetail(selected); });
+  window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); rebuildNewsRegions(); if (state.selectedRegion) { const updatedRegion = state.newsRegions.find(region => region.id === state.selectedRegion.id); if (updatedRegion) { state.selectedRegion = updatedRegion; renderNews(updatedRegion.articles || [], regionName(updatedRegion)); } else renderNews([], regionName(state.selectedRegion)); } else if (state.newsQuery) loadNews(state.newsQuery.term, state.newsQuery.lat, state.newsQuery.lon, state.newsQuery.country); refreshLanguageUI(); loadWorld(); const selected = state.events.find(item => item.id === state.selected); if (selected && $('#event-dialog').open) openEventDetail(selected); });
 }
 function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
 async function refreshSnapshot() { await loadSnapshot(); await loadWorld(); if (state.showAir || state.showAurora || state.showTemperature) renderGlobeData(); }
