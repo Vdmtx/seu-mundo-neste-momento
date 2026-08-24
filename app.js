@@ -15,13 +15,32 @@ const state = {
   events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], conflictNews: [], admin1: [], newsRegions: [], conflictRegions: [],
   selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: false, showAurora: false,
   showAir: false, showIss: true, showRegions: false, showConflicts: false, showDaylight: true, showSatellite: false,
-  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null, selectedConflict: null, expandedGlobeCluster: null
+  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null, selectedConflict: null, expandedGlobeCluster: null,
+  myWorld: readMyWorld(), myWorldActive: false, detailRegion: null
 };
 const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['other', '06', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
+const myWorldCategoryIds = ['earthquakes', 'wildfires', 'storms', 'volcanoes', 'floods', 'other'];
+const MY_WORLD_KEY = 'my-world-preferences-v1';
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
 const $ = selector => document.querySelector(selector);
 const t = (key, variables = {}) => window.i18n?.t(key, variables) ?? key;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+function readMyWorld() {
+  const fallback = { regions: [], categories: [], preferredView: 'map' };
+  try {
+    const stored = JSON.parse(localStorage.getItem('my-world-preferences-v1') || 'null');
+    if (!stored || typeof stored !== 'object') return fallback;
+    const regions = Array.isArray(stored.regions) ? stored.regions.filter(region => region && typeof region.id === 'string' && typeof region.name === 'string' && Number.isFinite(Number(region.lat)) && Number.isFinite(Number(region.lon))).slice(0, 20).map(region => ({ id: region.id, name: region.name, country: String(region.country || ''), lat: Number(region.lat), lon: Number(region.lon) })) : [];
+    const allowed = new Set(['earthquakes', 'wildfires', 'storms', 'volcanoes', 'floods', 'other']);
+    const selectedCategories = Array.isArray(stored.categories) ? [...new Set(stored.categories.filter(category => allowed.has(category)))] : [];
+    return { regions, categories: selectedCategories, preferredView: stored.preferredView === 'globe' ? 'globe' : 'map' };
+  } catch { return fallback; }
+}
+function saveMyWorld() {
+  try { localStorage.setItem(MY_WORLD_KEY, JSON.stringify(state.myWorld)); } catch { /* armazenamento local pode estar desativado */ }
+  updateMyWorldButton();
+}
 
 function symbolKind(item = {}) {
   if (item.symbol) return item.symbol;
@@ -190,7 +209,12 @@ async function loadAdmin1(options = {}) {
   } catch (error) { source('natural-earth', 'NATURAL EARTH', false, 0, error.message); if (!silent) $('#region-status').textContent = t('layer.regionsUnavailable'); return []; }
 }
 
-function filteredEvents() { return state.events.filter(event => (state.category === 'all' || event.category === state.category) && (!state.priority || ['critical', 'high'].includes(event.severity))); }
+function myWorldMatches(event) {
+  const categoryMatch = !state.myWorld.categories.length || state.myWorld.categories.includes(event.category);
+  const regionMatch = !state.myWorld.regions.length || state.myWorld.regions.some(region => distanceKm(event.lat, event.lon, region.lat, region.lon) <= 700);
+  return categoryMatch && regionMatch;
+}
+function filteredEvents() { return state.events.filter(event => (state.category === 'all' || event.category === state.category) && (!state.priority || ['critical', 'high'].includes(event.severity)) && (!state.myWorldActive || myWorldMatches(event))); }
 function displayEventTitle(event) {
   if (event.source === 'GDACS') return t({ wildfires: 'event.gdacsWildfire', floods: 'event.gdacsFlood', storms: 'event.gdacsStorm', volcanoes: 'event.gdacsVolcano', other: 'event.gdacsOther' }[event.category] || 'event.gdacsOther');
   if (/^NOAA PA|^NOAA PH/.test(event.source)) return t('event.tsunami');
@@ -215,6 +239,62 @@ function nearestAdminRegion(event) {
     const distance = distanceKm(event.lat, event.lon, region.lat, region.lon);
     return !nearest || distance < nearest.distance ? { region, distance } : nearest;
   }, null);
+}
+function isFavoriteRegion(region) { return Boolean(region && state.myWorld.regions.some(item => item.id === region.id)); }
+function updateEventFavoriteButton() {
+  const button = $('#event-favorite-button'); if (!button) return;
+  button.hidden = !state.detailRegion;
+  if (state.detailRegion) button.textContent = t(isFavoriteRegion(state.detailRegion) ? 'myWorld.removeRegion' : 'myWorld.saveRegion');
+}
+function toggleFavoriteRegion(region) {
+  if (!region) return;
+  const existing = state.myWorld.regions.findIndex(item => item.id === region.id);
+  if (existing >= 0) state.myWorld.regions.splice(existing, 1);
+  else if (state.myWorld.regions.length < 20) state.myWorld.regions.push({ id: region.id, name: region.name, country: region.country, lat: region.lat, lon: region.lon });
+  saveMyWorld(); renderMyWorld(); updateEventFavoriteButton(); if (state.myWorldActive) renderAll();
+}
+function myWorldResultLabel(region) { return `${region.name} · ${region.country}`; }
+function renderMyWorldSearchResults(regions = null) {
+  const container = $('#my-world-results'); if (!container) return;
+  if (regions == null) { container.innerHTML = `<p class="muted">${esc(t('myWorld.searchStart'))}</p>`; return; }
+  if (!regions.length) { container.innerHTML = `<p class="muted">${esc(t('myWorld.noResults'))}</p>`; return; }
+  container.innerHTML = regions.map(region => `<div class="my-world-region-row"><span><strong>${esc(region.name)}</strong><small>${esc(region.country)}</small></span><button type="button" data-my-world-add="${esc(region.id)}">${esc(isFavoriteRegion(region) ? t('myWorld.remove') : t('myWorld.add'))}</button></div>`).join('');
+  container.querySelectorAll('[data-my-world-add]').forEach(button => button.onclick = () => { const region = state.admin1.find(item => item.id === button.dataset.myWorldAdd); toggleFavoriteRegion(region); searchMyWorldRegions($('#my-world-search').value); });
+}
+function renderMyWorld() {
+  const favorites = $('#my-world-favorites'), categoryBox = $('#my-world-categories'); if (!favorites || !categoryBox) return;
+  favorites.innerHTML = `<h4>${esc(t('myWorld.favoritesTitle'))}</h4>${state.myWorld.regions.length ? state.myWorld.regions.map(region => `<div class="my-world-region-row saved"><span><strong>${esc(region.name)}</strong><small>${esc(region.country)}</small></span><span class="my-world-region-actions"><button type="button" data-my-world-focus="${esc(region.id)}">${esc(t('myWorld.focus'))}</button><button type="button" data-my-world-remove="${esc(region.id)}">${esc(t('myWorld.remove'))}</button></span></div>`).join('') : `<p class="muted">${esc(t('myWorld.favoritesEmpty'))}</p>`}`;
+  favorites.querySelectorAll('[data-my-world-focus]').forEach(button => button.onclick = () => { const region = state.myWorld.regions.find(item => item.id === button.dataset.myWorldFocus); if (!region) return; $('#my-world-dialog').close(); focusCoordinate(region.lat, region.lon, 1.35); loadWeather(region.lat, region.lon); loadNews(region.name, region.lat, region.lon, region.country); });
+  favorites.querySelectorAll('[data-my-world-remove]').forEach(button => button.onclick = () => toggleFavoriteRegion(state.myWorld.regions.find(item => item.id === button.dataset.myWorldRemove)));
+  categoryBox.innerHTML = myWorldCategoryIds.map(id => { const key = categories.find(([category]) => category === id)?.[2] || 'cat.other'; return `<label><input type="checkbox" value="${id}" ${state.myWorld.categories.includes(id) ? 'checked' : ''}><span>${symbolMarkup(id, '#60e6da')} ${esc(t(key))}</span></label>`; }).join('');
+  categoryBox.querySelectorAll('input').forEach(input => input.onchange = () => { state.myWorld.categories = [...categoryBox.querySelectorAll('input:checked')].map(item => item.value); saveMyWorld(); renderMyWorldSummary(); if (state.myWorldActive) renderAll(); });
+  $('#my-world-view').value = state.myWorld.preferredView;
+  $('#my-world-apply').textContent = t(state.myWorldActive ? 'myWorld.showAll' : 'myWorld.apply');
+  renderMyWorldSummary(); updateMyWorldButton();
+}
+function renderMyWorldSummary() {
+  const summary = $('#my-world-summary'); if (!summary) return;
+  const count = state.events.filter(myWorldMatches).length;
+  summary.textContent = t('myWorld.matches', { count });
+}
+function updateMyWorldButton() {
+  const button = $('#my-world-button'); if (!button) return;
+  const count = state.myWorld.regions.length + state.myWorld.categories.length;
+  button.classList.toggle('active', state.myWorldActive);
+  button.dataset.count = count ? String(count) : '';
+  button.setAttribute('aria-pressed', String(state.myWorldActive));
+}
+async function searchMyWorldRegions(rawQuery) {
+  const query = normalizedText(rawQuery).trim();
+  if (query.length < 2) { renderMyWorldSearchResults(null); return; }
+  $('#my-world-results').innerHTML = `<p class="muted">${esc(t('myWorld.searching'))}</p>`;
+  await loadAdmin1({ silent: true });
+  const results = state.admin1.map(region => { const name = normalizedText(region.name), country = normalizedText(region.country); const score = name.startsWith(query) ? 0 : country.startsWith(query) ? 1 : name.includes(query) ? 2 : country.includes(query) ? 3 : 9; return { region, score }; }).filter(item => item.score < 9).sort((a, b) => a.score - b.score || a.region.name.localeCompare(b.region.name, window.i18n.locale())).slice(0, 12).map(item => item.region);
+  renderMyWorldSearchResults(results);
+}
+function openMyWorld() {
+  renderMyWorld(); renderMyWorldSearchResults(null); $('#my-world-search').value = '';
+  const dialog = $('#my-world-dialog'); if (!dialog.open) dialog.showModal();
 }
 const eventNewsStopwords = new Set(['about', 'active', 'activity', 'alert', 'area', 'coast', 'east', 'earthquake', 'event', 'flood', 'from', 'incendio', 'near', 'north', 'oeste', 'perto', 'regiao', 'region', 'south', 'storm', 'terremoto', 'tempestade', 'typhoon', 'west', 'wildfire']);
 function eventNewsTokens(value) { return normalizedText(value).split(/[^\p{L}\p{N}]+/u).filter(token => token.length >= 4 && !eventNewsStopwords.has(token) && !/^\d+$/.test(token)); }
@@ -241,12 +321,15 @@ async function enrichEventDetail(event) {
   await loadAdmin1({ silent: true });
   if (state.selected !== event.id || !$('#event-dialog').open) return;
   const nearby = nearestAdminRegion(event), withinRange = nearby && nearby.distance <= 600;
+  state.detailRegion = withinRange ? nearby.region : null;
   $('#event-detail-near-region').textContent = withinRange ? `${nearby.region.name} · ${nearby.region.country}` : t('eventDetail.noNearbyRegion');
   $('#event-detail-distance').textContent = withinRange ? t('eventDetail.distanceApprox', { distance: Math.round(nearby.distance) }) : '';
+  updateEventFavoriteButton();
   renderEventRelatedNews(relatedNewsForEvent(event, withinRange ? nearby : null));
 }
 function openEventDetail(event) {
   state.selected = event.id;
+  state.detailRegion = null;
   const risk = $('#event-detail-risk'); risk.textContent = t(`risk.${event.severity}`); risk.style.color = severityColors[event.severity];
   $('#event-detail-title').textContent = displayEventTitle(event); $('#event-detail-location').textContent = event.location; $('#event-detail-summary').textContent = event.summary;
   $('#event-detail-category').textContent = eventCategoryLabel(event); $('#event-detail-metric').textContent = event.metric; $('#event-detail-source').textContent = event.source;
@@ -254,6 +337,7 @@ function openEventDetail(event) {
   $('#event-detail-reported-location').textContent = event.location; $('#event-detail-near-region').textContent = t('eventDetail.locating'); $('#event-detail-distance').textContent = '';
   const mapUrl = new URL('https://www.openstreetmap.org/'); mapUrl.searchParams.set('mlat', event.lat); mapUrl.searchParams.set('mlon', event.lon); mapUrl.hash = `map=7/${event.lat}/${event.lon}`; $('#event-map-link').href = mapUrl.href;
   $('#event-related-news').innerHTML = `<p class="muted">${esc(t('eventDetail.relatedLoading'))}</p>`;
+  updateEventFavoriteButton();
   const link = $('#event-detail-link'), verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified;
   $('#event-share-status').textContent = ''; const dialog = $('#event-dialog'); if (!dialog.open) dialog.showModal(); enrichEventDetail(event);
 }
@@ -713,6 +797,19 @@ function refreshLanguageUI() {
   toggleSatellite(state.showSatellite); renderSources(); renderAll(); clock();
   if (state.space) { const scale = kpScale(state.space.kp); $('#kp-scale').textContent = `${scale[0]} · ${scale[1]}`; $('#space-time').textContent = t('space.latest', { time: fmtTime(state.space.time, true) }); }
   $('#notification-button').textContent = state.notificationsReady ? t('notifications.active') : t('intel.notifications');
+  updateMyWorldButton(); if ($('#my-world-dialog')?.open) renderMyWorld(); updateEventFavoriteButton();
+}
+function switchView(nextView, silent = false) {
+  if (nextView === state.view) return true;
+  if (nextView === 'globe' && !initGlobe()) { if (!silent) alert(t('alert.webgl')); return false; }
+  if (nextView === 'map' && !map) return false;
+  state.view = nextView;
+  $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe';
+  $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d');
+  renderGlobeData();
+  if (state.view === 'map') setTimeout(() => { map.invalidateSize(); updateTemperaturePresentation(); }, 50);
+  else { resizeGlobe(); updateTemperaturePresentation(); }
+  return true;
 }
 function bind() {
   $('#theme-button').onclick = () => setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
@@ -727,16 +824,22 @@ function bind() {
   $('#conflicts-toggle').onchange = event => toggleConflicts(event.target.checked);
   $('#daylight-toggle').onchange = event => { state.showDaylight = event.target.checked; renderGlobeData(); };
   $('#satellite-toggle').onchange = event => toggleSatellite(event.target.checked);
-  $('#view-button').onclick = () => { if (state.view === 'map' && !initGlobe()) { alert(t('alert.webgl')); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d'); renderGlobeData(); if (state.view === 'map') setTimeout(() => { map.invalidateSize(); updateTemperaturePresentation(); }, 50); else { resizeGlobe(); updateTemperaturePresentation(); } };
+  $('#view-button').onclick = () => switchView(state.view === 'globe' ? 'map' : 'globe');
   $('#refresh-button').onclick = async () => { await loadSnapshot(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); if (state.showTemperature) loadTemperature(); };
   $('#locate-button').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(position => { focusCoordinate(position.coords.latitude, position.coords.longitude, 1.5); loadWeather(position.coords.latitude, position.coords.longitude); loadNews($('#region-input').placeholder, position.coords.latitude, position.coords.longitude); }, () => alert(t('alert.locationDenied'))) : alert(t('alert.locationUnavailable'));
   $('#intel-form').onsubmit = event => { event.preventDefault(); loadNews($('#region-input').value); };
   $('#notification-button').onclick = enableNotifications;
+  $('#my-world-button').onclick = openMyWorld; $('#my-world-close').onclick = () => $('#my-world-dialog').close();
+  $('#my-world-search-form').onsubmit = event => { event.preventDefault(); searchMyWorldRegions($('#my-world-search').value); };
+  let myWorldSearchTimer; $('#my-world-search').oninput = event => { clearTimeout(myWorldSearchTimer); myWorldSearchTimer = setTimeout(() => searchMyWorldRegions(event.target.value), 180); };
+  $('#my-world-apply').onclick = () => { state.myWorldActive = !state.myWorldActive; state.selected = null; renderAll(); renderMyWorld(); };
+  $('#my-world-view').onchange = event => { const requested = event.target.value === 'globe' ? 'globe' : 'map'; if (switchView(requested)) { state.myWorld.preferredView = requested; saveMyWorld(); } else event.target.value = state.myWorld.preferredView; };
+  $('#event-favorite-button').onclick = () => toggleFavoriteRegion(state.detailRegion);
   $('#about-button').onclick = () => $('#about-dialog').showModal(); $('#about-close').onclick = () => $('#about-dialog').close(); $('#news-close').onclick = () => $('#news-dialog').close(); $('#event-close').onclick = () => $('#event-dialog').close(); $('#conflict-close').onclick = () => $('#conflict-dialog').close(); $('#event-share-button').onclick = shareSelectedEvent;
   $('#language-select').onchange = event => window.i18n.set(event.target.value);
   window.addEventListener('languagechange', () => { state.admin1.forEach(region => { region.location = t('region.click', { country: region.country }); region.metric = t('region.metric'); }); rebuildNewsRegions(); rebuildConflictRegions(); if ($('#conflict-dialog').open) $('#conflict-dialog').close(); state.selectedConflict = null; if (state.selectedRegion) { const updatedRegion = state.newsRegions.find(region => region.id === state.selectedRegion.id); if (updatedRegion) { state.selectedRegion = updatedRegion; renderNews(updatedRegion.articles || [], regionName(updatedRegion)); } else renderNews([], regionName(state.selectedRegion)); } else if (state.newsQuery) loadNews(state.newsQuery.term, state.newsQuery.lat, state.newsQuery.lon, state.newsQuery.country); refreshLanguageUI(); loadWorld(); const selected = state.events.find(item => item.id === state.selected); if (selected && $('#event-dialog').open) openEventDetail(selected); });
 }
 function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
 async function refreshSnapshot() { await loadSnapshot(); await loadWorld(); if (state.showAir || state.showAurora || state.showTemperature) renderGlobeData(); }
-async function start() { bind(); setTheme(currentTheme(), false); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
+async function start() { bind(); setTheme(currentTheme(), false); updateMyWorldButton(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); if (state.myWorld.preferredView === 'globe') switchView('globe', true); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
 start();

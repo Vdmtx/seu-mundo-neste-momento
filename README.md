@@ -19,6 +19,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Clima pontual, diretório externo de câmeras públicas e alertas críticos locais do navegador enquanto o site está aberto.
 - Indicador de frescor por fonte, distinguindo horário de publicação e horário da última consulta do monitor.
 - Página permanente de metodologia e integridade, em português, inglês e espanhol, com intervalos, limitações, critérios de risco, regras para conflitos e incidentes sensíveis, privacidade e canal público de correções.
+- “Meu Mundo” local e sem cadastro: até 20 estados, províncias ou países de referência, categorias prioritárias, filtro opcional no mapa e preferência entre mapa 2D e globo 3D. As escolhas ficam somente no navegador.
 - Ficha detalhada de cada ocorrência com categoria, indicador, fonte, horário, coordenadas e link original.
 - Compartilhamento contextual com fonte e horário, usando o menu nativo do aparelho ou cópia para a área de transferência.
 
