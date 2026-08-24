@@ -15,13 +15,60 @@ const state = {
   events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], conflictNews: [], admin1: [], newsRegions: [], conflictRegions: [],
   selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: false, showAurora: false,
   showAir: false, showIss: true, showRegions: false, showConflicts: false, showDaylight: true, showSatellite: false,
-  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null, selectedConflict: null
+  view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null, selectedConflict: null, expandedGlobeCluster: null
 };
 const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['other', '06', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
 const $ = selector => document.querySelector(selector);
 const t = (key, variables = {}) => window.i18n?.t(key, variables) ?? key;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+function symbolKind(item = {}) {
+  if (item.symbol) return item.symbol;
+  if (item.kind === 'conflict-media') return 'conflict';
+  if (item.kind === 'region') return 'news';
+  if (item.kind === 'iss') return 'iss';
+  if (item.kind === 'aurora') return 'aurora';
+  if (item.kind === 'air') return 'air';
+  if (/^NOAA PA|^NOAA PH/.test(item.source || '')) return 'tsunami';
+  return item.category || item.kind || 'other';
+}
+function symbolGlyph(kind) {
+  const glyphs = {
+    all: '<path d="M7 7h4v4H7zM13 7h4v4h-4zM7 13h4v4H7zM13 13h4v4h-4z"/>',
+    earthquakes: '<path d="M4.5 12h4l2-5 3 10 2-5h4"/>',
+    wildfires: '<path d="M12.2 4.2c1.1 3.2-2.1 4.2-.8 7.1.8-1 1.8-1.9 2-3.2 3.2 2.8 4.5 5.7 2.8 8.7-1.7 3.1-6.8 3.2-8.6.2-1.7-2.8-.3-5.4 2.5-8.2-.2 2.1.4 3.4 1.2 4.1-.1-3 2.7-4.7.9-8.7z"/>',
+    storms: '<path d="M18.8 9.3c-1.5-3.7-7.5-4.2-10.3-1.5-3.1 3-1.1 7.7 2.8 8.1 3.5.4 5.6-3.3 3.4-5.5-1.5-1.5-4.2-.4-3.9 1.5.2 1.1 1.5 1.5 2.2.8"/>',
+    volcanoes: '<path d="M3.8 19 9.7 8.5l2.3 3.2 2.1-3.2L20.2 19zM11.2 6.4c-1.3-1-.8-2.2.1-2.8M14 6.2c1.4-1 .9-2.2 0-3"/>',
+    floods: '<path d="M3.5 9.5c2.2-1.8 4.3 1.8 6.5 0s4.3 1.8 6.5 0 3.8.7 4 .9M3.5 14c2.2-1.8 4.3 1.8 6.5 0s4.3 1.8 6.5 0 3.8.7 4 .9M3.5 18.5c2.2-1.8 4.3 1.8 6.5 0s4.3 1.8 6.5 0 3.8.7 4 .9"/>',
+    tsunami: '<path d="M3.5 16.8c3.8-6.5 8.1-7.8 11.7-5.7-2.1-.1-3.7 1-4 2.6 2.5-1.1 5.5-.7 8.3 1.7-4.2-.7-6.8 3.5-10.8 3.1-2.1-.2-3.8-.8-5.2-1.7z"/>',
+    hazmat: '<circle cx="12" cy="12" r="2"/><circle cx="12" cy="7" r="3"/><circle cx="7.7" cy="14.6" r="3"/><circle cx="16.3" cy="14.6" r="3"/>',
+    nuclear: '<circle cx="12" cy="12" r="1.5"/><path d="M12 10 9.2 5.1A7.8 7.8 0 0 1 14.8 5zM10.2 13 4.6 13a7.8 7.8 0 0 0 2.8 4.8zM13.8 13l2.8 4.8a7.8 7.8 0 0 0 2.8-4.8z"/>',
+    conflict: '<rect x="5" y="5" width="14" height="14" rx="1"/><path d="M8 8h5M8 11h8M8 14h5M16.5 14v3M16.5 18.5v.1"/>',
+    news: '<path d="M5 6h11.5A2.5 2.5 0 0 1 19 8.5V18H7a2 2 0 0 1-2-2zM8 9h6M8 12h8M8 15h5"/>',
+    iss: '<path d="M9 9h6v6H9zM3 6l5 2-2 4-4-2zM21 18l-5-2 2-4 4 2zM12 3v4M12 17v4"/>',
+    aurora: '<path d="M4 16c3.2-7.5 6.4-7.5 9.6 0M9 17c3.2-7.5 6.4-7.5 9.6 0"/>',
+    air: '<path d="M4 9h10c3.2 0 3.2-4 0-4-1.4 0-2.3.8-2.5 1.8M4 13h14c3.2 0 3.2 4 0 4-1.4 0-2.3-.8-2.5-1.8M4 17h7"/>',
+    other: '<path d="M12 4.5 19.5 12 12 19.5 4.5 12zM12 8v5M12 16v.1"/>'
+  };
+  return glyphs[kind] || glyphs.other;
+}
+function symbolSvg(kind, color = '#60e6da', selected = false) {
+  const accent = selected ? '#c7ff4a' : color;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.4" fill="#071017" fill-opacity=".92" stroke="${accent}" stroke-width="${selected ? 2 : 1.35}"/><g fill="none" stroke="#eef7f5" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">${symbolGlyph(kind)}</g></svg>`;
+}
+function symbolMarkup(kind, color, selected = false) { return `<span class="event-symbol" aria-hidden="true">${symbolSvg(kind, color, selected)}</span>`; }
+const leafletIconCache = new Map();
+function leafletSymbolIcon(kind, color, selected = false, size = 28, count = 1) {
+  const key = `${kind}-${color}-${selected}-${size}-${count}`;
+  const badge = count > 1 ? `<b class="map-symbol-count">${count > 99 ? '99+' : count}</b>` : '';
+  if (!leafletIconCache.has(key)) leafletIconCache.set(key, L.divIcon({ className: 'map-symbol-host', html: `<span class="map-symbol ${selected ? 'selected' : ''}">${symbolSvg(kind, color, selected)}${badge}</span>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2], tooltipAnchor: [0, -size / 2] }));
+  return leafletIconCache.get(key);
+}
+function symbolLabel(kind) {
+  const keys = { earthquakes: 'cat.earthquakes', wildfires: 'cat.wildfires', storms: 'cat.storms', volcanoes: 'cat.volcanoes', floods: 'cat.floods', hazmat: 'cat.hazmat', nuclear: 'cat.nuclear', other: 'cat.other', tsunami: 'event.tsunami' };
+  return t(keys[kind] || 'cat.other');
+}
 
 function safeUrl(value) { try { const url = new URL(String(value)); return ['http:', 'https:'].includes(url.protocol) ? url.href : '#'; } catch { return '#'; } }
 function timeoutFetch(url, options = {}, ms = 15000) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), ms); return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer)); }
@@ -149,9 +196,9 @@ function displayEventTitle(event) {
   if (/^NOAA PA|^NOAA PH/.test(event.source)) return t('event.tsunami');
   return event.title;
 }
-function renderCategories() { $('#category-list').innerHTML = categories.map(([id, code, labelKey]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (['nuclear', 'hazmat'].includes(id) && count === 0) return ''; return `<button class="category ${state.category === id ? 'active' : ''}" data-category="${id}"><span class="code">${code}</span><span>${esc(t(labelKey))}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
+function renderCategories() { $('#category-list').innerHTML = categories.map(([id, , labelKey]) => { const count = id === 'all' ? state.events.length : state.events.filter(event => event.category === id).length; if (['nuclear', 'hazmat'].includes(id) && count === 0) return ''; const active = state.category === id; return `<button class="category ${active ? 'active' : ''}" data-category="${id}">${symbolMarkup(id, active ? '#c7ff4a' : '#60e6da', active)}<span>${esc(t(labelKey))}</span><span class="count">${count}</span></button>`; }).join(''); document.querySelectorAll('.category').forEach(button => button.onclick = () => { state.category = button.dataset.category; state.selected = null; renderAll(); }); }
 function renderSources() { const list = [...state.sources.values()]; const decorated = list.map(item => ({ ...item, freshness: sourceFreshness(item) })); $('#source-list').innerHTML = decorated.length ? decorated.map(item => `<div class="source-row ${item.ok ? 'ok' : ''} ${item.freshness.stale ? 'stale' : ''}" title="${esc(item.message || '')}"><span><i></i><span>${esc(item.label)}<small>${esc(item.freshness.text)}${item.freshness.stale ? ` · ${esc(t('sources.stale'))}` : ''}</small></span></span><b>${item.ok ? esc(t('sources.ok', { count: item.count })) : esc(t('sources.fail'))}</b></div>`).join('') : `<span class="muted">${esc(t('sources.loading'))}</span>`; const healthy = decorated.filter(item => item.ok && !item.freshness.stale).length; $('#source-count').textContent = healthy; $('#online-dot').className = `live-dot ${healthy === 0 ? 'offline' : healthy < decorated.length ? 'partial' : ''}`; $('#system-status').textContent = healthy === 0 ? t('system.offline') : healthy < decorated.length ? t('system.partial') : t('system.online'); }
-function renderFeed() { const rows = filteredEvents().slice(0, 12); $('#visible-count').textContent = filteredEvents().length; $('#feed-count').textContent = rows.length; $('#event-feed').innerHTML = rows.length ? rows.map(event => `<button class="event-item ${state.selected === event.id ? 'active' : ''}" data-id="${esc(event.id)}"><i class="${event.severity}"></i><span><strong>${esc(displayEventTitle(event))}</strong><small>${esc(event.location)} · ${fmtTime(event.timestamp)}</small></span><span>${esc(event.metric)}</span></button>`).join('') : `<p class="muted" style="padding:18px">${esc(t('event.none'))}</p>`; document.querySelectorAll('.event-item').forEach(button => button.onclick = () => selectEvent(button.dataset.id)); }
+function renderFeed() { const rows = filteredEvents().slice(0, 12); $('#visible-count').textContent = filteredEvents().length; $('#feed-count').textContent = rows.length; $('#event-feed').innerHTML = rows.length ? rows.map(event => { const selected = state.selected === event.id; return `<button class="event-item ${selected ? 'active' : ''}" data-id="${esc(event.id)}">${symbolMarkup(symbolKind(event), severityColors[event.severity], selected)}<span><strong>${esc(displayEventTitle(event))}</strong><small>${esc(event.location)} · ${fmtTime(event.timestamp)}</small></span><span>${esc(event.metric)}</span></button>`; }).join('') : `<p class="muted" style="padding:18px">${esc(t('event.none'))}</p>`; document.querySelectorAll('.event-item').forEach(button => button.onclick = () => selectEvent(button.dataset.id)); }
 function selectEvent(id, openDetails = true) { state.selected = id; const event = state.events.find(item => item.id === id); if (!event) return; renderSpotlight(event); renderFeed(); focusCoordinate(event.lat, event.lon, 1.6); loadWeather(event.lat, event.lon); loadNews(event.location, event.lat, event.lon); if (openDetails) openEventDetail(event); }
 function renderSpotlight(event) { if (!event) event = filteredEvents()[0]; if (!event) return; $('#risk-chip').textContent = t(`risk.${event.severity}`); $('#risk-chip').style.borderColor = severityColors[event.severity]; $('#risk-chip').style.color = severityColors[event.severity]; $('#spot-title').textContent = displayEventTitle(event).toUpperCase(); $('#spot-location').textContent = event.location; $('#spot-summary').textContent = event.summary; $('#spot-metric').textContent = event.metric; $('#spot-source').textContent = event.source; $('#spot-time').textContent = fmtTime(event.timestamp, true); $('#spot-coordinates').textContent = `${event.lat.toFixed(2)}, ${event.lon.toFixed(2)}`; const link = $('#spot-link'); const verified = safeUrl(event.url); link.hidden = verified === '#'; if (verified !== '#') link.href = verified; const details = $('#event-detail-button'); details.hidden = false; details.onclick = () => openEventDetail(event); renderCoordinate(event.lat, event.lon); }
 
@@ -222,7 +269,23 @@ async function shareSelectedEvent() {
 }
 
 let globe, map, baseMapLayer, satelliteLayer, regionLayer, conflictLayer, issTrailLayer, temperatureLayer, regionRenderFrame;
-let mapMarkers = [], environmentMarkers = [];
+let mapMarkers = [], environmentMarkers = [], issMapMarker = null;
+function activateGlobePoint(point) {
+  if (point.clusterEvents?.length) { state.expandedGlobeCluster = point.id; globe?.pointOfView({ lat: point.lat, lng: point.lon, altitude: .72 }, 700); renderGlobeData(); return; }
+  if (point.eventId) selectEvent(point.eventId);
+  else if (point.kind === 'conflict-media') selectConflictRegion(point);
+  else if (point.kind === 'region') selectRegion(point);
+  else loadWeather(point.lat, point.lon);
+}
+function globeHtmlElement(point) {
+  const element = document.createElement('button'), count = point.clusterEvents?.length || 1;
+  element.type = 'button'; element.className = `globe-map-symbol ${point.selected ? 'selected' : ''}`;
+  element.innerHTML = `${symbolSvg(symbolKind(point), point.color || '#60e6da', point.selected)}${count > 1 ? `<b>${count > 99 ? '99+' : count}</b>` : ''}`;
+  element.title = [point.title, point.metric, point.location].filter(Boolean).join(' · ');
+  element.setAttribute('aria-label', element.title || symbolLabel(symbolKind(point)));
+  element.onclick = event => { event.stopPropagation(); activateGlobePoint(point); };
+  return element;
+}
 
 function currentTheme() { return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'; }
 function mapTileUrl() { return `https://{s}.basemaps.cartocdn.com/${currentTheme() === 'light' ? 'light_all' : 'dark_all'}/{z}/{x}/{y}{r}.png`; }
@@ -243,7 +306,7 @@ function initVisuals() {
     temperatureLayer = createTemperatureFieldLayer();
     map.on('mousemove', event => updateTemperatureReadout(event.latlng));
     map.on('mouseout', () => { const readout = $('#temperature-readout'); if (readout) readout.hidden = true; });
-    map.on('moveend zoomend', () => { if (state.showRegions || state.showConflicts) scheduleMapOverlays(); });
+    map.on('moveend zoomend', scheduleMapOverlays);
     $('#globe').hidden = true; $('#map').hidden = false; $('#view-button').textContent = t('stage.globe3d'); $('#visual-loading').hidden = true;
     setTimeout(() => map.invalidateSize(), 50);
   } catch { map = null; }
@@ -259,6 +322,7 @@ function initGlobe() {
       .pointAltitude(point => point.kind === 'iss' ? .09 : point.kind === 'conflict-media' ? .045 : state.selected === point.id ? .07 : point.kind === 'event' ? .035 : .008).pointColor('color')
       .pointLabel(point => `<div class="globe-label"><span>${esc(point.metric || point.kind.toUpperCase())}</span><strong>${esc(point.title || '')}</strong><small>${esc(point.location || '')}</small></div>`)
       .onPointClick(point => { if (point.eventId) selectEvent(point.eventId); else if (point.kind === 'conflict-media') selectConflictRegion(point); else if (point.kind === 'region') selectRegion(point); else loadWeather(point.lat, point.lon); }).onGlobeClick(({ lat, lng }) => { renderCoordinate(lat, lng); loadWeather(lat, lng); })
+      .htmlLat('lat').htmlLng('lon').htmlAltitude(point => point.kind === 'iss' ? .075 : point.selected ? .055 : .035).htmlElement(globeHtmlElement).htmlTransitionDuration(0)
       .pathPoints('points').pathPointLat('lat').pathPointLng('lon').pathColor('color').pathStroke('stroke')
       .ringLat('lat').ringLng('lon').ringColor(point => point.color).ringMaxRadius(point => point.radius).ringPropagationSpeed(2).ringRepeatPeriod(1400);
     globe.controls().autoRotate = true; globe.controls().autoRotateSpeed = .16; globe.controls().enableDamping = true;
@@ -482,13 +546,39 @@ function environmentPoints() {
   return [];
 }
 
+function renderMapEventMarkers() {
+  if (!map) return;
+  mapMarkers.forEach(marker => marker.remove()); mapMarkers = [];
+  const zoom = map.getZoom(), bounds = map.getBounds().pad(.25);
+  const visible = filteredEvents().filter(event => zoom <= 2 || bounds.contains([event.lat, event.lon]));
+  const cellSize = zoom <= 2 ? 18 : zoom === 3 ? 10 : zoom === 4 ? 5 : 0;
+  const severityRank = { critical: 4, high: 3, medium: 2, low: 1 };
+  if (cellSize) {
+    const groups = new Map();
+    visible.forEach(event => {
+      const kind = symbolKind(event), key = `${kind}:${Math.floor((event.lat + 90) / cellSize)}:${Math.floor((event.lon + 180) / cellSize)}`;
+      const group = groups.get(key) || { kind, events: [], lat: 0, lon: 0, severity: 'low' };
+      group.events.push(event); group.lat += event.lat; group.lon += event.lon;
+      if (severityRank[event.severity] > severityRank[group.severity]) group.severity = event.severity;
+      groups.set(key, group);
+    });
+    mapMarkers = [...groups.values()].map(group => {
+      const count = group.events.length, lat = group.lat / count, lon = group.lon / count, color = severityColors[group.severity];
+      if (count === 1) { const event = group.events[0], selected = event.id === state.selected; return L.marker([event.lat, event.lon], { icon: leafletSymbolIcon(group.kind, selected ? '#c7ff4a' : color, selected, selected ? 32 : 24), keyboard: true, title: displayEventTitle(event) }).bindTooltip(`${esc(displayEventTitle(event))} · ${esc(event.metric)}`).on('click', () => selectEvent(event.id)).addTo(map); }
+      return L.marker([lat, lon], { icon: leafletSymbolIcon(group.kind, color, false, 27, count), keyboard: true, title: `${count} · ${symbolLabel(group.kind)}` }).bindTooltip(`<strong>${count} · ${esc(symbolLabel(group.kind))}</strong><br>${esc(t('map.clusterHint'))}`).on('click', () => map.flyTo([lat, lon], Math.min(6, zoom + 2), { duration: .7 })).addTo(map);
+    });
+    return;
+  }
+  mapMarkers = visible.map(event => { const selected = event.id === state.selected, color = selected ? '#c7ff4a' : severityColors[event.severity]; return L.marker([event.lat, event.lon], { icon: leafletSymbolIcon(symbolKind(event), color, selected, selected ? 34 : 28), keyboard: true, title: displayEventTitle(event) }).bindTooltip(`${esc(displayEventTitle(event))} · ${esc(event.metric)}`).on('click', () => selectEvent(event.id)).addTo(map); });
+}
+
 function renderMapRegions() {
   if (!map) return;
   if (regionLayer) { regionLayer.remove(); regionLayer = null; }
   if (!state.showRegions || !state.newsRegions.length) return;
   const bounds = map.getBounds().pad(.12);
   const visible = state.newsRegions.filter(region => bounds.contains([region.lat, region.lon])).slice(0, 40);
-  regionLayer = L.layerGroup(visible.map(region => L.circleMarker([region.lat, region.lon], { radius: region === state.selectedRegion ? 6 : 3.6, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da', weight: region === state.selectedRegion ? 1.3 : .7, fillColor: '#174958', fillOpacity: .82 }).bindTooltip(`<strong>${esc(regionName(region))}</strong> · ${esc(regionCountry(region))}<br>${esc(region.headline?.title || '')}`).on('click', () => selectRegion(region)))).addTo(map);
+  regionLayer = L.layerGroup(visible.map(region => { const selected = region === state.selectedRegion; return L.marker([region.lat, region.lon], { icon: leafletSymbolIcon('news', selected ? '#c7ff4a' : '#60e6da', selected, selected ? 31 : 25), keyboard: true, title: `${regionName(region)} · ${regionCountry(region)}` }).bindTooltip(`<strong>${esc(regionName(region))}</strong> · ${esc(regionCountry(region))}<br>${esc(region.headline?.title || '')}`).on('click', () => selectRegion(region)); })).addTo(map);
 }
 
 function renderMapConflicts() {
@@ -497,31 +587,50 @@ function renderMapConflicts() {
   if (!state.showConflicts || !state.conflictRegions.length) return;
   const bounds = map.getBounds().pad(.12);
   const visible = state.conflictRegions.filter(point => bounds.contains([point.lat, point.lon])).slice(0, 30);
-  conflictLayer = L.layerGroup(visible.map(point => L.circleMarker([point.lat, point.lon], {
-    radius: point === state.selectedConflict ? 7 : 5, color: point === state.selectedConflict ? '#c7ff4a' : '#ff9e44', weight: 1.4, fillColor: '#ff9e44', fillOpacity: .28, dashArray: '3 3'
-  }).bindTooltip(`<strong>${esc(t('conflict.eyebrow'))}</strong><br>${esc(point.location)}<br>${esc(point.headline?.title || '')}`).on('click', () => selectConflictRegion(point)))).addTo(map);
+  conflictLayer = L.layerGroup(visible.map(point => { const selected = point === state.selectedConflict; return L.marker([point.lat, point.lon], { icon: leafletSymbolIcon('conflict', selected ? '#c7ff4a' : '#ff9e44', selected, selected ? 33 : 28), keyboard: true, title: point.location }).bindTooltip(`<strong>${esc(t('conflict.eyebrow'))}</strong><br>${esc(point.location)}<br>${esc(point.headline?.title || '')}`).on('click', () => selectConflictRegion(point)); })).addTo(map);
 }
 
 function scheduleMapOverlays() {
   cancelAnimationFrame(regionRenderFrame);
-  regionRenderFrame = requestAnimationFrame(() => { renderMapRegions(); renderMapConflicts(); });
+  regionRenderFrame = requestAnimationFrame(() => { renderMapEventMarkers(); renderMapRegions(); renderMapConflicts(); });
+}
+
+function clusterGlobeEvents(points) {
+  const cellSize = 12, ranks = { critical: 4, high: 3, medium: 2, low: 1 }, groups = new Map();
+  points.forEach(point => {
+    const kind = symbolKind(point), key = `${kind}:${Math.floor((point.lat + 90) / cellSize)}:${Math.floor((point.lon + 180) / cellSize)}`;
+    const group = groups.get(key) || { key, kind, points: [], lat: 0, lon: 0, severity: 'low' };
+    group.points.push(point); group.lat += point.lat; group.lon += point.lon;
+    if (ranks[point.severity] > ranks[group.severity]) group.severity = point.severity;
+    groups.set(key, group);
+  });
+  return [...groups.values()].flatMap(group => {
+    if (group.points.length === 1 || state.expandedGlobeCluster === group.key || group.points.some(point => point.selected)) return group.points;
+    const count = group.points.length;
+    return [{ id: group.key, kind: 'event-cluster', symbol: group.kind, clusterEvents: group.points, lat: group.lat / count, lon: group.lon / count, severity: group.severity, color: severityColors[group.severity], title: `${count} · ${symbolLabel(group.kind)}`, metric: t('map.clusterMetric'), location: t('map.clusterHint') }];
+  });
 }
 
 function renderGlobeData() {
   const events = filteredEvents();
-  const points = events.map(event => ({ ...event, title: displayEventTitle(event), eventId: event.id, kind: 'event', color: state.selected === event.id ? '#c7ff4a' : severityColors[event.severity] }));
-  if (state.showIss && state.iss) points.push({ ...state.iss, id: 'iss', kind: 'iss', color: '#60e6da', title: t('iss.title'), location: t('iss.altitude', { altitude: Math.round(state.iss.altitude) }), metric: 'ISS' });
-  const environmental = environmentPoints(); points.push(...environmental); if (state.showRegions && globe) points.push(...state.newsRegions.slice(0, 80).map(region => ({ ...region, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
-  if (state.showConflicts && globe) points.push(...state.conflictRegions.slice(0, 30).map(point => ({ ...point, color: point === state.selectedConflict ? '#c7ff4a' : '#ff9e44' })));
+  const eventPoints = events.map(event => { const selected = state.selected === event.id; return { ...event, title: displayEventTitle(event), eventId: event.id, kind: 'event', selected, color: selected ? '#c7ff4a' : severityColors[event.severity] }; });
+  const iconPoints = clusterGlobeEvents(eventPoints);
+  if (state.showIss && state.iss) iconPoints.push({ ...state.iss, id: 'iss', kind: 'iss', color: '#60e6da', title: t('iss.title'), location: t('iss.altitude', { altitude: Math.round(state.iss.altitude) }), metric: 'ISS' });
+  if (state.showRegions && globe) iconPoints.push(...state.newsRegions.slice(0, 80).map(region => ({ ...region, selected: region === state.selectedRegion, color: region === state.selectedRegion ? '#c7ff4a' : '#60e6da' })));
+  if (state.showConflicts && globe) iconPoints.push(...state.conflictRegions.slice(0, 30).map(point => ({ ...point, selected: point === state.selectedConflict, color: point === state.selectedConflict ? '#c7ff4a' : '#ff9e44' })));
+  const environmental = environmentPoints();
   if (globe) {
-    globe.pointsData(points);
+    globe.pointsData(environmental);
+    globe.htmlElementsData(state.view === 'globe' ? iconPoints : []);
     const paths = []; if (state.showDaylight) paths.push(terminatorPath()); if (state.showIss && state.issTrail.length > 1) paths.push({ points: state.issTrail, color: '#60e6da', stroke: .55 }); globe.pathsData(paths);
     globe.ringsData(events.filter(event => event.category === 'earthquakes' && Number(String(event.metric).replace(/[^0-9.]/g, '')) >= 4.5).slice(0, 30).map(event => ({ lat: event.lat, lon: event.lon, color: severityColors[event.severity], radius: Math.max(1.2, Number(String(event.metric).replace(/[^0-9.]/g, '')) * .55) })));
   }
   if (map) {
-    mapMarkers.forEach(marker => marker.remove()); environmentMarkers.forEach(marker => marker.remove());
-    mapMarkers = events.map(event => L.circleMarker([event.lat, event.lon], { radius: event.id === state.selected ? 8 : 5, color: severityColors[event.severity], fillOpacity: .9, weight: 1 }).bindTooltip(`${esc(displayEventTitle(event))} · ${esc(event.metric)}`).on('click', () => selectEvent(event.id)).addTo(map));
+    environmentMarkers.forEach(marker => marker.remove());
+    renderMapEventMarkers();
     environmentMarkers = environmental.filter(point => point.kind !== 'temperature').map(point => L.circleMarker([point.lat, point.lon], { radius: point.kind === 'aurora' ? 2.5 : 3.5, stroke: false, fillColor: point.color, fillOpacity: .7 }).bindTooltip(`${esc(point.title)} · ${esc(point.metric)} · ${esc(point.location)}`).addTo(map));
+    if (issMapMarker) { issMapMarker.remove(); issMapMarker = null; }
+    if (state.showIss && state.iss) issMapMarker = L.marker([state.iss.lat, state.iss.lon], { icon: leafletSymbolIcon('iss', '#60e6da', false, 34), keyboard: true, title: t('iss.title') }).bindTooltip(`${esc(t('iss.title'))} · ${Math.round(state.iss.altitude)} KM`).on('click', () => loadWeather(state.iss.lat, state.iss.lon)).addTo(map);
     if (issTrailLayer) issTrailLayer.remove(); issTrailLayer = state.showIss && state.issTrail.length > 1 ? L.polyline(state.issTrail.map(point => [point.lat, point.lon]), { color: '#60e6da', weight: 1, opacity: .65, dashArray: '3 6' }).addTo(map) : null;
     updateTemperaturePresentation(); renderMapRegions(); renderMapConflicts();
   }
@@ -618,7 +727,7 @@ function bind() {
   $('#conflicts-toggle').onchange = event => toggleConflicts(event.target.checked);
   $('#daylight-toggle').onchange = event => { state.showDaylight = event.target.checked; renderGlobeData(); };
   $('#satellite-toggle').onchange = event => toggleSatellite(event.target.checked);
-  $('#view-button').onclick = () => { if (state.view === 'map' && !initGlobe()) { alert(t('alert.webgl')); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d'); if (state.view === 'map') setTimeout(() => { map.invalidateSize(); updateTemperaturePresentation(); }, 50); else { resizeGlobe(); updateTemperaturePresentation(); } };
+  $('#view-button').onclick = () => { if (state.view === 'map' && !initGlobe()) { alert(t('alert.webgl')); return; } if (state.view === 'globe' && !map) return; state.view = state.view === 'globe' ? 'map' : 'globe'; $('#globe').hidden = state.view === 'map'; $('#map').hidden = state.view === 'globe'; $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d'); renderGlobeData(); if (state.view === 'map') setTimeout(() => { map.invalidateSize(); updateTemperaturePresentation(); }, 50); else { resizeGlobe(); updateTemperaturePresentation(); } };
   $('#refresh-button').onclick = async () => { await loadSnapshot(); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); if (state.showTemperature) loadTemperature(); };
   $('#locate-button').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(position => { focusCoordinate(position.coords.latitude, position.coords.longitude, 1.5); loadWeather(position.coords.latitude, position.coords.longitude); loadNews($('#region-input').placeholder, position.coords.latitude, position.coords.longitude); }, () => alert(t('alert.locationDenied'))) : alert(t('alert.locationUnavailable'));
   $('#intel-form').onsubmit = event => { event.preventDefault(); loadNews($('#region-input').value); };

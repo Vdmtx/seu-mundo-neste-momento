@@ -5,6 +5,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 ## O que está funcional
 
 - Globo 3D com mapa 2D automático para aparelhos sem WebGL.
+- Ícones vetoriais próprios e consistentes no mapa 2D, no globo 3D, na lista de categorias e no feed; o desenho identifica a situação e a borda colorida identifica a gravidade. Em escala global, ocorrências próximas da mesma categoria são agrupadas para reduzir sobreposição e preservar desempenho.
 - Temas claro e escuro com preferência salva no navegador; o mapa 2D troca de cartografia e contraste conforme o tema.
 - Campo térmico contínuo no mapa 2D, calculado a partir do modelo NOAA GFS via Open-Meteo, com interpolação bilinear, escala em Celsius, horário da rodada e leitura por coordenada.
 - Terremotos, anéis sísmicos, eventos naturais, desastres GDACS e alertas ativos de tsunami.
