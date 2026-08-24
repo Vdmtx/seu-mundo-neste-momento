@@ -168,17 +168,17 @@ function nearestAdminRegion(event) {
   }, null);
 }
 const eventNewsStopwords = new Set(['about', 'active', 'activity', 'alert', 'area', 'coast', 'east', 'earthquake', 'event', 'flood', 'from', 'incendio', 'near', 'north', 'oeste', 'perto', 'regiao', 'region', 'south', 'storm', 'terremoto', 'tempestade', 'typhoon', 'west', 'wildfire']);
-function eventNewsTokens(value) { return normalizedText(value).split(/[^a-z0-9]+/).filter(token => token.length >= 4 && !eventNewsStopwords.has(token) && !/^\d+$/.test(token)); }
+function eventNewsTokens(value) { return normalizedText(value).split(/[^\p{L}\p{N}]+/u).filter(token => token.length >= 4 && !eventNewsStopwords.has(token) && !/^\d+$/.test(token)); }
 function relatedNewsForEvent(event, nearby) {
-  const eventLocation = newsComparable(event.location), eventTitle = newsComparable(event.title), regionNameValue = nearby?.region?.name || '', country = nearby?.region?.country || '';
+  const eventLocation = newsComparable(event.location), regionNameValue = nearby?.region?.name || '', country = nearby?.region?.country || '';
   const locationTokens = [...new Set(eventNewsTokens(`${event.location} ${event.title}`))];
   return recentNews().map(article => {
-    const text = newsComparable(article.title), locationPhrase = eventLocation.trim().length >= 5 && text.includes(eventLocation), titlePhrase = eventTitle.trim().length >= 5 && text.includes(eventTitle);
+    const text = newsComparable(article.title), locationPhrase = eventLocation.trim().length >= 5 && text.includes(eventLocation);
     const regionPhrase = regionNameValue && newsHasPhrase(text, regionSearchName(regionNameValue));
     const matchedTokens = locationTokens.filter(token => text.includes(` ${token} `));
     const countryMatch = country && newsHasPhrase(text, country);
-    const localMatch = locationPhrase || titlePhrase || regionPhrase || matchedTokens.length > 0;
-    const score = (locationPhrase ? 14 : 0) + (titlePhrase ? 12 : 0) + (regionPhrase ? 9 : 0) + matchedTokens.length * 3 + (countryMatch ? 1 : 0);
+    const localMatch = locationPhrase || regionPhrase || matchedTokens.length > 0;
+    const score = (locationPhrase ? 14 : 0) + (regionPhrase ? 9 : 0) + matchedTokens.length * 3 + (countryMatch ? 1 : 0);
     return { article, score, localMatch };
   }).filter(row => row.localMatch && row.score >= 3).sort((a, b) => b.score - a.score || new Date(b.article.seendate) - new Date(a.article.seendate)).slice(0, 5).map(row => row.article);
 }
