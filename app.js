@@ -10,6 +10,7 @@ const API = {
   weather: 'https://api.open-meteo.com/v1/forecast'
 };
 const refresh = { world: 300000, snapshot: 900000, iss: 10000, space: 300000, temperature: 1800000 };
+const CARTO_BASEMAP_KEY = 'cb1_25k6_1_cf2c5e6bbca5260db3c5d1ac';
 const NEWS_MAX_AGE = 24 * 60 * 60 * 1000;
 const state = {
   events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], conflictNews: [], admin1: [], newsRegions: [], conflictRegions: [],
@@ -372,8 +373,8 @@ function globeHtmlElement(point) {
 }
 
 function currentTheme() { return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'; }
-function mapTileUrl() { return `https://{s}.basemaps.cartocdn.com/${currentTheme() === 'light' ? 'light_all' : 'dark_all'}/{z}/{x}/{y}{r}.png`; }
-function applyMapTheme() { if (!map) return; if (baseMapLayer) baseMapLayer.remove(); baseMapLayer = L.tileLayer(mapTileUrl(), { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18 }).addTo(map); baseMapLayer.bringToBack(); }
+function mapTileUrl() { return `https://{s}.basemaps.cartocdn.com/${currentTheme() === 'light' ? 'light_all' : 'dark_all'}/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(CARTO_BASEMAP_KEY)}`; }
+function applyMapTheme() { if (!map) return; if (baseMapLayer) baseMapLayer.remove(); baseMapLayer = L.tileLayer(mapTileUrl(), { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>', subdomains: 'abcd', maxZoom: 18 }).addTo(map); baseMapLayer.bringToBack(); }
 function setTheme(theme, persist = true) {
   const next = theme === 'light' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; document.documentElement.style.colorScheme = next;
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = next === 'light' ? '#eaf1f0' : '#05090d';
