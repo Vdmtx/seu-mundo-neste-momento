@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths-ignore:
       - 'data/temperature.json'
+      - 'data/temperature-globe.webp'
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:

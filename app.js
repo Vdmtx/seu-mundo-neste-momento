@@ -113,14 +113,14 @@ async function loadSnapshot() {
     state.snapshot = next;
     state.airQuality = next.airQuality || [];
     state.temperatureGrid = next.temperatureGrid || null;
-    state.temperature = temperatureGridPoints(state.temperatureGrid);
+    state.temperature = [];
     state.news = next.news || [];
     state.conflictNews = next.conflictNews || [];
     if (state.admin1.length) { rebuildNewsRegions(); rebuildConflictRegions(); }
     source('gdacs', 'GDACS', next.sources?.gdacs === 'fulfilled', next.events.filter(event => event.source === 'GDACS').length, t('sources.snapshot15'), next.generatedAt, 45 * 60000);
     source('tsunami', 'NOAA TSUNAMI', next.sources?.tsunamiPaaq === 'fulfilled' || next.sources?.tsunamiPheb === 'fulfilled', next.events.filter(event => /^NOAA PA|^NOAA PH/.test(event.source)).length, t('sources.activeOnly'), next.generatedAt, 45 * 60000);
     source('air', 'OPEN-METEO AR', state.airQuality.length > 0, state.airQuality.length, t('sources.grid15'), next.generatedAt, 45 * 60000);
-    source('temperature-grid', 'NOAA GFS / OPEN-METEO', Boolean(state.temperatureGrid), state.temperature.length, '', state.temperatureGrid?.observedAt || null, 8 * 3600000);
+    source('temperature-grid', state.temperatureGrid?.source || 'NOAA GFS', Boolean(state.temperatureGrid), state.temperatureGrid?.values?.filter(Number.isFinite).length || 0, '', state.temperatureGrid?.observedAt || null, 8 * 3600000);
     source('news-cache', 'GOOGLE NEWS RSS', state.news.length > 0, state.news.length, t('sources.newsCache'), next.generatedAt, 45 * 60000);
     source('conflict-media', 'GOOGLE NEWS / CONFLITOS', state.conflictNews.length > 0, state.conflictNews.length, t('sources.conflictMedia'), next.generatedAt, 45 * 60000);
   } catch { if (!state.snapshot) state.snapshot = null; }
@@ -353,7 +353,7 @@ async function shareSelectedEvent() {
   } catch (error) { if (error.name !== 'AbortError') status.textContent = t('eventDetail.shareFailed'); }
 }
 
-let globe, map, baseMapLayer, satelliteLayer, regionLayer, conflictLayer, issTrailLayer, temperatureLayer, regionRenderFrame;
+let globe, map, baseMapLayer, satelliteLayer, regionLayer, conflictLayer, issTrailLayer, temperatureLayer, regionRenderFrame, activeGlobeTexture = '', fallbackTemperatureTexture = null;
 let mapMarkers = [], environmentMarkers = [], issMapMarker = null;
 function activateGlobePoint(point) {
   if (point.clusterEvents?.length) { state.expandedGlobeCluster = point.id; globe?.pointOfView({ lat: point.lat, lng: point.lon, altitude: .72 }, 700); renderGlobeData(); return; }
@@ -402,7 +402,7 @@ function initVisuals() {
 function initGlobe() {
   if (globe) return true;
   try {
-    globe = Globe()($('#globe')).backgroundColor('rgba(0,0,0,0)').globeImageUrl('assets/earth-night.jpg').bumpImageUrl('assets/earth-topology.png').showAtmosphere(true).atmosphereColor('#53d9de').atmosphereAltitude(.15).showGraticules(true)
+    globe = Globe()($('#globe')).backgroundColor('rgba(0,0,0,0)').globeImageUrl(globeBaseUrl()).bumpImageUrl('assets/earth-topology.png').showAtmosphere(true).atmosphereColor('#53d9de').atmosphereAltitude(.15).showGraticules(true)
       .pointLat('lat').pointLng('lon').pointRadius(point => point.kind === 'conflict-media' ? .12 : point.kind === 'region' ? .07 : point.kind === 'temperature' ? .18 : point.kind === 'aurora' ? .12 : point.kind === 'air' ? .16 : point.kind === 'iss' ? .55 : state.selected === point.id ? .55 : .34)
       .pointAltitude(point => point.kind === 'iss' ? .09 : point.kind === 'conflict-media' ? .045 : state.selected === point.id ? .07 : point.kind === 'event' ? .035 : .008).pointColor('color')
       .pointLabel(point => `<div class="globe-label"><span>${esc(point.metric || point.kind.toUpperCase())}</span><strong>${esc(point.title || '')}</strong><small>${esc(point.location || '')}</small></div>`)
@@ -506,11 +506,39 @@ function updateTemperatureReadout(latlng) {
   readout.textContent = t('temperature.readout', { value: value.toFixed(1), time: fmtTime(state.temperatureGrid.observedAt) }); readout.hidden = false;
 }
 function updateTemperaturePresentation() {
-  const active = Boolean(map && state.view === 'map' && state.showTemperature && state.temperatureGrid);
-  if (active && !map.hasLayer(temperatureLayer)) temperatureLayer.addTo(map); else if (!active && temperatureLayer && map.hasLayer(temperatureLayer)) temperatureLayer.remove();
-  if (active) temperatureLayer.redraw();
+  const active = Boolean(state.showTemperature && state.temperatureGrid), mapActive = Boolean(map && state.view === 'map' && active);
+  if (mapActive && !map.hasLayer(temperatureLayer)) temperatureLayer.addTo(map); else if (!mapActive && temperatureLayer && map.hasLayer(temperatureLayer)) temperatureLayer.remove();
+  if (mapActive) temperatureLayer.redraw();
   const legend = $('#temperature-legend'); if (legend) legend.hidden = !active;
-  const readout = $('#temperature-readout'); if (readout && !active) readout.hidden = true;
+  const readout = $('#temperature-readout'); if (readout && !mapActive) readout.hidden = true;
+  updateGlobeTexture();
+}
+
+function globeBaseUrl() { return state.showSatellite ? gibsGlobeUrl(satelliteDate()) : 'assets/earth-night.jpg'; }
+function browserTemperatureTexture() {
+  const grid = state.temperatureGrid, key = grid?.observedAt || '';
+  if (!grid) return null;
+  if (fallbackTemperatureTexture?.key === key) return fallbackTemperatureTexture.url;
+  const canvas = document.createElement('canvas'); canvas.width = 720; canvas.height = 360;
+  const context = canvas.getContext('2d'), image = context.createImageData(canvas.width, canvas.height);
+  for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
+    const lat = 90 - (y + .5) * 180 / canvas.height, lon = -180 + (x + .5) * 360 / canvas.width;
+    const color = interpolateTemperatureColor(temperatureAt(lat, lon), 255), offset = (y * canvas.width + x) * 4;
+    image.data[offset] = color[0]; image.data[offset + 1] = color[1]; image.data[offset + 2] = color[2]; image.data[offset + 3] = 255;
+  }
+  context.putImageData(image, 0, 0); fallbackTemperatureTexture = { key, url: canvas.toDataURL('image/jpeg', .86) };
+  return fallbackTemperatureTexture.url;
+}
+function temperatureGlobeUrl() {
+  const grid = state.temperatureGrid;
+  if (!grid) return null;
+  if (grid.texture) return `${grid.texture}?v=${encodeURIComponent(grid.modelRun || grid.observedAt || grid.generatedAt || '')}`;
+  return browserTemperatureTexture();
+}
+function updateGlobeTexture() {
+  if (!globe) return;
+  const next = state.showTemperature ? temperatureGlobeUrl() : globeBaseUrl();
+  if (next && next !== activeGlobeTexture) { activeGlobeTexture = next; globe.globeImageUrl(next); }
 }
 function airColor(value) { if (value <= 50) return '#55e58d'; if (value <= 100) return '#f0d95f'; if (value <= 150) return '#ff9e44'; if (value <= 200) return '#ff455d'; if (value <= 300) return '#a45cff'; return '#7b1734'; }
 function normalizeLon(lon) { return ((lon + 540) % 360) - 180; }
@@ -625,7 +653,7 @@ function selectConflictRegion(point) {
 }
 
 function environmentPoints() {
-  if (state.showTemperature) return sample(state.temperature, 600).map((point, index) => ({ ...point, id: `temp-${index}`, kind: 'temperature', color: tempColor(point.temperature), metric: `${point.temperature.toFixed(1)} °C`, title: t('temperature.approx'), location: 'Open-Meteo' }));
+  if (state.showTemperature) return [];
   if (state.showAurora) return sample(state.aurora, 1400).map((point, index) => ({ ...point, id: `aurora-${index}`, kind: 'aurora', color: point.lat > 0 ? `rgba(73,255,155,${Math.min(.95, .2 + point.intensity / 100)})` : `rgba(178,92,255,${Math.min(.95, .2 + point.intensity / 100)})`, metric: `${point.intensity}%`, title: point.lat > 0 ? t('aurora.north') : t('aurora.south'), location: t('aurora.probability') }));
   if (state.showAir) return state.airQuality.map((point, index) => ({ ...point, id: `air-${index}`, kind: 'air', color: airColor(point.aqi), metric: `AQI ${Math.round(point.aqi)}`, title: t('air.title'), location: `PM2.5 ${point.pm25 == null ? '—' : point.pm25.toFixed(1)} µg/m³` }));
   return [];
@@ -705,6 +733,7 @@ function renderGlobeData() {
   if (state.showConflicts && globe) iconPoints.push(...state.conflictRegions.slice(0, 30).map(point => ({ ...point, selected: point === state.selectedConflict, color: point === state.selectedConflict ? '#c7ff4a' : '#ff9e44' })));
   const environmental = environmentPoints();
   if (globe) {
+    updateGlobeTexture();
     globe.pointsData(environmental);
     globe.htmlElementsData(state.view === 'globe' ? iconPoints : []);
     const paths = []; if (state.showDaylight) paths.push(terminatorPath()); if (state.showIss && state.issTrail.length > 1) paths.push({ points: state.issTrail, color: '#60e6da', stroke: .55 }); globe.pathsData(paths);
@@ -759,7 +788,7 @@ function satelliteDate() { const date = new Date(Date.now() - 86400000); return 
 function gibsGlobeUrl(date) { const url = new URL('https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi'); Object.entries({ SERVICE: 'WMS', REQUEST: 'GetMap', VERSION: '1.3.0', LAYERS: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', STYLES: '', FORMAT: 'image/jpeg', TRANSPARENT: 'false', HEIGHT: '1024', WIDTH: '2048', CRS: 'EPSG:4326', BBOX: '-90,-180,90,180', TIME: date }).forEach(([key, value]) => url.searchParams.set(key, value)); return url.href; }
 function toggleSatellite(active) {
   state.showSatellite = active; const date = satelliteDate();
-  if (globe) globe.globeImageUrl(active ? gibsGlobeUrl(date) : 'assets/earth-night.jpg');
+  updateGlobeTexture();
   if (map) { if (satelliteLayer) { satelliteLayer.remove(); satelliteLayer = null; } if (active) satelliteLayer = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', { layers: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', format: 'image/jpeg', transparent: false, time: date, attribution: 'NASA GIBS', opacity: .82, maxZoom: 9, className: 'satellite-tiles' }).addTo(map); }
   $('#satellite-status').textContent = active ? t('layer.satelliteOn', { date }) : t('status.satelliteOff');
 }

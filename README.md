@@ -7,7 +7,7 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - Globo 3D com mapa 2D automático para aparelhos sem WebGL.
 - Ícones vetoriais próprios e consistentes no mapa 2D, no globo 3D, na lista de categorias e no feed; o desenho identifica a situação e a borda colorida identifica a gravidade. Em escala global, ocorrências próximas da mesma categoria são agrupadas para reduzir sobreposição e preservar desempenho.
 - Temas claro e escuro com preferência salva no navegador; o mapa 2D troca de cartografia e contraste conforme o tema.
-- Campo térmico contínuo no mapa 2D, calculado a partir do modelo NOAA GFS via Open-Meteo, com interpolação bilinear, escala em Celsius, horário da rodada e leitura por coordenada.
+- Campo térmico contínuo no mapa 2D e no globo 3D, derivado da grade NOAA/NCEP GFS 0,25° obtida pelo NOMADS. A textura usa a grade nativa; a leitura interativa usa uma redução de 1°, com escala em Celsius e horário da rodada.
 - Terremotos, anéis sísmicos, eventos naturais, desastres GDACS e alertas ativos de tsunami.
 - Posição e trilha recente da ISS.
 - Índice Kp, Bz, vento solar e previsão NOAA OVATION de auroras.
@@ -31,7 +31,8 @@ Monitor global estático para GitHub Pages. O projeto consulta fontes públicas,
 - NOAA Tsunami Warning Centers: somente Warning, Watch, Advisory ou Threat ativos; snapshot a cada 15 minutos.
 - NOAA SWPC: Kp, Bz, vento solar e OVATION; navegador a cada 5 minutos e snapshot de contingência.
 - Where The ISS At: posição da ISS a cada 10 segundos.
-- Open-Meteo: clima pontual, temperatura sob demanda, grade térmica global de 12° renovada em até 6 horas e grade de qualidade do ar atualizada no snapshot a cada 15 minutos.
+- NOAA/NCEP NOMADS: temperatura do ar a 2 m da rodada GFS 0,25° mais recente disponível, usando a hora de previsão válida mais próxima do momento da atualização. O campo é processado aproximadamente quatro vezes ao dia e identificado como estimativa de modelo meteorológico.
+- Open-Meteo: clima pontual, temperatura sob demanda, contingência térmica quando o NOMADS estiver indisponível e grade de qualidade do ar atualizada no snapshot a cada 15 minutos.
 - Google News RSS: cache de manchetes públicas em português, inglês e espanhol, reconstruído pelo GitHub Actions a cada 15 minutos. A busca do site filtra esse conjunto e não promete cobertura completa de todos os estados.
 - Google News RSS — conflitos: consulta temática separada, também a cada 15 minutos. Ela indica cobertura jornalística e não confirma de forma independente o conteúdo publicado.
 - NASA GIBS: imagem VIIRS do dia anterior, sob demanda.

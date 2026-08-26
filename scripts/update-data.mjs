@@ -139,7 +139,7 @@ async function loadTemperatureGrid() {
   try {
     const previous = JSON.parse(await readFile('data/temperature.json', 'utf8'));
     const age = Date.now() - new Date(previous?.generatedAt || 0).getTime();
-    if (previous?.values?.length && age >= 0 && age < 5.5 * 3600000) return { ...previous, cached: true };
+    if (previous?.values?.length && age >= 0 && age < 8 * 3600000) return { ...previous, cached: true };
   } catch { /* O primeiro snapshot ainda não possui uma grade reutilizável. */ }
 
   // A grade de 12° mantém a coleta gratuita abaixo do limite por minuto. A
