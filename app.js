@@ -19,8 +19,8 @@ const state = {
   view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null, selectedConflict: null, expandedGlobeCluster: null,
   myWorld: readMyWorld(), myWorldActive: false, detailRegion: null
 };
-const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['other', '06', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
-const myWorldCategoryIds = ['earthquakes', 'wildfires', 'storms', 'volcanoes', 'floods', 'other'];
+const categories = [['all', '00', 'cat.all'], ['earthquakes', '01', 'cat.earthquakes'], ['wildfires', '02', 'cat.wildfires'], ['storms', '03', 'cat.storms'], ['volcanoes', '04', 'cat.volcanoes'], ['floods', '05', 'cat.floods'], ['tsunamis', '06', 'cat.tsunamis'], ['landslides', '07', 'cat.landslides'], ['damFailures', '08', 'cat.damFailures'], ['other', '09', 'cat.other'], ['hazmat', '!', 'cat.hazmat'], ['nuclear', '!!', 'cat.nuclear']];
+const myWorldCategoryIds = ['earthquakes', 'wildfires', 'storms', 'volcanoes', 'floods', 'tsunamis', 'landslides', 'damFailures', 'other'];
 const MY_WORLD_KEY = 'my-world-preferences-v1';
 const severityColors = { critical: '#ff455d', high: '#ff9e44', medium: '#f0d95f', low: '#63a9ff' };
 const $ = selector => document.querySelector(selector);
@@ -33,7 +33,7 @@ function readMyWorld() {
     const stored = JSON.parse(localStorage.getItem('my-world-preferences-v1') || 'null');
     if (!stored || typeof stored !== 'object') return fallback;
     const regions = Array.isArray(stored.regions) ? stored.regions.filter(region => region && typeof region.id === 'string' && typeof region.name === 'string' && Number.isFinite(Number(region.lat)) && Number.isFinite(Number(region.lon))).slice(0, 20).map(region => ({ id: region.id, name: region.name, country: String(region.country || ''), lat: Number(region.lat), lon: Number(region.lon) })) : [];
-    const allowed = new Set(['earthquakes', 'wildfires', 'storms', 'volcanoes', 'floods', 'other']);
+    const allowed = new Set(['earthquakes', 'wildfires', 'storms', 'volcanoes', 'floods', 'tsunamis', 'landslides', 'damFailures', 'other']);
     const selectedCategories = Array.isArray(stored.categories) ? [...new Set(stored.categories.filter(category => allowed.has(category)))] : [];
     return { regions, categories: selectedCategories, preferredView: stored.preferredView === 'globe' ? 'globe' : 'map' };
   } catch { return fallback; }
@@ -62,6 +62,9 @@ function symbolGlyph(kind) {
     volcanoes: '<path d="M3.8 19 9.7 8.5l2.3 3.2 2.1-3.2L20.2 19zM11.2 6.4c-1.3-1-.8-2.2.1-2.8M14 6.2c1.4-1 .9-2.2 0-3"/>',
     floods: '<path d="M3.5 9.5c2.2-1.8 4.3 1.8 6.5 0s4.3 1.8 6.5 0 3.8.7 4 .9M3.5 14c2.2-1.8 4.3 1.8 6.5 0s4.3 1.8 6.5 0 3.8.7 4 .9M3.5 18.5c2.2-1.8 4.3 1.8 6.5 0s4.3 1.8 6.5 0 3.8.7 4 .9"/>',
     tsunami: '<path d="M3.5 16.8c3.8-6.5 8.1-7.8 11.7-5.7-2.1-.1-3.7 1-4 2.6 2.5-1.1 5.5-.7 8.3 1.7-4.2-.7-6.8 3.5-10.8 3.1-2.1-.2-3.8-.8-5.2-1.7z"/>',
+    tsunamis: '<path d="M3.5 16.8c3.8-6.5 8.1-7.8 11.7-5.7-2.1-.1-3.7 1-4 2.6 2.5-1.1 5.5-.7 8.3 1.7-4.2-.7-6.8 3.5-10.8 3.1-2.1-.2-3.8-.8-5.2-1.7z"/>',
+    landslides: '<path d="M4 18h16M5 16l5-9 3 5 2-3 4 7M10 13l2 2M14 14l2 2"/>',
+    damFailures: '<path d="M5 6v12M19 6v12M5 9h14M9 9v9M15 9v9M3 19h18"/>',
     hazmat: '<circle cx="12" cy="12" r="2"/><circle cx="12" cy="7" r="3"/><circle cx="7.7" cy="14.6" r="3"/><circle cx="16.3" cy="14.6" r="3"/>',
     nuclear: '<circle cx="12" cy="12" r="1.5"/><path d="M12 10 9.2 5.1A7.8 7.8 0 0 1 14.8 5zM10.2 13 4.6 13a7.8 7.8 0 0 0 2.8 4.8zM13.8 13l2.8 4.8a7.8 7.8 0 0 0 2.8-4.8z"/>',
     conflict: '<rect x="5" y="5" width="14" height="14" rx="1"/><path d="M8 8h5M8 11h8M8 14h5M16.5 14v3M16.5 18.5v.1"/>',
@@ -86,7 +89,7 @@ function leafletSymbolIcon(kind, color, selected = false, size = 28, count = 1) 
   return leafletIconCache.get(key);
 }
 function symbolLabel(kind) {
-  const keys = { earthquakes: 'cat.earthquakes', wildfires: 'cat.wildfires', storms: 'cat.storms', volcanoes: 'cat.volcanoes', floods: 'cat.floods', hazmat: 'cat.hazmat', nuclear: 'cat.nuclear', other: 'cat.other', tsunami: 'event.tsunami' };
+  const keys = { earthquakes: 'cat.earthquakes', wildfires: 'cat.wildfires', storms: 'cat.storms', volcanoes: 'cat.volcanoes', floods: 'cat.floods', tsunamis: 'cat.tsunamis', landslides: 'cat.landslides', damFailures: 'cat.damFailures', hazmat: 'cat.hazmat', nuclear: 'cat.nuclear', other: 'cat.other', tsunami: 'cat.tsunamis' };
   return t(keys[kind] || 'cat.other');
 }
 
@@ -95,7 +98,7 @@ function timeoutFetch(url, options = {}, ms = 15000) { const controller = new Ab
 async function json(url, ms = 15000) { const response = await timeoutFetch(url, { headers: { Accept: 'application/json' } }, ms); if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }
 function source(id, label, ok, count = 0, message = '', publishedAt = null, staleAfterMs = null) { state.sources.set(id, { id, label, ok, count, message, publishedAt, staleAfterMs, checkedAt: new Date().toISOString() }); renderSources(); }
 function riskForQuake(magnitude) { return magnitude >= 6.5 ? 'critical' : magnitude >= 5.5 ? 'high' : magnitude >= 4.5 ? 'medium' : 'low'; }
-function naturalCategory(raw = '') { const text = raw.toLowerCase(); if (text.includes('wildfire')) return 'wildfires'; if (text.includes('storm') || text.includes('cyclone') || text.includes('severe')) return 'storms'; if (text.includes('volcano')) return 'volcanoes'; if (text.includes('flood')) return 'floods'; return 'other'; }
+function naturalCategory(raw = '') { const text = raw.toLowerCase(); if (text.includes('wildfire')) return 'wildfires'; if (text.includes('storm') || text.includes('cyclone') || text.includes('severe')) return 'storms'; if (text.includes('volcano')) return 'volcanoes'; if (text.includes('tsunami')) return 'tsunamis'; if (text.includes('landslide')) return 'landslides'; if (text.includes('flood')) return 'floods'; return 'other'; }
 function naturalRisk(category, date) { const hours = (Date.now() - new Date(date).getTime()) / 36e5; if (category === 'volcanoes' || category === 'storms') return hours < 48 ? 'high' : 'medium'; if (category === 'wildfires' || category === 'floods') return hours < 72 ? 'medium' : 'low'; return 'low'; }
 function fmtTime(value, withDate = false) { const date = new Date(value); if (Number.isNaN(+date)) return '—'; return new Intl.DateTimeFormat(window.i18n.locale(), withDate ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } : { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(date) + ' UTC'; }
 function timeAgo(value) { const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000)); const relative = new Intl.RelativeTimeFormat(window.i18n.locale(), { numeric: 'always', style: 'narrow' }); if (seconds < 60) return relative.format(-seconds, 'second'); if (seconds < 3600) return relative.format(-Math.floor(seconds / 60), 'minute'); return relative.format(-Math.floor(seconds / 3600), 'hour'); }
@@ -126,7 +129,7 @@ async function loadSnapshot() {
   } catch { if (!state.snapshot) state.snapshot = null; }
 }
 
-function snapshotOnlyEvents() { return (state.snapshot?.events || []).filter(event => event.source === 'GDACS' || /^NOAA PA|^NOAA PH/.test(event.source)); }
+function snapshotOnlyEvents() { return (state.snapshot?.events || []).filter(event => event.source === 'GDACS' || /^NOAA PA|^NOAA PH/.test(event.source) || event.source === 'COBERTURA JORNALÍSTICA MULTIFONTE'); }
 function dedupeEvents(events) { return [...new Map(events.map(event => [event.id, event])).values()]; }
 
 async function loadWorld() {
