@@ -356,7 +356,7 @@ async function shareSelectedEvent() {
   } catch (error) { if (error.name !== 'AbortError') status.textContent = t('eventDetail.shareFailed'); }
 }
 
-let globe, map, baseMapLayer, satelliteLayer, regionLayer, conflictLayer, issTrailLayer, temperatureLayer, regionRenderFrame, activeGlobeTexture = '', fallbackTemperatureTexture = null;
+let globe, map, baseMapLayer, satelliteLayer, regionLayer, conflictLayer, issTrailLayer, temperatureLayer, auroraLayer, regionRenderFrame, activeGlobeTexture = '', fallbackTemperatureTexture = null, auroraTextureCache = null, auroraTextureRequest = 0;
 let mapMarkers = [], environmentMarkers = [], issMapMarker = null;
 function activateGlobePoint(point) {
   if (point.clusterEvents?.length) { state.expandedGlobeCluster = point.id; globe?.pointOfView({ lat: point.lat, lng: point.lon, altitude: .72 }, 700); renderGlobeData(); return; }
@@ -390,8 +390,10 @@ function initVisuals() {
   try {
     map = L.map('map', { worldCopyJump: true, preferCanvas: true }).setView([18, 0], 2);
     map.createPane('temperaturePane'); map.getPane('temperaturePane').style.zIndex = 250; map.getPane('temperaturePane').style.pointerEvents = 'none';
+    map.createPane('auroraPane'); map.getPane('auroraPane').style.zIndex = 255; map.getPane('auroraPane').style.pointerEvents = 'none';
     applyMapTheme();
     temperatureLayer = createTemperatureFieldLayer();
+    auroraLayer = createAuroraFieldLayer();
     map.on('mousemove', event => updateTemperatureReadout(event.latlng));
     map.on('mouseout', () => { const readout = $('#temperature-readout'); if (readout) readout.hidden = true; });
     map.on('moveend zoomend', scheduleMapOverlays);
@@ -517,7 +519,72 @@ function updateTemperaturePresentation() {
   updateGlobeTexture();
 }
 
+function auroraAlpha(intensity) { return Math.max(.035, Math.min(.72, .025 + Number(intensity || 0) / 115)); }
+function auroraSignature() {
+  if (!state.aurora.length) return 'empty';
+  const checksum = sample(state.aurora, 80).reduce((sum, point) => sum + Math.round(point.intensity * 10) + Math.round(point.lat * 3) + Math.round(point.lon), 0);
+  return `${state.aurora.length}-${checksum}`;
+}
+function auroraColor(point) { return point.lat >= 0 ? [56, 255, 132] : [177, 80, 255]; }
+function paintAuroraGlow(context, x, y, radius, point) {
+  const [red, green, blue] = auroraColor(point), alpha = auroraAlpha(point.intensity);
+  const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, `rgba(${red},${green},${blue},${alpha})`);
+  gradient.addColorStop(.42, `rgba(${red},${green},${blue},${alpha * .52})`);
+  gradient.addColorStop(1, `rgba(${red},${green},${blue},0)`);
+  context.fillStyle = gradient; context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+function createAuroraFieldLayer() {
+  const AuroraLayer = L.Layer.extend({
+    onAdd(currentMap) {
+      this._map = currentMap; this._canvas = L.DomUtil.create('canvas', 'aurora-field-canvas'); this._canvas.setAttribute('aria-hidden', 'true'); this._canvas.style.pointerEvents = 'none';
+      currentMap.getPane('auroraPane').appendChild(this._canvas); currentMap.on('moveend zoomend resize', this._reset, this); this._reset();
+    },
+    onRemove(currentMap) { currentMap.off('moveend zoomend resize', this._reset, this); this._canvas?.remove(); },
+    redraw() { if (this._map) this._reset(); },
+    _reset() {
+      const size = this._map.getSize(), topLeft = this._map.containerPointToLayerPoint([0, 0]);
+      L.DomUtil.setPosition(this._canvas, topLeft); this._canvas.width = Math.max(1, size.x); this._canvas.height = Math.max(1, size.y);
+      if (!state.showAurora || !state.aurora.length) return;
+      const context = this._canvas.getContext('2d'), zoom = this._map.getZoom(), radius = Math.max(9, Math.min(58, 11 * Math.pow(1.55, zoom - 2)));
+      context.clearRect(0, 0, size.x, size.y); context.save(); context.globalCompositeOperation = 'screen';
+      for (const point of state.aurora) {
+        const projected = this._map.latLngToContainerPoint([point.lat, point.lon]);
+        if (projected.x < -radius || projected.x > size.x + radius || projected.y < -radius || projected.y > size.y + radius) continue;
+        paintAuroraGlow(context, projected.x, projected.y, radius, point);
+      }
+      context.restore();
+    }
+  });
+  return new AuroraLayer();
+}
+function updateAuroraPresentation() {
+  if (!map || !auroraLayer) return;
+  const active = state.showAurora && state.view === 'map' && state.aurora.length > 0;
+  if (active && !map.hasLayer(auroraLayer)) auroraLayer.addTo(map); else if (!active && map.hasLayer(auroraLayer)) auroraLayer.remove();
+  if (active) auroraLayer.redraw();
+}
+
 function globeBaseUrl() { return state.showSatellite ? gibsGlobeUrl(satelliteDate()) : 'assets/earth-night.jpg'; }
+function loadTextureImage(url) {
+  return new Promise((resolve, reject) => { const image = new Image(); image.crossOrigin = 'anonymous'; image.onload = () => resolve(image); image.onerror = reject; image.src = url; });
+}
+async function auroraGlobeUrl() {
+  const key = `${globeBaseUrl()}-${auroraSignature()}`;
+  if (auroraTextureCache?.key === key) return auroraTextureCache.url;
+  let base;
+  try { base = await loadTextureImage(globeBaseUrl()); } catch { base = await loadTextureImage('assets/earth-night.jpg'); }
+  const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512;
+  const context = canvas.getContext('2d'); context.drawImage(base, 0, 0, canvas.width, canvas.height); context.save(); context.globalCompositeOperation = 'screen';
+  for (const point of state.aurora) {
+    const x = (normalizeLon(point.lon) + 180) / 360 * canvas.width, y = (90 - point.lat) / 180 * canvas.height;
+    const radius = 21 + Math.min(15, point.intensity * .18);
+    paintAuroraGlow(context, x, y, radius, point);
+    if (x < radius) paintAuroraGlow(context, x + canvas.width, y, radius, point);
+    if (x > canvas.width - radius) paintAuroraGlow(context, x - canvas.width, y, radius, point);
+  }
+  context.restore(); auroraTextureCache = { key, url: canvas.toDataURL('image/jpeg', .9) }; return auroraTextureCache.url;
+}
 function browserTemperatureTexture() {
   const grid = state.temperatureGrid, key = grid?.observedAt || '';
   if (!grid) return null;
@@ -538,8 +605,14 @@ function temperatureGlobeUrl() {
   if (grid.texture) return `${grid.texture}?v=${encodeURIComponent(grid.modelRun || grid.observedAt || grid.generatedAt || '')}`;
   return browserTemperatureTexture();
 }
-function updateGlobeTexture() {
+async function updateGlobeTexture() {
   if (!globe) return;
+  if (state.showAurora && state.aurora.length) {
+    const request = ++auroraTextureRequest, key = `aurora-${auroraSignature()}-${globeBaseUrl()}`;
+    if (key === activeGlobeTexture) return; activeGlobeTexture = key;
+    const next = await auroraGlobeUrl(); if (request === auroraTextureRequest && state.showAurora && globe) globe.globeImageUrl(next); return;
+  }
+  auroraTextureRequest++;
   const next = state.showTemperature ? temperatureGlobeUrl() : globeBaseUrl();
   if (next && next !== activeGlobeTexture) { activeGlobeTexture = next; globe.globeImageUrl(next); }
 }
@@ -657,7 +730,7 @@ function selectConflictRegion(point) {
 
 function environmentPoints() {
   if (state.showTemperature) return [];
-  if (state.showAurora) return sample(state.aurora, 1400).map((point, index) => ({ ...point, id: `aurora-${index}`, kind: 'aurora', color: point.lat > 0 ? `rgba(73,255,155,${Math.min(.95, .2 + point.intensity / 100)})` : `rgba(178,92,255,${Math.min(.95, .2 + point.intensity / 100)})`, metric: `${point.intensity}%`, title: point.lat > 0 ? t('aurora.north') : t('aurora.south'), location: t('aurora.probability') }));
+  if (state.showAurora) return [];
   if (state.showAir) return state.airQuality.map((point, index) => ({ ...point, id: `air-${index}`, kind: 'air', color: airColor(point.aqi), metric: `AQI ${Math.round(point.aqi)}`, title: t('air.title'), location: `PM2.5 ${point.pm25 == null ? '—' : point.pm25.toFixed(1)} µg/m³` }));
   return [];
 }
@@ -749,7 +822,7 @@ function renderGlobeData() {
     if (issMapMarker) { issMapMarker.remove(); issMapMarker = null; }
     if (state.showIss && state.iss) issMapMarker = L.marker([state.iss.lat, state.iss.lon], { icon: leafletSymbolIcon('iss', '#60e6da', false, 34), keyboard: true, title: t('iss.title') }).bindTooltip(`${esc(t('iss.title'))} · ${Math.round(state.iss.altitude)} KM`).on('click', () => loadWeather(state.iss.lat, state.iss.lon)).addTo(map);
     if (issTrailLayer) issTrailLayer.remove(); issTrailLayer = state.showIss && state.issTrail.length > 1 ? L.polyline(state.issTrail.map(point => [point.lat, point.lon]), { color: '#60e6da', weight: 1, opacity: .65, dashArray: '3 6' }).addTo(map) : null;
-    updateTemperaturePresentation(); renderMapRegions(); renderMapConflicts();
+    updateTemperaturePresentation(); updateAuroraPresentation(); renderMapRegions(); renderMapConflicts();
   }
 }
 
