@@ -78,6 +78,65 @@ function parseNews(xml, language) {
   });
 }
 
+const normalized = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const floodTerms = /\b(floods?|flash flood|flooding|glof|inundac(?:ao|oes|ion|iones)|inunda(?:cao|coes|cion|ciones)|enchente|alagamento|riada)\b/i;
+const landslideTerms = /\b(landslides?|mudslides?|debris flow|deslizamentos?|corrida de massa|avalanche)\b/i;
+const damFailureTerms = /\b(dam (?:collapse|failure|burst)|tailings dam|barragem de rejeitos|rompimento (?:de|da) barragem|represa rompeu)\b/i;
+const severeImpactTerms = /\b(deadly|devastat|fatal|kills?|killed|deaths?|missing|desaparecid|mort[oa]s?|mortes?|catastrof|destrui|arrastad)\b/i;
+
+async function deriveMediaDisasterEvents(articles) {
+  let geography;
+  try { geography = JSON.parse(await readFile('data/admin1.json', 'utf8')); }
+  catch { return []; }
+  const countries = geography?.countries || [], regions = geography?.regions || [];
+  const countryRows = countries.map((name, index) => {
+    const points = regions.filter(region => region[1] === index);
+    if (!points.length) return null;
+    return {
+      name, match: normalized(name),
+      lat: points.reduce((sum, point) => sum + point[2], 0) / points.length,
+      lon: points.reduce((sum, point) => sum + point[3], 0) / points.length
+    };
+  }).filter(row => row && row.match.length >= 4);
+  const groups = new Map(), cutoff = Date.now() - 48 * 3600000;
+  for (const article of articles) {
+    const normalizedTitle = normalized(article.title);
+    if (new Date(article.seendate).getTime() < cutoff) continue;
+    const category = damFailureTerms.test(normalizedTitle) ? 'damFailures' : floodTerms.test(normalizedTitle) ? 'floods' : landslideTerms.test(normalizedTitle) ? 'landslides' : null;
+    if (!category) continue;
+    const title = normalized(article.title);
+    const country = countryRows
+      .map(row => ({ ...row, position: title.search(new RegExp(`(^|[^a-z])${row.match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`)) }))
+      .filter(row => row.position >= 0)
+      .sort((a, b) => a.position - b.position || b.match.length - a.match.length)[0];
+    if (!country) continue;
+    const key = country.name;
+    const group = groups.get(key) || { country, categories: new Map() };
+    const categoryGroup = group.categories.get(category) || { articles: [], domains: new Set() };
+    if (!categoryGroup.domains.has(normalized(article.domain))) {
+      categoryGroup.domains.add(normalized(article.domain));
+      categoryGroup.articles.push(article);
+    }
+    group.categories.set(category, categoryGroup);
+    groups.set(key, group);
+  }
+  return [...groups.values()].flatMap(group => {
+    const [category, categoryGroup] = [...group.categories.entries()].sort((a, b) => b[1].articles.length - a[1].articles.length)[0] || [];
+    if (!categoryGroup || categoryGroup.articles.length < 3) return [];
+    const latest = categoryGroup.articles.sort((a, b) => new Date(b.seendate) - new Date(a.seendate))[0];
+    const severe = categoryGroup.articles.length >= 5 && severeImpactTerms.test(normalized(categoryGroup.articles.map(article => article.title).join(' ')));
+    const labels = { floods: 'Inundação', landslides: 'Deslizamento ou fluxo de detritos', damFailures: 'Rompimento de barragem' };
+    return [{
+      id: `media-${category}-${normalized(group.country.name).replace(/[^a-z0-9]+/g, '-')}`,
+      category, severity: severe ? 'high' : 'medium', title: `${labels[category]} com cobertura jornalística relevante`,
+      location: `${group.country.name} · localização aproximada`,
+      summary: `Ocorrência identificada em ${categoryGroup.articles.length} veículos independentes nas últimas 48 horas. O marcador representa aproximadamente o país até que uma fonte cartográfica oficial publique coordenadas mais precisas.`,
+      metric: `${categoryGroup.articles.length} FONTES`, timestamp: latest.seendate, source: 'COBERTURA JORNALÍSTICA MULTIFONTE',
+      lat: group.country.lat, lon: group.country.lon, url: latest.url
+    }];
+  });
+}
+
 function parseTsunami(xml, center) {
   return [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi)].flatMap(([, entry]) => {
     const summary = xmlTag(entry, 'summary');
@@ -89,7 +148,7 @@ function parseTsunami(xml, center) {
     const updated = xmlTag(entry, 'updated') || new Date().toISOString();
     return [{
       id: `tsunami-${center}-${updated}`,
-      category: 'other',
+      category: 'tsunamis',
       severity: /warning|threat/i.test(category) ? 'critical' : 'high',
       title: `Alerta de tsunami: ${category}`,
       location: center === 'PAAQ' ? 'Pacífico e Alasca' : 'Pacífico, Caribe e Atlântico',
@@ -256,6 +315,7 @@ const news = [...new Map([
   ...(newsEn.status === 'fulfilled' ? parseNews(newsEn.value, 'en') : []),
   ...(newsEs.status === 'fulfilled' ? parseNews(newsEs.value, 'es') : [])
 ].map(article => [article.title.toLowerCase(), article])).values()].sort((a, b) => new Date(b.seendate) - new Date(a.seendate)).slice(0, 120);
+events.push(...await deriveMediaDisasterEvents(news));
 const conflictNews = ['pt-BR', 'en', 'es'].flatMap((language, index) => {
   const result = [conflictPt, conflictEn, conflictEs][index];
   return (result.status === 'fulfilled' ? parseNews(result.value, language) : []).map(article => ({ ...article, topic: 'conflict-media' })).sort((a, b) => new Date(b.seendate) - new Date(a.seendate)).slice(0, 20);
