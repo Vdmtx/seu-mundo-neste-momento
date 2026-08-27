@@ -414,6 +414,7 @@ function initGlobe() {
       .onPointClick(point => { if (point.eventId) selectEvent(point.eventId); else if (point.kind === 'conflict-media') selectConflictRegion(point); else if (point.kind === 'region') selectRegion(point); else loadWeather(point.lat, point.lon); }).onGlobeClick(({ lat, lng }) => { renderCoordinate(lat, lng); loadWeather(lat, lng); })
       .htmlLat('lat').htmlLng('lon').htmlAltitude(point => point.kind === 'iss' ? .075 : point.selected ? .055 : .035).htmlElement(globeHtmlElement).htmlTransitionDuration(0)
       .pathPoints('points').pathPointLat('lat').pathPointLng('lon').pathColor('color').pathStroke('stroke')
+      .polygonGeoJsonGeometry('geometry').polygonCapColor('color').polygonSideColor(() => 'rgba(0,0,0,0)').polygonStrokeColor(() => 'rgba(0,0,0,0)').polygonAltitude(cell => cell.altitude).polygonsTransitionDuration(0)
       .ringLat('lat').ringLng('lon').ringColor(point => point.color).ringMaxRadius(point => point.radius).ringPropagationSpeed(2).ringRepeatPeriod(1400);
     globe.controls().autoRotate = true; globe.controls().autoRotateSpeed = .16; globe.controls().enableDamping = true;
     window.addEventListener('resize', resizeGlobe); resizeGlobe(); renderGlobeData(); return true;
@@ -565,6 +566,25 @@ function updateAuroraPresentation() {
   if (active) auroraLayer.redraw();
 }
 
+function auroraGlobeSurface() {
+  if (!state.showAurora || !state.aurora.length) return [];
+  const bins = new Map();
+  for (const point of state.aurora) {
+    const lat = Math.round(point.lat / 6) * 6, lon = Math.floor(normalizeLon(point.lon) / 6) * 6, key = `${lat}:${lon}`;
+    const current = bins.get(key);
+    if (!current || point.intensity > current.intensity) bins.set(key, { lat, lon, intensity: Number(point.intensity || 0) });
+  }
+  return [...bins.values()].filter(cell => cell.intensity >= 3).map(cell => {
+    const halfLat = 4.2, halfLon = 4.2, south = Math.max(-89.5, cell.lat - halfLat), north = Math.min(89.5, cell.lat + halfLat), west = Math.max(-180, cell.lon - halfLon), east = Math.min(180, cell.lon + halfLon);
+    const alpha = Math.max(.1, Math.min(.58, .07 + cell.intensity / 30));
+    return {
+      geometry: { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] },
+      color: cell.lat >= 0 ? `rgba(35,255,118,${alpha})` : `rgba(170,70,255,${alpha})`,
+      altitude: .006 + Math.min(.005, cell.intensity / 4000)
+    };
+  });
+}
+
 function globeBaseUrl() { return state.showSatellite ? gibsGlobeUrl(satelliteDate()) : 'assets/earth-night.jpg'; }
 function loadTextureImage(url) {
   return new Promise((resolve, reject) => { const image = new Image(); image.crossOrigin = 'anonymous'; image.onload = () => resolve(image); image.onerror = reject; image.src = url; });
@@ -607,11 +627,6 @@ function temperatureGlobeUrl() {
 }
 async function updateGlobeTexture() {
   if (!globe) return;
-  if (state.showAurora && state.aurora.length) {
-    const request = ++auroraTextureRequest, key = `aurora-${auroraSignature()}-${globeBaseUrl()}`;
-    if (key === activeGlobeTexture) return; activeGlobeTexture = key;
-    const next = await auroraGlobeUrl(); if (request === auroraTextureRequest && state.showAurora && globe) globe.globeImageUrl(next); return;
-  }
   auroraTextureRequest++;
   const next = state.showTemperature ? temperatureGlobeUrl() : globeBaseUrl();
   if (next && next !== activeGlobeTexture) { activeGlobeTexture = next; globe.globeImageUrl(next); }
@@ -811,6 +826,7 @@ function renderGlobeData() {
   if (globe) {
     updateGlobeTexture();
     globe.pointsData(environmental);
+    globe.polygonsData(auroraGlobeSurface());
     globe.htmlElementsData(state.view === 'globe' ? iconPoints : []);
     const paths = []; if (state.showDaylight) paths.push(terminatorPath()); if (state.showIss && state.issTrail.length > 1) paths.push({ points: state.issTrail, color: '#60e6da', stroke: .55 }); globe.pathsData(paths);
     globe.ringsData(events.filter(event => event.category === 'earthquakes' && Number(String(event.metric).replace(/[^0-9.]/g, '')) >= 4.5).slice(0, 30).map(event => ({ lat: event.lat, lon: event.lon, color: severityColors[event.severity], radius: Math.max(1.2, Number(String(event.metric).replace(/[^0-9.]/g, '')) * .55) })));
