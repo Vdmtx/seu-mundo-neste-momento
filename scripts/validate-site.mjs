@@ -109,6 +109,13 @@ async function validateTranslations(index) {
   pass(`${reference.size} traduções equivalentes em três idiomas verificadas`);
 }
 
+async function validateNewsControl() {
+  const app = await text('app.js');
+  assert(/\$\('#regions-button'\)\.onclick\s*=\s*\(\)\s*=>\s*toggleRegions\(true\)/.test(app), 'app.js: botão Notícias não pode ocultar a camada ao ser clicado');
+  assert(!/\$\('#regions-button'\)\.onclick\s*=\s*\(\)\s*=>\s*toggleRegions\(!state\.showRegions\)/.test(app), 'app.js: regressão — botão Notícias voltou a alternar e ocultar marcadores');
+  pass('Controle de Notícias protegido contra ocultação acidental');
+}
+
 async function validateLocalReferences(files) {
   const locallyMissing = new Set();
   for (const [file, source] of Object.entries(files)) {
@@ -190,6 +197,7 @@ await validateRequiredFiles();
 validateJavaScriptSyntax(['app.js', 'bootstrap.js', 'i18n.js', 'methodology.js', 'scripts/update-data.mjs', 'scripts/validate-site.mjs']);
 const html = await validateHtml();
 await validateTranslations(html.index);
+await validateNewsControl();
 await validateLocalReferences({ 'index.html': html.index, 'metodologia.html': html.methodology });
 await validateSnapshot();
 await validateAutomation();

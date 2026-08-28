@@ -908,7 +908,8 @@ async function enableNotifications() {
 function renderAll() { document.body.classList.toggle('nuclear-alert', state.events.some(event => event.category === 'nuclear')); document.body.classList.toggle('hazmat-alert', !state.events.some(event => event.category === 'nuclear') && state.events.some(event => event.category === 'hazmat')); renderCategories(); renderFeed(); renderSpotlight(state.events.find(event => event.id === state.selected)); renderGlobeData(); $('#footer-sync').textContent = state.updatedAt ? t('system.sync', { time: fmtTime(state.updatedAt, true) }) : t('footer.sync'); }
 function refreshLanguageUI() {
   setTheme(currentTheme(), false);
-  $('#regions-button').textContent = state.showRegions ? t('stage.hideRegions') : t('stage.regions');
+  $('#regions-button').textContent = state.showRegions ? t('stage.regionsActive') : t('stage.regions');
+  $('#regions-button').setAttribute('aria-pressed', String(state.showRegions));
   $('#view-button').textContent = state.view === 'globe' ? t('stage.map2d') : t('stage.globe3d');
   if (!state.showTemperature) $('#temperature-status').textContent = t('status.temperatureOff');
   else $('#temperature-status').textContent = temperatureStatus();
@@ -940,8 +941,9 @@ function bind() {
   $('#temperature-toggle').onchange = event => setEnvironment('temperature', event.target.checked);
   $('#aurora-toggle').onchange = event => setEnvironment('aurora', event.target.checked);
   $('#air-toggle').onchange = event => setEnvironment('air', event.target.checked);
-  const toggleRegions = async active => { state.showRegions = active; $('#regions-toggle').checked = active; $('#regions-button').textContent = active ? t('stage.hideRegions') : t('stage.regions'); if (active) await loadAdmin1(); else $('#region-status').textContent = t('status.regionsOff'); renderGlobeData(); };
-  $('#regions-toggle').onchange = event => toggleRegions(event.target.checked); $('#regions-button').onclick = () => toggleRegions(!state.showRegions);
+  const toggleRegions = async active => { state.showRegions = active; $('#regions-toggle').checked = active; $('#regions-button').textContent = active ? t('stage.regionsActive') : t('stage.regions'); $('#regions-button').setAttribute('aria-pressed', String(active)); if (active) await loadAdmin1(); else $('#region-status').textContent = t('status.regionsOff'); renderGlobeData(); };
+  $('#regions-toggle').onchange = event => toggleRegions(event.target.checked);
+  $('#regions-button').onclick = () => toggleRegions(true);
   const toggleConflicts = async active => { state.showConflicts = active; $('#conflicts-toggle').checked = active; if (active) { $('#conflict-status').textContent = t('layer.conflictsLoading'); await loadAdmin1({ silent: true }); rebuildConflictRegions(); } else { state.selectedConflict = null; $('#conflict-status').textContent = t('status.conflictsOff'); if ($('#conflict-dialog').open) $('#conflict-dialog').close(); } renderGlobeData(); };
   $('#conflicts-toggle').onchange = event => toggleConflicts(event.target.checked);
   $('#daylight-toggle').onchange = event => { state.showDaylight = event.target.checked; renderGlobeData(); };
