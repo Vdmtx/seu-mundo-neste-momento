@@ -116,6 +116,16 @@ async function validateNewsControl() {
   pass('Controle de Notícias protegido contra ocultação acidental');
 }
 
+async function validateDefaultLayers(index) {
+  const app = await text('app.js');
+  assert(/showTemperature:\s*true,\s*showAurora:\s*false/.test(app), 'app.js: temperatura deve iniciar ativa e aurora desativada');
+  assert(/showAir:\s*true,\s*showIss:\s*false,\s*showRegions:\s*false,\s*showConflicts:\s*true,\s*showDaylight:\s*true,\s*showSatellite:\s*true/.test(app), 'app.js: estado inicial das camadas diverge da configuração aprovada');
+  for (const id of ['temperature-toggle', 'air-toggle', 'conflicts-toggle', 'daylight-toggle', 'satellite-toggle']) assert(new RegExp(`id=["']${id}["'][^>]*\\bchecked\\b`, 'i').test(index), `index.html: #${id} deve iniciar marcado`);
+  for (const id of ['aurora-toggle', 'regions-toggle', 'iss-toggle']) assert(!new RegExp(`id=["']${id}["'][^>]*\\bchecked\\b`, 'i').test(index), `index.html: #${id} deve iniciar desmarcado`);
+  assert(!/active\s*&&\s*key\s*===\s*kind/.test(app), 'app.js: camadas ambientais não podem se desligar mutuamente');
+  pass('Estado inicial das camadas e controles verificado');
+}
+
 async function validateLocalReferences(files) {
   const locallyMissing = new Set();
   for (const [file, source] of Object.entries(files)) {
@@ -198,6 +208,7 @@ validateJavaScriptSyntax(['app.js', 'bootstrap.js', 'i18n.js', 'methodology.js',
 const html = await validateHtml();
 await validateTranslations(html.index);
 await validateNewsControl();
+await validateDefaultLayers(html.index);
 await validateLocalReferences({ 'index.html': html.index, 'metodologia.html': html.methodology });
 await validateSnapshot();
 await validateAutomation();

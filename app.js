@@ -14,8 +14,8 @@ const CARTO_BASEMAP_KEY = 'cb1_25k6_1_cf2c5e6bbca5260db3c5d1ac';
 const NEWS_MAX_AGE = 24 * 60 * 60 * 1000;
 const state = {
   events: [], sources: new Map(), iss: null, issTrail: [], space: null, temperature: [], temperatureGrid: null, aurora: [], airQuality: [], news: [], conflictNews: [], admin1: [], newsRegions: [], conflictRegions: [],
-  selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: false, showAurora: false,
-  showAir: false, showIss: true, showRegions: false, showConflicts: false, showDaylight: true, showSatellite: false,
+  selected: null, selectedRegion: null, category: 'all', priority: false, showTemperature: true, showAurora: false,
+  showAir: true, showIss: false, showRegions: false, showConflicts: true, showDaylight: true, showSatellite: true,
   view: 'map', updatedAt: null, snapshot: null, notificationsReady: false, newsQuery: null, selectedConflict: null, expandedGlobeCluster: null,
   myWorld: readMyWorld(), myWorldActive: false, detailRegion: null
 };
@@ -744,8 +744,6 @@ function selectConflictRegion(point) {
 }
 
 function environmentPoints() {
-  if (state.showTemperature) return [];
-  if (state.showAurora) return [];
   if (state.showAir) return state.airQuality.map((point, index) => ({ ...point, id: `air-${index}`, kind: 'air', color: airColor(point.aqi), metric: `AQI ${Math.round(point.aqi)}`, title: t('air.title'), location: `PM2.5 ${point.pm25 == null ? '—' : point.pm25.toFixed(1)} µg/m³` }));
   return [];
 }
@@ -865,8 +863,9 @@ async function loadNews(term, lat = null, lon = null, country = '') {
 }
 
 function setEnvironment(kind, active) {
-  const keys = ['temperature', 'aurora', 'air'];
-  for (const key of keys) { state[`show${key[0].toUpperCase()}${key.slice(1)}`] = active && key === kind; $(`#${key}-toggle`).checked = active && key === kind; }
+  const stateKey = `show${kind[0].toUpperCase()}${kind.slice(1)}`;
+  state[stateKey] = active;
+  $(`#${kind}-toggle`).checked = active;
   if (!state.showTemperature) $('#temperature-status').textContent = t('status.temperatureOff');
   if (!state.showAurora) $('#aurora-status').textContent = t('status.auroraOff');
   if (!state.showAir) $('#air-status').textContent = t('status.airOff');
@@ -965,5 +964,5 @@ function bind() {
 }
 function clock() { const now = new Date(); $('#utc-clock').textContent = now.toLocaleString(window.i18n.locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }).toUpperCase() + ' UTC'; if (state.updatedAt) $('#sync-age').textContent = t('system.sync', { time: timeAgo(state.updatedAt) }); }
 async function refreshSnapshot() { await loadSnapshot(); await loadWorld(); if (state.showAir || state.showAurora || state.showTemperature) renderGlobeData(); }
-async function start() { bind(); setTheme(currentTheme(), false); updateMyWorldButton(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); initVisuals(); if (state.myWorld.preferredView === 'globe') switchView('globe', true); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
+async function start() { bind(); setTheme(currentTheme(), false); updateMyWorldButton(); try { if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('browser-alerts-enabled') === 'true') { state.notificationsReady = true; $('#notification-button').textContent = t('notifications.active'); } } catch { /* armazenamento pode estar desativado */ } clock(); setInterval(clock, 1000); await loadSnapshot(); if (state.showConflicts) { await loadAdmin1({ silent: true }); rebuildConflictRegions(); } initVisuals(); toggleSatellite(state.showSatellite); if (state.myWorld.preferredView === 'globe') switchView('globe', true); await Promise.allSettled([loadWorld(), loadIss(), loadSpace()]); const sharedEvent = new URL(location.href).searchParams.get('event'); if (sharedEvent) selectEvent(sharedEvent); setInterval(loadWorld, refresh.world); setInterval(refreshSnapshot, refresh.snapshot); setInterval(loadIss, refresh.iss); setInterval(loadSpace, refresh.space); setInterval(() => { if (state.showTemperature) loadTemperature(); }, refresh.temperature); setInterval(() => { renderSources(); if (state.showDaylight) renderGlobeData(); }, 60000); }
 start();
