@@ -161,8 +161,9 @@ async function validateSnapshot() {
     for (const [index, point] of (rows || []).entries()) assert(validCoordinate(point), `snapshot.${name}[${index}]: coordenadas inválidas`);
   }
   for (const [index, point] of (snapshot.aurora || []).entries()) assert(Number.isFinite(point.intensity) && point.intensity >= 0 && point.intensity <= 100, `snapshot.aurora[${index}]: intensidade inválida`);
-  const grid = snapshot.temperatureGrid;
-  assert(grid && Array.isArray(grid.values), 'snapshot: grade térmica ausente');
+  const requireGeneratedSnapshot = process.env.REQUIRE_GENERATED_SNAPSHOT === '1';
+  const grid = snapshot.temperatureGrid || (requireGeneratedSnapshot ? null : await json('data/temperature.json'));
+  assert(grid && Array.isArray(grid.values), requireGeneratedSnapshot ? 'snapshot: publicação sem grade térmica consolidada' : 'dados: grade térmica ausente');
   if (grid?.values) {
     assert(Number.isInteger(grid.rows) && Number.isInteger(grid.columns), 'snapshot: dimensões térmicas inválidas');
     assert(grid.rows * grid.columns === grid.values.length, `snapshot: grade térmica esperava ${grid.rows * grid.columns} valores e recebeu ${grid.values.length}`);
