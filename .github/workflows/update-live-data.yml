@@ -30,6 +30,8 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/update-data.mjs
+      - name: Bloquear publicação inconsistente
+        run: node scripts/validate-site.mjs
       - name: Persistir grade térmica quando houver nova rodada
         run: |
           git config user.name "github-actions[bot]"

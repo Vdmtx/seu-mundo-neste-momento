@@ -40,6 +40,8 @@ jobs:
           node-version: '22'
       - name: Atualizar snapshot público
         run: node scripts/update-data.mjs
+      - name: Bloquear publicação inconsistente
+        run: node scripts/validate-site.mjs
       - name: Persistir rodada e textura
         run: |
           git config user.name "github-actions[bot]"

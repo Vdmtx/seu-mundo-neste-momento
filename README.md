@@ -49,3 +49,13 @@ O monitor não calcula nem publica trajetória de armamentos, previsão própria
 As categorias nuclear/radiológica e biológica/química permanecem invisíveis quando não há ocorrência oficial ativa. Se uma fonte oficial vier a alimentar um evento nuclear, a categoria surge automaticamente e o mapa adota o estado visual vermelho; um evento biológico/químico confirmado ativa um estado âmbar. A interface já aplica essas regras, mas nenhum agregador foi habilitado sem um feed oficial global suficientemente confiável.
 
 Alertas do navegador funcionam enquanto o site está aberto. E-mail, Telegram e WhatsApp exigem um serviço externo e credenciais guardadas em GitHub Secrets; nenhuma chave deve ser colocada em `index.html` ou `app.js`.
+
+## Barreira de qualidade
+
+Antes de cada publicação, `node scripts/validate-site.mjs` verifica sintaxe JavaScript, arquivos essenciais, IDs críticos da interface, referências locais, equivalência das traduções, categorias, fontes sensíveis, coordenadas, horários e dimensões das grades ambientais. Uma inconsistência interrompe a publicação do GitHub Pages.
+
+Alterações de código também executam o workflow independente “Validar estabilidade do site”. A validação local pode ser repetida com:
+
+```sh
+node scripts/validate-site.mjs
+```
